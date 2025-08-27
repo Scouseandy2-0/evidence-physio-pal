@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_users: {
+        Row: {
+          admin_role: Database["public"]["Enums"]["admin_role"]
+          assigned_at: string | null
+          assigned_by: string | null
+          id: string
+          is_active: boolean | null
+          user_id: string
+        }
+        Insert: {
+          admin_role: Database["public"]["Enums"]["admin_role"]
+          assigned_at?: string | null
+          assigned_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          user_id: string
+        }
+        Update: {
+          admin_role?: Database["public"]["Enums"]["admin_role"]
+          assigned_at?: string | null
+          assigned_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       analytics_sessions: {
         Row: {
           condition_id: string | null
@@ -386,6 +413,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      patient_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          assignment_reason: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          patient_id: string
+          therapist_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by: string
+          assignment_reason?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          patient_id: string
+          therapist_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          assignment_reason?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          patient_id?: string
+          therapist_id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       patient_sessions: {
         Row: {
@@ -786,9 +849,43 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      approve_patient_access: {
+        Args: { approved?: boolean; target_user_id: string }
+        Returns: boolean
+      }
+      assign_healthcare_role: {
+        Args: {
+          department?: string
+          license_number?: string
+          new_role: Database["public"]["Enums"]["healthcare_role"]
+          target_user_id: string
+        }
+        Returns: boolean
+      }
+      assign_patient_to_therapist: {
+        Args: {
+          assignment_reason?: string
+          patient_id: string
+          therapist_id: string
+        }
+        Returns: boolean
+      }
+      get_user_healthcare_status: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          approved_for_access: boolean
+          healthcare_role: string
+          is_verified: boolean
+          license_verified: boolean
+        }[]
+      }
+      is_admin: {
+        Args: { user_id?: string }
+        Returns: boolean
+      }
     }
     Enums: {
+      admin_role: "super_admin" | "admin" | "moderator"
       condition_category: "msk" | "neurological" | "respiratory"
       evidence_level: "A" | "B" | "C" | "D"
       healthcare_role:
@@ -925,6 +1022,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      admin_role: ["super_admin", "admin", "moderator"],
       condition_category: ["msk", "neurological", "respiratory"],
       evidence_level: ["A", "B", "C", "D"],
       healthcare_role: [
