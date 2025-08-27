@@ -25,18 +25,22 @@ export const Header = () => {
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <Search className="h-4 w-4 mr-2" />
-              Search Conditions
-            </Button>
+            <Link to="/conditions">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                <Search className="h-4 w-4 mr-2" />
+                Browse Conditions
+              </Button>
+            </Link>
             <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
               <FileText className="h-4 w-4 mr-2" />
               Evidence Library
             </Button>
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <User className="h-4 w-4 mr-2" />
-              Assessment Tools
-            </Button>
+            <Link to="/assessments">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                <User className="h-4 w-4 mr-2" />
+                Assessment Tools
+              </Button>
+            </Link>
           </nav>
 
           {/* Action Buttons */}
