@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      analytics_sessions: {
+        Row: {
+          condition_id: string | null
+          created_at: string
+          duration_minutes: number | null
+          id: string
+          interventions: string[] | null
+          notes: string | null
+          outcomes: Json | null
+          patient_id: string | null
+          satisfaction_score: number | null
+          session_type: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          condition_id?: string | null
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          interventions?: string[] | null
+          notes?: string | null
+          outcomes?: Json | null
+          patient_id?: string | null
+          satisfaction_score?: number | null
+          session_type: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          condition_id?: string | null
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          interventions?: string[] | null
+          notes?: string | null
+          outcomes?: Json | null
+          patient_id?: string | null
+          satisfaction_score?: number | null
+          session_type?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_sessions_condition_id_fkey"
+            columns: ["condition_id"]
+            isOneToOne: false
+            referencedRelation: "conditions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analytics_sessions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assessment_tools: {
         Row: {
           condition_ids: string[] | null
@@ -250,6 +310,42 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string
+          data: Json | null
+          id: string
+          message: string
+          read: boolean
+          title: string
+          type: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          message: string
+          read?: boolean
+          title: string
+          type?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          message?: string
+          read?: boolean
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       patient_sessions: {
         Row: {
           created_at: string
@@ -415,6 +511,77 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      study_group_members: {
+        Row: {
+          group_id: string | null
+          id: string
+          joined_at: string
+          role: string
+          user_id: string | null
+        }
+        Insert: {
+          group_id?: string | null
+          id?: string
+          joined_at?: string
+          role?: string
+          user_id?: string | null
+        }
+        Update: {
+          group_id?: string | null
+          id?: string
+          joined_at?: string
+          role?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "study_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      study_groups: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_public: boolean | null
+          max_members: number | null
+          meeting_schedule: Json | null
+          name: string
+          topic: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          max_members?: number | null
+          meeting_schedule?: Json | null
+          name: string
+          topic: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          max_members?: number | null
+          meeting_schedule?: Json | null
+          name?: string
+          topic?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       subscribers: {
         Row: {

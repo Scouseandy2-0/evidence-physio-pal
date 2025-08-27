@@ -18,6 +18,7 @@ import { CollaborationHub } from "./components/collaboration/CollaborationHub";
 import { AnalyticsDashboard } from "./components/analytics/AnalyticsDashboard";
 import { SubscriptionPage } from "./components/subscription/SubscriptionPage";
 import { SubscriptionSuccessPage } from "./components/subscription/SubscriptionSuccessPage";
+import { AdvancedFeatures } from "./components/advanced/AdvancedFeatures";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/patients" element={<PatientManagement />} />
             <Route path="/collaboration" element={<CollaborationHub />} />
             <Route path="/analytics" element={<AnalyticsDashboard />} />
+            <Route path="/advanced" element={<AdvancedFeatures />} />
             <Route path="/subscription" element={<SubscriptionPage />} />
             <Route path="/subscription-success" element={<SubscriptionSuccessPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

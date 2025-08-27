@@ -67,6 +67,12 @@ export const Header = () => {
                     Collaborate
                   </Button>
                 </Link>
+                <Link to="/advanced">
+                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                    <Brain className="h-4 w-4 mr-2" />
+                    Advanced
+                  </Button>
+                </Link>
                 <Link to="/analytics">
                   <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
                     <BarChart3 className="h-4 w-4 mr-2" />
