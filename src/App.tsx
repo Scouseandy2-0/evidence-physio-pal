@@ -12,6 +12,9 @@ import { AssessmentToolsLibrary } from "./components/conditions/AssessmentToolsL
 import { PersonalizedDashboard } from "./components/dashboard/PersonalizedDashboard";
 import { TreatmentProtocolBuilder } from "./components/protocols/TreatmentProtocolBuilder";
 import { CPDTracker } from "./components/cpd/CPDTracker";
+import { PatientManagement } from "./components/patients/PatientManagement";
+import { CollaborationHub } from "./components/collaboration/CollaborationHub";
+import { AnalyticsDashboard } from "./components/analytics/AnalyticsDashboard";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +33,9 @@ const App = () => (
             <Route path="/assessments" element={<AssessmentToolsLibrary />} />
             <Route path="/protocols" element={<TreatmentProtocolBuilder />} />
             <Route path="/cpd" element={<CPDTracker />} />
+            <Route path="/patients" element={<PatientManagement />} />
+            <Route path="/collaboration" element={<CollaborationHub />} />
+            <Route path="/analytics" element={<AnalyticsDashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

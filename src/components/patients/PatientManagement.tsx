@@ -34,7 +34,7 @@ interface Patient {
   last_name: string;
   date_of_birth: string;
   primary_condition: string;
-  status: 'active' | 'discharged' | 'on_hold';
+  status: string;
   created_at: string;
   updated_at: string;
   therapist_id: string;
@@ -46,7 +46,7 @@ interface PatientSession {
   session_date: string;
   duration_minutes: number;
   interventions: string[];
-  outcomes: Record<string, any>;
+  outcomes: any;
   notes: string;
   next_session_date?: string;
 }

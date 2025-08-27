@@ -59,6 +59,47 @@ export type Database = {
         }
         Relationships: []
       }
+      collaboration_shared_protocols: {
+        Row: {
+          access_level: string
+          created_at: string
+          id: string
+          is_public: boolean | null
+          protocol_id: string
+          shared_by: string
+          shared_with: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_level?: string
+          created_at?: string
+          id?: string
+          is_public?: boolean | null
+          protocol_id: string
+          shared_by: string
+          shared_with?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_level?: string
+          created_at?: string
+          id?: string
+          is_public?: boolean | null
+          protocol_id?: string
+          shared_by?: string
+          shared_with?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collaboration_shared_protocols_protocol_id_fkey"
+            columns: ["protocol_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_protocols"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conditions: {
         Row: {
           category: Database["public"]["Enums"]["condition_category"]
@@ -92,6 +133,57 @@ export type Database = {
           name?: string
           prevalence_data?: Json | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      cpd_activities: {
+        Row: {
+          activity_type: string
+          certificate_url: string | null
+          cpd_points: number | null
+          created_at: string
+          date_completed: string
+          description: string | null
+          hours_claimed: number
+          id: string
+          notes: string | null
+          provider: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          verification_method: string | null
+        }
+        Insert: {
+          activity_type: string
+          certificate_url?: string | null
+          cpd_points?: number | null
+          created_at?: string
+          date_completed: string
+          description?: string | null
+          hours_claimed: number
+          id?: string
+          notes?: string | null
+          provider?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+          verification_method?: string | null
+        }
+        Update: {
+          activity_type?: string
+          certificate_url?: string | null
+          cpd_points?: number | null
+          created_at?: string
+          date_completed?: string
+          description?: string | null
+          hours_claimed?: number
+          id?: string
+          notes?: string | null
+          provider?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          verification_method?: string | null
         }
         Relationships: []
       }
@@ -158,6 +250,92 @@ export type Database = {
         }
         Relationships: []
       }
+      patient_sessions: {
+        Row: {
+          created_at: string
+          duration_minutes: number
+          id: string
+          interventions: string[] | null
+          next_session_date: string | null
+          notes: string | null
+          outcomes: Json | null
+          patient_id: string
+          session_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          interventions?: string[] | null
+          next_session_date?: string | null
+          notes?: string | null
+          outcomes?: Json | null
+          patient_id: string
+          session_date: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          interventions?: string[] | null
+          next_session_date?: string | null
+          notes?: string | null
+          outcomes?: Json | null
+          patient_id?: string
+          session_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_sessions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patients: {
+        Row: {
+          created_at: string
+          date_of_birth: string | null
+          first_name: string
+          id: string
+          last_name: string
+          patient_id: string | null
+          primary_condition: string
+          status: string
+          therapist_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date_of_birth?: string | null
+          first_name: string
+          id?: string
+          last_name: string
+          patient_id?: string | null
+          primary_condition: string
+          status?: string
+          therapist_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date_of_birth?: string | null
+          first_name?: string
+          id?: string
+          last_name?: string
+          patient_id?: string | null
+          primary_condition?: string
+          status?: string
+          therapist_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -193,6 +371,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      protocol_reviews: {
+        Row: {
+          created_at: string
+          id: string
+          protocol_id: string
+          rating: number | null
+          recommendations: string | null
+          review_text: string | null
+          reviewer_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          protocol_id: string
+          rating?: number | null
+          recommendations?: string | null
+          review_text?: string | null
+          reviewer_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          protocol_id?: string
+          rating?: number | null
+          recommendations?: string | null
+          review_text?: string | null
+          reviewer_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "protocol_reviews_protocol_id_fkey"
+            columns: ["protocol_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_protocols"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       treatment_protocols: {
         Row: {

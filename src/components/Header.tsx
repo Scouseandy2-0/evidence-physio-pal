@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button"
-import { Search, Menu, User, FileText, Brain, LogOut } from "lucide-react"
+import { Search, Menu, User, FileText, Brain, LogOut, BarChart3, Users, Share2 } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import { Link } from "react-router-dom"
 
@@ -47,10 +47,32 @@ export const Header = () => {
             </Link>
             <Link to="/assessments">
               <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-                <User className="h-4 w-4 mr-2" />
+                <Brain className="h-4 w-4 mr-2" />
                 Assessments
               </Button>
             </Link>
+            {user && (
+              <>
+                <Link to="/patients">
+                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                    <Users className="h-4 w-4 mr-2" />
+                    Patients
+                  </Button>
+                </Link>
+                <Link to="/collaboration">
+                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Collaborate
+                  </Button>
+                </Link>
+                <Link to="/analytics">
+                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Analytics
+                  </Button>
+                </Link>
+              </>
+            )}
           </nav>
 
           {/* Action Buttons */}
