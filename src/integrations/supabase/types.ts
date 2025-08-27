@@ -72,13 +72,6 @@ export type Database = {
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "analytics_sessions_patient_id_fkey"
-            columns: ["patient_id"]
-            isOneToOne: false
-            referencedRelation: "secure_patient_view"
-            referencedColumns: ["id"]
-          },
         ]
       }
       assessment_tools: {
@@ -392,13 +385,6 @@ export type Database = {
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "patient_access_logs_patient_id_fkey"
-            columns: ["patient_id"]
-            isOneToOne: false
-            referencedRelation: "secure_patient_view"
-            referencedColumns: ["id"]
-          },
         ]
       }
       patient_sessions: {
@@ -444,13 +430,6 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "patient_sessions_patient_id_fkey"
-            columns: ["patient_id"]
-            isOneToOne: false
-            referencedRelation: "secure_patient_view"
             referencedColumns: ["id"]
           },
         ]
@@ -804,51 +783,10 @@ export type Database = {
       }
     }
     Views: {
-      secure_patient_view: {
-        Row: {
-          created_at: string | null
-          date_of_birth: string | null
-          first_name: string | null
-          id: string | null
-          last_name: string | null
-          patient_id: string | null
-          primary_condition: string | null
-          status: string | null
-          therapist_id: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          date_of_birth?: string | null
-          first_name?: string | null
-          id?: string | null
-          last_name?: string | null
-          patient_id?: string | null
-          primary_condition?: string | null
-          status?: string | null
-          therapist_id?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          date_of_birth?: string | null
-          first_name?: string | null
-          id?: string | null
-          last_name?: string | null
-          patient_id?: string | null
-          primary_condition?: string | null
-          status?: string | null
-          therapist_id?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
-      is_verified_healthcare_provider: {
-        Args: { user_uuid: string }
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
       condition_category: "msk" | "neurological" | "respiratory"
