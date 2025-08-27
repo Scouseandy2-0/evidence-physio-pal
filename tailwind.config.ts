@@ -26,7 +26,8 @@ export default {
 				foreground: 'hsl(var(--foreground))',
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
-					foreground: 'hsl(var(--primary-foreground))'
+					foreground: 'hsl(var(--primary-foreground))',
+					hover: 'hsl(var(--primary-hover))'
 				},
 				secondary: {
 					DEFAULT: 'hsl(var(--secondary))',
@@ -42,7 +43,8 @@ export default {
 				},
 				accent: {
 					DEFAULT: 'hsl(var(--accent))',
-					foreground: 'hsl(var(--accent-foreground))'
+					foreground: 'hsl(var(--accent-foreground))',
+					hover: 'hsl(var(--accent-hover))'
 				},
 				popover: {
 					DEFAULT: 'hsl(var(--popover))',
@@ -51,6 +53,25 @@ export default {
 				card: {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
+				},
+				warning: {
+					DEFAULT: 'hsl(var(--warning))',
+					foreground: 'hsl(var(--warning-foreground))'
+				},
+				medical: {
+					blue: 'hsl(var(--medical-blue))',
+					'blue-dark': 'hsl(var(--medical-blue-dark))',
+					green: 'hsl(var(--medical-green))',
+					'green-dark': 'hsl(var(--medical-green-dark))'
+				},
+				neutral: {
+					50: 'hsl(var(--neutral-50))',
+					100: 'hsl(var(--neutral-100))',
+					200: 'hsl(var(--neutral-200))',
+					300: 'hsl(var(--neutral-300))',
+					400: 'hsl(var(--neutral-400))',
+					500: 'hsl(var(--neutral-500))',
+					600: 'hsl(var(--neutral-600))'
 				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
