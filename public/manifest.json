@@ -1,0 +1,52 @@
+{
+  "name": "PhysioEvidence - Evidence-Based Physiotherapy",
+  "short_name": "PhysioEvidence",
+  "description": "Evidence-based physiotherapy platform for research, protocols, and patient management",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "categories": ["medical", "health", "education"],
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Search Conditions",
+      "short_name": "Conditions",
+      "description": "Browse physiotherapy conditions",
+      "url": "/conditions",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Treatment Protocols",
+      "short_name": "Protocols",
+      "description": "Access treatment protocols",
+      "url": "/protocols",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Patient Management",
+      "short_name": "Patients",
+      "description": "Manage your patients",
+      "url": "/patients",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ],
+  "features": [
+    "cross-origin-isolated"
+  ]
+}
