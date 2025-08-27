@@ -83,7 +83,7 @@ export const Header = () => {
               <div className="flex items-center gap-2">
                 {!subscribed && (
                   <Link to="/subscription">
-                    <Button variant="default" size="sm" className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600">
+                    <Button variant="warning" size="sm">
                       <Crown className="h-4 w-4 mr-2" />
                       Upgrade
                     </Button>
