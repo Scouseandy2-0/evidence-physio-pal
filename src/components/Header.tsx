@@ -28,57 +28,57 @@ export const Header = () => {
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
             {user && (
-              <Link to="/dashboard">
-                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" asChild>
+                <Link to="/dashboard">
                   <User className="h-4 w-4 mr-2" />
                   Dashboard
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             )}
-            <Link to="/conditions">
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" asChild>
+              <Link to="/conditions">
                 <Search className="h-4 w-4 mr-2" />
                 Conditions
-              </Button>
-            </Link>
-            <Link to="/protocols">
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+              </Link>
+            </Button>
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" asChild>
+              <Link to="/protocols">
                 <FileText className="h-4 w-4 mr-2" />
                 Protocols
-              </Button>
-            </Link>
-            <Link to="/assessments">
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+              </Link>
+            </Button>
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" asChild>
+              <Link to="/assessments">
                 <Brain className="h-4 w-4 mr-2" />
                 Assessments
-              </Button>
-            </Link>
+              </Link>
+            </Button>
             {user && (
               <>
-                <Link to="/patients">
-                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" asChild>
+                  <Link to="/patients">
                     <Users className="h-4 w-4 mr-2" />
                     Patients
-                  </Button>
-                </Link>
-                <Link to="/collaboration">
-                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                  </Link>
+                </Button>
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" asChild>
+                  <Link to="/collaboration">
                     <Share2 className="h-4 w-4 mr-2" />
                     Collaborate
-                  </Button>
-                </Link>
-                <Link to="/advanced">
-                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                  </Link>
+                </Button>
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" asChild>
+                  <Link to="/advanced">
                     <Brain className="h-4 w-4 mr-2" />
                     Advanced
-                  </Button>
-                </Link>
-                <Link to="/analytics">
-                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                  </Link>
+                </Button>
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" asChild>
+                  <Link to="/analytics">
                     <BarChart3 className="h-4 w-4 mr-2" />
                     Analytics
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
               </>
             )}
           </nav>
@@ -88,19 +88,19 @@ export const Header = () => {
             {user ? (
               <div className="flex items-center gap-2">
                 {!subscribed && (
-                  <Link to="/subscription">
-                    <Button variant="warning" size="sm">
+                  <Button variant="warning" size="sm" asChild>
+                    <Link to="/subscription">
                       <Crown className="h-4 w-4 mr-2" />
                       Upgrade
-                    </Button>
-                  </Link>
+                    </Link>
+                  </Button>
                 )}
-                <Link to="/cpd">
-                  <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/cpd">
                     <User className="h-4 w-4 mr-2" />
                     CPD
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
                 <Button variant="outline" size="sm" onClick={signOut}>
                   <LogOut className="h-4 w-4 mr-2" />
                   Sign Out
@@ -108,16 +108,16 @@ export const Header = () => {
               </div>
             ) : (
               <>
-                <Link to="/auth">
-                  <Button variant="outline" size="sm" className="hidden sm:flex">
+                <Button variant="outline" size="sm" className="hidden sm:flex" asChild>
+                  <Link to="/auth">
                     Sign In
-                  </Button>
-                </Link>
-                <Link to="/auth">
-                  <Button variant="medical" size="sm">
+                  </Link>
+                </Button>
+                <Button variant="medical" size="sm" asChild>
+                  <Link to="/auth">
                     Get Started
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
               </>
             )}
             <Button variant="ghost" size="icon" className="md:hidden">
