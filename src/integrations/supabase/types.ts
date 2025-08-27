@@ -72,6 +72,13 @@ export type Database = {
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "analytics_sessions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "secure_patient_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       assessment_tools: {
@@ -346,6 +353,54 @@ export type Database = {
         }
         Relationships: []
       }
+      patient_access_logs: {
+        Row: {
+          accessed_at: string | null
+          action: string
+          id: string
+          ip_address: unknown | null
+          patient_id: string | null
+          session_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          accessed_at?: string | null
+          action: string
+          id?: string
+          ip_address?: unknown | null
+          patient_id?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          accessed_at?: string | null
+          action?: string
+          id?: string
+          ip_address?: unknown | null
+          patient_id?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_access_logs_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_access_logs_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "secure_patient_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patient_sessions: {
         Row: {
           created_at: string
@@ -391,6 +446,13 @@ export type Database = {
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "patient_sessions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "secure_patient_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       patients: {
@@ -434,10 +496,16 @@ export type Database = {
       }
       profiles: {
         Row: {
+          approved_for_patient_access: boolean | null
           created_at: string
+          department: string | null
           first_name: string | null
+          healthcare_role: Database["public"]["Enums"]["healthcare_role"] | null
           id: string
           last_name: string | null
+          license_expiry_date: string | null
+          license_number: string | null
+          license_verified: boolean | null
           professional_title: string | null
           registration_number: string | null
           specialization: string[] | null
@@ -445,10 +513,18 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          approved_for_patient_access?: boolean | null
           created_at?: string
+          department?: string | null
           first_name?: string | null
+          healthcare_role?:
+            | Database["public"]["Enums"]["healthcare_role"]
+            | null
           id?: string
           last_name?: string | null
+          license_expiry_date?: string | null
+          license_number?: string | null
+          license_verified?: boolean | null
           professional_title?: string | null
           registration_number?: string | null
           specialization?: string[] | null
@@ -456,10 +532,18 @@ export type Database = {
           user_id: string
         }
         Update: {
+          approved_for_patient_access?: boolean | null
           created_at?: string
+          department?: string | null
           first_name?: string | null
+          healthcare_role?:
+            | Database["public"]["Enums"]["healthcare_role"]
+            | null
           id?: string
           last_name?: string | null
+          license_expiry_date?: string | null
+          license_number?: string | null
+          license_verified?: boolean | null
           professional_title?: string | null
           registration_number?: string | null
           specialization?: string[] | null
@@ -720,14 +804,62 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      secure_patient_view: {
+        Row: {
+          created_at: string | null
+          date_of_birth: string | null
+          first_name: string | null
+          id: string | null
+          last_name: string | null
+          patient_id: string | null
+          primary_condition: string | null
+          status: string | null
+          therapist_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date_of_birth?: never
+          first_name?: never
+          id?: string | null
+          last_name?: never
+          patient_id?: string | null
+          primary_condition?: string | null
+          status?: string | null
+          therapist_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date_of_birth?: never
+          first_name?: never
+          id?: string | null
+          last_name?: never
+          patient_id?: string | null
+          primary_condition?: string | null
+          status?: string | null
+          therapist_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      is_verified_healthcare_provider: {
+        Args: { user_uuid: string }
+        Returns: boolean
+      }
     }
     Enums: {
       condition_category: "msk" | "neurological" | "respiratory"
       evidence_level: "A" | "B" | "C" | "D"
+      healthcare_role:
+        | "physiotherapist"
+        | "doctor"
+        | "nurse"
+        | "occupational_therapist"
+        | "speech_therapist"
+        | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -857,6 +989,14 @@ export const Constants = {
     Enums: {
       condition_category: ["msk", "neurological", "respiratory"],
       evidence_level: ["A", "B", "C", "D"],
+      healthcare_role: [
+        "physiotherapist",
+        "doctor",
+        "nurse",
+        "occupational_therapist",
+        "speech_therapist",
+        "admin",
+      ],
     },
   },
 } as const
