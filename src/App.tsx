@@ -19,6 +19,7 @@ import { AnalyticsDashboard } from "./components/analytics/AnalyticsDashboard";
 import { SubscriptionPage } from "./components/subscription/SubscriptionPage";
 import { SubscriptionSuccessPage } from "./components/subscription/SubscriptionSuccessPage";
 import { AdvancedFeatures } from "./components/advanced/AdvancedFeatures";
+import { HealthcareProviderVerification } from "./components/admin/HealthcareProviderVerification";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/advanced" element={<AdvancedFeatures />} />
             <Route path="/subscription" element={<SubscriptionPage />} />
             <Route path="/subscription-success" element={<SubscriptionSuccessPage />} />
+            <Route path="/verification" element={<HealthcareProviderVerification />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
