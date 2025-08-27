@@ -14,7 +14,285 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      assessment_tools: {
+        Row: {
+          condition_ids: string[] | null
+          created_at: string
+          description: string | null
+          id: string
+          instructions: string | null
+          interpretation_guide: Json | null
+          name: string
+          psychometric_properties: Json | null
+          reference_values: Json | null
+          scoring_method: string | null
+          tool_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          condition_ids?: string[] | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          instructions?: string | null
+          interpretation_guide?: Json | null
+          name: string
+          psychometric_properties?: Json | null
+          reference_values?: Json | null
+          scoring_method?: string | null
+          tool_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          condition_ids?: string[] | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          instructions?: string | null
+          interpretation_guide?: Json | null
+          name?: string
+          psychometric_properties?: Json | null
+          reference_values?: Json | null
+          scoring_method?: string | null
+          tool_type?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      conditions: {
+        Row: {
+          category: Database["public"]["Enums"]["condition_category"]
+          created_at: string
+          description: string | null
+          icd_codes: string[] | null
+          id: string
+          keywords: string[] | null
+          name: string
+          prevalence_data: Json | null
+          updated_at: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["condition_category"]
+          created_at?: string
+          description?: string | null
+          icd_codes?: string[] | null
+          id?: string
+          keywords?: string[] | null
+          name: string
+          prevalence_data?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["condition_category"]
+          created_at?: string
+          description?: string | null
+          icd_codes?: string[] | null
+          id?: string
+          keywords?: string[] | null
+          name?: string
+          prevalence_data?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      evidence: {
+        Row: {
+          abstract: string | null
+          authors: string[] | null
+          clinical_implications: string | null
+          condition_ids: string[] | null
+          created_at: string
+          doi: string | null
+          evidence_level: Database["public"]["Enums"]["evidence_level"] | null
+          grade_assessment: Json | null
+          id: string
+          is_active: boolean | null
+          journal: string | null
+          key_findings: string | null
+          pmid: string | null
+          publication_date: string | null
+          study_type: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          abstract?: string | null
+          authors?: string[] | null
+          clinical_implications?: string | null
+          condition_ids?: string[] | null
+          created_at?: string
+          doi?: string | null
+          evidence_level?: Database["public"]["Enums"]["evidence_level"] | null
+          grade_assessment?: Json | null
+          id?: string
+          is_active?: boolean | null
+          journal?: string | null
+          key_findings?: string | null
+          pmid?: string | null
+          publication_date?: string | null
+          study_type?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          abstract?: string | null
+          authors?: string[] | null
+          clinical_implications?: string | null
+          condition_ids?: string[] | null
+          created_at?: string
+          doi?: string | null
+          evidence_level?: Database["public"]["Enums"]["evidence_level"] | null
+          grade_assessment?: Json | null
+          id?: string
+          is_active?: boolean | null
+          journal?: string | null
+          key_findings?: string | null
+          pmid?: string | null
+          publication_date?: string | null
+          study_type?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          professional_title: string | null
+          registration_number: string | null
+          specialization: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          professional_title?: string | null
+          registration_number?: string | null
+          specialization?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          professional_title?: string | null
+          registration_number?: string | null
+          specialization?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      treatment_protocols: {
+        Row: {
+          condition_id: string | null
+          contraindications: string[] | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          duration_weeks: number | null
+          evidence_ids: string[] | null
+          expected_outcomes: string | null
+          frequency_per_week: number | null
+          id: string
+          is_validated: boolean | null
+          name: string
+          precautions: string[] | null
+          protocol_steps: Json | null
+          updated_at: string
+        }
+        Insert: {
+          condition_id?: string | null
+          contraindications?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration_weeks?: number | null
+          evidence_ids?: string[] | null
+          expected_outcomes?: string | null
+          frequency_per_week?: number | null
+          id?: string
+          is_validated?: boolean | null
+          name: string
+          precautions?: string[] | null
+          protocol_steps?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          condition_id?: string | null
+          contraindications?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration_weeks?: number | null
+          evidence_ids?: string[] | null
+          expected_outcomes?: string | null
+          frequency_per_week?: number | null
+          id?: string
+          is_validated?: boolean | null
+          name?: string
+          precautions?: string[] | null
+          protocol_steps?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treatment_protocols_condition_id_fkey"
+            columns: ["condition_id"]
+            isOneToOne: false
+            referencedRelation: "conditions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treatment_protocols_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      user_preferences: {
+        Row: {
+          created_at: string
+          display_preferences: Json | null
+          id: string
+          notification_settings: Json | null
+          preferred_conditions: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_preferences?: Json | null
+          id?: string
+          notification_settings?: Json | null
+          preferred_conditions?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_preferences?: Json | null
+          id?: string
+          notification_settings?: Json | null
+          preferred_conditions?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +301,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      condition_category: "msk" | "neurological" | "respiratory"
+      evidence_level: "A" | "B" | "C" | "D"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +429,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      condition_category: ["msk", "neurological", "respiratory"],
+      evidence_level: ["A", "B", "C", "D"],
+    },
   },
 } as const
