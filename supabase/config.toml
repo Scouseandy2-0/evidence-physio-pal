@@ -1,1 +1,16 @@
 project_id = "xbonrxqrzkuwxovyqrxx"
+
+[functions.pubmed-integration]
+verify_jwt = false
+
+[functions.cochrane-integration]
+verify_jwt = false
+
+[functions.pedro-integration]
+verify_jwt = false
+
+[functions.guidelines-integration]
+verify_jwt = false
+
+[functions.evidence-sync]
+verify_jwt = false
