@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSubscription } from "@/hooks/useSubscription";
+import { PremiumFeature, FreeTierBanner } from "@/components/subscription/PremiumFeature";
 import { 
   Search, 
   Bone, 
@@ -15,7 +17,9 @@ import {
   TrendingUp,
   Users,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  Lock,
+  Crown
 } from "lucide-react";
 
 interface Condition {
@@ -66,6 +70,7 @@ export const ConditionModules = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { subscribed } = useSubscription();
 
   useEffect(() => {
     fetchConditions();
@@ -117,6 +122,19 @@ export const ConditionModules = () => {
                          condition.keywords.some(keyword => keyword.toLowerCase().includes(searchTerm.toLowerCase()));
     return matchesCategory && matchesSearch;
   });
+
+  // Filter conditions based on subscription status for free tier
+  const getAccessibleConditions = (categoryConditions: Condition[]) => {
+    if (subscribed) {
+      return categoryConditions;
+    }
+    // Free users only get the first condition in each category
+    return categoryConditions.slice(0, 1);
+  };
+
+  const mskConditions = getAccessibleConditions(filteredConditions.filter(c => c.category === 'msk'));
+  const respiratoryConditions = getAccessibleConditions(filteredConditions.filter(c => c.category === 'respiratory'));
+  const neuroConditions = getAccessibleConditions(filteredConditions.filter(c => c.category === 'neurological'));
 
   const getConditionsByCategory = (category: 'msk' | 'neurological' | 'respiratory') => {
     return conditions.filter(c => c.category === category);
@@ -304,10 +322,21 @@ export const ConditionModules = () => {
             />
           </div>
           
+          <FreeTierBanner 
+            currentItem={mskConditions.length} 
+            totalItems={conditions.filter(c => c.category === 'msk').length}
+            category="MSK"
+          />
+          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredConditions.map(condition => (
+            {mskConditions.map(condition => (
               <ConditionCard key={condition.id} condition={condition} />
             ))}
+            {!subscribed && conditions.filter(c => c.category === 'msk').length > 1 && (
+              <PremiumFeature feature="additional MSK conditions">
+                <div></div>
+              </PremiumFeature>
+            )}
           </div>
         </TabsContent>
 
@@ -322,10 +351,21 @@ export const ConditionModules = () => {
             />
           </div>
           
+          <FreeTierBanner 
+            currentItem={neuroConditions.length} 
+            totalItems={conditions.filter(c => c.category === 'neurological').length}
+            category="Neurological"
+          />
+          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredConditions.map(condition => (
+            {neuroConditions.map(condition => (
               <ConditionCard key={condition.id} condition={condition} />
             ))}
+            {!subscribed && conditions.filter(c => c.category === 'neurological').length > 1 && (
+              <PremiumFeature feature="additional neurological conditions">
+                <div></div>
+              </PremiumFeature>
+            )}
           </div>
         </TabsContent>
 
@@ -340,10 +380,21 @@ export const ConditionModules = () => {
             />
           </div>
           
+          <FreeTierBanner 
+            currentItem={respiratoryConditions.length} 
+            totalItems={conditions.filter(c => c.category === 'respiratory').length}
+            category="Respiratory"
+          />
+          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredConditions.map(condition => (
+            {respiratoryConditions.map(condition => (
               <ConditionCard key={condition.id} condition={condition} />
             ))}
+            {!subscribed && conditions.filter(c => c.category === 'respiratory').length > 1 && (
+              <PremiumFeature feature="additional respiratory conditions">
+                <div></div>
+              </PremiumFeature>
+            )}
           </div>
         </TabsContent>
       </Tabs>

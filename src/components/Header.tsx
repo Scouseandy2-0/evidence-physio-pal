@@ -1,10 +1,12 @@
 import { Button } from "@/components/ui/button"
-import { Search, Menu, User, FileText, Brain, LogOut, BarChart3, Users, Share2 } from "lucide-react"
+import { Search, Menu, User, FileText, Brain, LogOut, BarChart3, Users, Share2, Crown } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
+import { useSubscription } from "@/hooks/useSubscription"
 import { Link } from "react-router-dom"
 
 export const Header = () => {
   const { user, signOut } = useAuth();
+  const { subscribed } = useSubscription();
 
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
@@ -79,6 +81,14 @@ export const Header = () => {
           <div className="flex items-center space-x-3">
             {user ? (
               <div className="flex items-center gap-2">
+                {!subscribed && (
+                  <Link to="/subscription">
+                    <Button variant="default" size="sm" className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600">
+                      <Crown className="h-4 w-4 mr-2" />
+                      Upgrade
+                    </Button>
+                  </Link>
+                )}
                 <Link to="/cpd">
                   <Button variant="outline" size="sm">
                     <User className="h-4 w-4 mr-2" />

@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { AuthPage } from "./components/auth/AuthPage";
 import { AuthProvider } from "./hooks/useAuth";
+import { SubscriptionProvider } from "./hooks/useSubscription";
 import { ConditionModules } from "./components/conditions/ConditionModules";
 import { AssessmentToolsLibrary } from "./components/conditions/AssessmentToolsLibrary";
 import { PersonalizedDashboard } from "./components/dashboard/PersonalizedDashboard";
@@ -15,13 +16,16 @@ import { CPDTracker } from "./components/cpd/CPDTracker";
 import { PatientManagement } from "./components/patients/PatientManagement";
 import { CollaborationHub } from "./components/collaboration/CollaborationHub";
 import { AnalyticsDashboard } from "./components/analytics/AnalyticsDashboard";
+import { SubscriptionPage } from "./components/subscription/SubscriptionPage";
+import { SubscriptionSuccessPage } from "./components/subscription/SubscriptionSuccessPage";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
+      <SubscriptionProvider>
+        <TooltipProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -36,11 +40,14 @@ const App = () => (
             <Route path="/patients" element={<PatientManagement />} />
             <Route path="/collaboration" element={<CollaborationHub />} />
             <Route path="/analytics" element={<AnalyticsDashboard />} />
+            <Route path="/subscription" element={<SubscriptionPage />} />
+            <Route path="/subscription-success" element={<SubscriptionSuccessPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
+      </SubscriptionProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

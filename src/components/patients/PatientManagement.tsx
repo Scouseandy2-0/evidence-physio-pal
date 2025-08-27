@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { PremiumFeature } from "@/components/subscription/PremiumFeature";
+import { useSubscription } from "@/hooks/useSubscription";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +56,17 @@ interface PatientSession {
 export const PatientManagement = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { subscribed } = useSubscription();
+  
+  if (!subscribed) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <PremiumFeature feature="Patient Management">
+          <div></div>
+        </PremiumFeature>
+      </div>
+    );
+  }
   
   const [patients, setPatients] = useState<Patient[]>([]);
   const [sessions, setSessions] = useState<PatientSession[]>([]);
