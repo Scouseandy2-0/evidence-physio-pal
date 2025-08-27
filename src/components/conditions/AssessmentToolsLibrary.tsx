@@ -27,7 +27,7 @@ interface AssessmentTool {
   psychometric_properties: any;
   reference_values: any;
   instructions: string;
-  condition_ids?: string[];
+  condition_ids: string[];
 }
 
 interface ConditionDetails {
