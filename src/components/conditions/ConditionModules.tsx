@@ -10,8 +10,8 @@ import {
   Search, 
   Bone, 
   Brain, 
-  Lungs, 
-  FileText, 
+  Heart, 
+  FileText,
   TrendingUp,
   Users,
   Calendar,
@@ -37,12 +37,13 @@ interface AssessmentTool {
   interpretation_guide: any;
   psychometric_properties: any;
   reference_values: any;
+  condition_ids?: string[];
 }
 
 const categoryIcons = {
   msk: Bone,
   neurological: Brain,
-  respiratory: Lungs
+  respiratory: Heart
 };
 
 const categoryColors = {
