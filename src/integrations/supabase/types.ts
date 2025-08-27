@@ -819,10 +819,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
-          date_of_birth?: never
-          first_name?: never
+          date_of_birth?: string | null
+          first_name?: string | null
           id?: string | null
-          last_name?: never
+          last_name?: string | null
           patient_id?: string | null
           primary_condition?: string | null
           status?: string | null
@@ -831,10 +831,10 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
-          date_of_birth?: never
-          first_name?: never
+          date_of_birth?: string | null
+          first_name?: string | null
           id?: string | null
-          last_name?: never
+          last_name?: string | null
           patient_id?: string | null
           primary_condition?: string | null
           status?: string | null
