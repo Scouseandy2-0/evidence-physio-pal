@@ -1,0 +1,612 @@
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Award,
+  Calendar,
+  Clock,
+  BookOpen,
+  Users,
+  TrendingUp,
+  Plus,
+  Download,
+  Upload,
+  CheckCircle,
+  Target,
+  BarChart3,
+  Monitor
+} from "lucide-react";
+
+interface CPDActivity {
+  id: string;
+  title: string;
+  type: 'conference' | 'course' | 'webinar' | 'workshop' | 'reading' | 'research';
+  category: string;
+  hours: number;
+  date: string;
+  status: 'completed' | 'in_progress' | 'planned';
+  evidence_url?: string;
+  reflection: string;
+  learning_outcomes: string[];
+}
+
+interface CPDGoal {
+  category: string;
+  target_hours: number;
+  completed_hours: number;
+  deadline: string;
+}
+
+export const CPDTracker = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  
+  const [activities, setActivities] = useState<CPDActivity[]>([]);
+  const [goals, setGoals] = useState<CPDGoal[]>([]);
+  const [newActivity, setNewActivity] = useState<Partial<CPDActivity>>({
+    title: '',
+    type: 'conference',
+    category: '',
+    hours: 0,
+    date: '',
+    status: 'completed',
+    reflection: '',
+    learning_outcomes: []
+  });
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  useEffect(() => {
+    loadCPDData();
+  }, []);
+
+  const loadCPDData = () => {
+    // Mock data - in real implementation, fetch from database
+    const mockActivities: CPDActivity[] = [
+      {
+        id: '1',
+        title: 'International Physiotherapy Conference 2024',
+        type: 'conference',
+        category: 'Professional Development',
+        hours: 8,
+        date: '2024-03-15',
+        status: 'completed',
+        reflection: 'Excellent conference with latest research on manual therapy techniques. Key takeaways include new evidence on dry needling effectiveness.',
+        learning_outcomes: ['Updated manual therapy techniques', 'Evidence-based dry needling', 'Patient communication strategies']
+      },
+      {
+        id: '2',
+        title: 'Advanced Neurological Rehabilitation Course',
+        type: 'course',
+        category: 'Clinical Skills',
+        hours: 16,
+        date: '2024-04-20',
+        status: 'completed',
+        reflection: 'Comprehensive course covering latest stroke rehabilitation protocols and neuroplasticity principles.',
+        learning_outcomes: ['Advanced stroke protocols', 'Neuroplasticity applications', 'Outcome measurement tools']
+      },
+      {
+        id: '3',
+        title: 'Evidence-Based Practice in MSK Conditions',
+        type: 'webinar',
+        category: 'Evidence-Based Practice',
+        hours: 2,
+        date: '2024-06-10',
+        status: 'in_progress',
+        reflection: '',
+        learning_outcomes: []
+      },
+      {
+        id: '4',
+        title: 'Advanced Manual Therapy Workshop',
+        type: 'workshop',
+        category: 'Clinical Skills',
+        hours: 12,
+        date: '2024-09-15',
+        status: 'planned',
+        reflection: '',
+        learning_outcomes: []
+      }
+    ];
+
+    const mockGoals: CPDGoal[] = [
+      {
+        category: 'Professional Development',
+        target_hours: 15,
+        completed_hours: 8,
+        deadline: '2024-12-31'
+      },
+      {
+        category: 'Clinical Skills',
+        target_hours: 20,
+        completed_hours: 16,
+        deadline: '2024-12-31'
+      },
+      {
+        category: 'Evidence-Based Practice',
+        target_hours: 10,
+        completed_hours: 2,
+        deadline: '2024-12-31'
+      }
+    ];
+
+    setActivities(mockActivities);
+    setGoals(mockGoals);
+  };
+
+  const addActivity = () => {
+    if (!newActivity.title || !newActivity.hours || !newActivity.date) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const activity: CPDActivity = {
+      id: Date.now().toString(),
+      title: newActivity.title!,
+      type: newActivity.type!,
+      category: newActivity.category!,
+      hours: newActivity.hours!,
+      date: newActivity.date!,
+      status: newActivity.status!,
+      reflection: newActivity.reflection || '',
+      learning_outcomes: newActivity.learning_outcomes || []
+    };
+
+    setActivities(prev => [...prev, activity]);
+    setNewActivity({
+      title: '',
+      type: 'conference',
+      category: '',
+      hours: 0,
+      date: '',
+      status: 'completed',
+      reflection: '',
+      learning_outcomes: []
+    });
+    setShowAddForm(false);
+
+    toast({
+      title: "Activity Added",
+      description: "CPD activity has been recorded successfully.",
+    });
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'bg-green-500';
+      case 'in_progress': return 'bg-blue-500';
+      case 'planned': return 'bg-gray-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'conference': return Users;
+      case 'course': return BookOpen;
+      case 'webinar': return Monitor;
+      case 'workshop': return Target;
+      case 'reading': return BookOpen;
+      case 'research': return TrendingUp;
+      default: return BookOpen;
+    }
+  };
+
+  const totalHours = activities
+    .filter(a => a.status === 'completed')
+    .reduce((sum, a) => sum + a.hours, 0);
+
+  const totalRequired = goals.reduce((sum, g) => sum + g.target_hours, 0);
+  const overallProgress = totalRequired > 0 ? (totalHours / totalRequired) * 100 : 0;
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold mb-2">CPD Tracker</h1>
+        <p className="text-muted-foreground max-w-2xl mx-auto">
+          Track your continuing professional development activities and maintain certification requirements.
+        </p>
+      </div>
+
+      {/* Overview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-md bg-blue-500">
+                <Award className="h-4 w-4 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Hours</p>
+                <p className="text-2xl font-bold">{totalHours}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-md bg-green-500">
+                <Target className="h-4 w-4 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Required</p>
+                <p className="text-2xl font-bold">{totalRequired}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-md bg-purple-500">
+                <Clock className="h-4 w-4 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Activities</p>
+                <p className="text-2xl font-bold">{activities.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-md bg-orange-500">
+                <BarChart3 className="h-4 w-4 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Progress</p>
+                <p className="text-2xl font-bold">{Math.round(overallProgress)}%</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="activities">Activities</TabsTrigger>
+          <TabsTrigger value="goals">Goals</TabsTrigger>
+          <TabsTrigger value="reports">Reports</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Progress by Category */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Progress by Category</CardTitle>
+                <CardDescription>Track your progress towards CPD goals</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {goals.map(goal => {
+                  const progress = (goal.completed_hours / goal.target_hours) * 100;
+                  return (
+                    <div key={goal.category} className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium">{goal.category}</span>
+                        <span>{goal.completed_hours}/{goal.target_hours} hours</span>
+                      </div>
+                      <Progress value={progress} className="h-2" />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>{Math.round(progress)}% complete</span>
+                        <span>Due: {new Date(goal.deadline).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+
+            {/* Recent Activities */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Activities</CardTitle>
+                <CardDescription>Your latest CPD activities</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {activities.slice(0, 5).map(activity => {
+                    const Icon = getTypeIcon(activity.type);
+                    return (
+                      <div key={activity.id} className="flex items-center gap-3 p-3 border rounded">
+                        <div className={`p-2 rounded-md ${getStatusColor(activity.status)}`}>
+                          <Icon className="h-4 w-4 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-sm">{activity.title}</h4>
+                          <p className="text-xs text-muted-foreground">
+                            {activity.hours} hours • {new Date(activity.date).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <Badge variant={
+                          activity.status === 'completed' ? 'default' : 
+                          activity.status === 'in_progress' ? 'secondary' : 'outline'
+                        }>
+                          {activity.status.replace('_', ' ')}
+                        </Badge>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="activities" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">CPD Activities</h2>
+            <div className="space-x-2">
+              <Button variant="outline">
+                <Upload className="h-4 w-4 mr-2" />
+                Import
+              </Button>
+              <Button onClick={() => setShowAddForm(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Activity
+              </Button>
+            </div>
+          </div>
+
+          {showAddForm && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Add CPD Activity</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Title</Label>
+                    <Input
+                      value={newActivity.title}
+                      onChange={(e) => setNewActivity(prev => ({ ...prev, title: e.target.value }))}
+                      placeholder="Activity title"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Type</Label>
+                    <Select
+                      value={newActivity.type}
+                      onValueChange={(value) => setNewActivity(prev => ({ ...prev, type: value as any }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="conference">Conference</SelectItem>
+                        <SelectItem value="course">Course</SelectItem>
+                        <SelectItem value="webinar">Webinar</SelectItem>
+                        <SelectItem value="workshop">Workshop</SelectItem>
+                        <SelectItem value="reading">Reading</SelectItem>
+                        <SelectItem value="research">Research</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Category</Label>
+                    <Input
+                      value={newActivity.category}
+                      onChange={(e) => setNewActivity(prev => ({ ...prev, category: e.target.value }))}
+                      placeholder="e.g., Clinical Skills"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Hours</Label>
+                    <Input
+                      type="number"
+                      value={newActivity.hours}
+                      onChange={(e) => setNewActivity(prev => ({ ...prev, hours: parseFloat(e.target.value) }))}
+                      min="0"
+                      step="0.5"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Date</Label>
+                    <Input
+                      type="date"
+                      value={newActivity.date}
+                      onChange={(e) => setNewActivity(prev => ({ ...prev, date: e.target.value }))}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Status</Label>
+                    <Select
+                      value={newActivity.status}
+                      onValueChange={(value) => setNewActivity(prev => ({ ...prev, status: value as any }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="planned">Planned</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Reflection</Label>
+                  <Textarea
+                    value={newActivity.reflection}
+                    onChange={(e) => setNewActivity(prev => ({ ...prev, reflection: e.target.value }))}
+                    placeholder="Reflect on your learning and key takeaways..."
+                    rows={3}
+                  />
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button onClick={addActivity}>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Add Activity
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowAddForm(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="grid grid-cols-1 gap-4">
+            {activities.map(activity => {
+              const Icon = getTypeIcon(activity.type);
+              return (
+                <Card key={activity.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-md ${getStatusColor(activity.status)}`}>
+                          <Icon className="h-4 w-4 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-medium">{activity.title}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {activity.category} • {activity.hours} hours • {new Date(activity.date).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant={
+                        activity.status === 'completed' ? 'default' : 
+                        activity.status === 'in_progress' ? 'secondary' : 'outline'
+                      }>
+                        {activity.status.replace('_', ' ')}
+                      </Badge>
+                    </div>
+                    
+                    {activity.reflection && (
+                      <div className="mb-3">
+                        <h4 className="font-medium text-sm mb-1">Reflection:</h4>
+                        <p className="text-sm text-muted-foreground">{activity.reflection}</p>
+                      </div>
+                    )}
+                    
+                    {activity.learning_outcomes.length > 0 && (
+                      <div>
+                        <h4 className="font-medium text-sm mb-1">Learning Outcomes:</h4>
+                        <div className="flex flex-wrap gap-1">
+                          {activity.learning_outcomes.map(outcome => (
+                            <Badge key={outcome} variant="outline" className="text-xs">
+                              {outcome}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="goals" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>CPD Goals & Requirements</CardTitle>
+              <CardDescription>Set and track your professional development goals</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {goals.map(goal => {
+                  const progress = (goal.completed_hours / goal.target_hours) * 100;
+                  const remaining = goal.target_hours - goal.completed_hours;
+                  
+                  return (
+                    <div key={goal.category} className="p-4 border rounded-lg">
+                      <div className="flex justify-between items-start mb-3">
+                        <h3 className="font-medium">{goal.category}</h3>
+                        <Badge variant={progress >= 100 ? "default" : "secondary"}>
+                          {Math.round(progress)}% Complete
+                        </Badge>
+                      </div>
+                      
+                      <div className="space-y-2 mb-3">
+                        <div className="flex justify-between text-sm">
+                          <span>Progress: {goal.completed_hours}/{goal.target_hours} hours</span>
+                          <span>Remaining: {Math.max(0, remaining)} hours</span>
+                        </div>
+                        <Progress value={progress} className="h-2" />
+                      </div>
+                      
+                      <div className="flex justify-between items-center text-sm text-muted-foreground">
+                        <span>Deadline: {new Date(goal.deadline).toLocaleDateString()}</span>
+                        <span>
+                          {remaining > 0 ? `${remaining} hours needed` : 'Goal achieved!'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="reports" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>CPD Reports</CardTitle>
+              <CardDescription>Generate and export your CPD records</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Button variant="outline" className="h-20">
+                  <div className="text-center">
+                    <Download className="h-6 w-6 mx-auto mb-2" />
+                    <div className="text-sm">Annual CPD Report</div>
+                  </div>
+                </Button>
+                
+                <Button variant="outline" className="h-20">
+                  <div className="text-center">
+                    <Calendar className="h-6 w-6 mx-auto mb-2" />
+                    <div className="text-sm">Monthly Summary</div>
+                  </div>
+                </Button>
+                
+                <Button variant="outline" className="h-20">
+                  <div className="text-center">
+                    <BarChart3 className="h-6 w-6 mx-auto mb-2" />
+                    <div className="text-sm">Progress Chart</div>
+                  </div>
+                </Button>
+                
+                <Button variant="outline" className="h-20">
+                  <div className="text-center">
+                    <CheckCircle className="h-6 w-6 mx-auto mb-2" />
+                    <div className="text-sm">Compliance Report</div>
+                  </div>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};

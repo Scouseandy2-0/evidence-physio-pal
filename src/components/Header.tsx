@@ -25,20 +25,30 @@ export const Header = () => {
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
+            {user && (
+              <Link to="/dashboard">
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                  <User className="h-4 w-4 mr-2" />
+                  Dashboard
+                </Button>
+              </Link>
+            )}
             <Link to="/conditions">
               <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
                 <Search className="h-4 w-4 mr-2" />
-                Browse Conditions
+                Conditions
               </Button>
             </Link>
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <FileText className="h-4 w-4 mr-2" />
-              Evidence Library
-            </Button>
+            <Link to="/protocols">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                <FileText className="h-4 w-4 mr-2" />
+                Protocols
+              </Button>
+            </Link>
             <Link to="/assessments">
               <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
                 <User className="h-4 w-4 mr-2" />
-                Assessment Tools
+                Assessments
               </Button>
             </Link>
           </nav>
@@ -47,10 +57,12 @@ export const Header = () => {
           <div className="flex items-center space-x-3">
             {user ? (
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="hidden sm:flex">
-                  <User className="h-4 w-4 mr-2" />
-                  Profile
-                </Button>
+                <Link to="/cpd">
+                  <Button variant="outline" size="sm">
+                    <User className="h-4 w-4 mr-2" />
+                    CPD
+                  </Button>
+                </Link>
                 <Button variant="outline" size="sm" onClick={signOut}>
                   <LogOut className="h-4 w-4 mr-2" />
                   Sign Out
