@@ -853,15 +853,6 @@ export type Database = {
         Args: { approved?: boolean; target_user_id: string }
         Returns: boolean
       }
-      assign_healthcare_role: {
-        Args: {
-          department?: string
-          license_number?: string
-          new_role: Database["public"]["Enums"]["healthcare_role"]
-          target_user_id: string
-        }
-        Returns: boolean
-      }
       assign_patient_to_therapist: {
         Args: {
           assignment_reason?: string
