@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
 import { 
   ClipboardList,
   Target,
@@ -228,10 +229,12 @@ export const AssessmentToolsLibrary = () => {
               <BookOpen className="h-4 w-4 mr-2" />
               View Details
             </Button>
-            <Button variant="default" size="sm" className="flex-1">
-              <Activity className="h-4 w-4 mr-2" />
-              Use Tool
-            </Button>
+            <Link to={`/assessment/${tool.id}`} className="flex-1">
+              <Button variant="default" size="sm" className="w-full">
+                <Activity className="h-4 w-4 mr-2" />
+                Use Tool
+              </Button>
+            </Link>
           </div>
         </CardContent>
       </Card>
