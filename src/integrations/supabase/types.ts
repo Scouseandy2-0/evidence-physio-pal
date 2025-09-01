@@ -883,6 +883,19 @@ export type Database = {
         Args: { user_id?: string }
         Returns: boolean
       }
+      is_verified_admin: {
+        Args: { user_id?: string }
+        Returns: boolean
+      }
+      secure_assign_healthcare_role: {
+        Args: {
+          department?: string
+          license_number?: string
+          new_role: Database["public"]["Enums"]["healthcare_role"]
+          target_user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       admin_role: "super_admin" | "admin" | "moderator"
