@@ -212,8 +212,26 @@ export const ConditionModules = () => {
             </div>
           )}
 
-          <Button variant="outline" className="w-full mt-4">
-            View Details
+          <Button 
+            variant="outline" 
+            className="w-full mt-4"
+            onClick={() => {
+              // Premium interactive features
+              if (subscribed) {
+                toast({
+                  title: "Condition Details",
+                  description: `Accessing detailed information for ${condition.name}`,
+                });
+              } else {
+                toast({
+                  title: "Premium Feature",
+                  description: "Upgrade to Premium to access detailed condition information",
+                  variant: "destructive",
+                });
+              }
+            }}
+          >
+            {subscribed ? "View Details" : "Upgrade for Details"}
           </Button>
         </CardContent>
       </Card>

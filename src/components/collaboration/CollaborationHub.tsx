@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useSubscription } from "@/hooks/useSubscription";
+import { PremiumFeature } from "@/components/subscription/PremiumFeature";
 import {
   Share2,
   Users,
@@ -59,6 +61,7 @@ interface ProtocolReview {
 export const CollaborationHub = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { subscribed } = useSubscription();
   
   const [sharedProtocols, setSharedProtocols] = useState<SharedProtocol[]>([]);
   const [myProtocols, setMyProtocols] = useState<any[]>([]);
@@ -243,6 +246,39 @@ export const CollaborationHub = () => {
       description: "Share link copied to clipboard",
     });
   };
+
+  if (!subscribed) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <PremiumFeature feature="Collaboration Hub" showUpgrade={true}>
+          <div className="text-center py-12">
+            <Share2 className="h-16 w-16 mx-auto mb-6 text-muted-foreground" />
+            <h2 className="text-2xl font-bold mb-4">Collaboration Hub</h2>
+            <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
+              Share protocols, collaborate with peers, and participate in evidence-based practice through peer review.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto mb-8">
+              <div className="p-4 border rounded-lg">
+                <Share2 className="h-8 w-8 mx-auto mb-2 text-primary" />
+                <h3 className="font-semibold mb-2">Protocol Sharing</h3>
+                <p className="text-sm text-muted-foreground">Share treatment protocols with colleagues and the community</p>
+              </div>
+              <div className="p-4 border rounded-lg">
+                <Users className="h-8 w-8 mx-auto mb-2 text-primary" />
+                <h3 className="font-semibold mb-2">Peer Review</h3>
+                <p className="text-sm text-muted-foreground">Get expert feedback on your clinical protocols</p>
+              </div>
+              <div className="p-4 border rounded-lg">
+                <Star className="h-8 w-8 mx-auto mb-2 text-primary" />
+                <h3 className="font-semibold mb-2">Evidence Building</h3>
+                <p className="text-sm text-muted-foreground">Contribute to evidence-based practice standards</p>
+              </div>
+            </div>
+          </div>
+        </PremiumFeature>
+      </div>
+    );
+  }
 
   if (loading) {
     return <div className="flex items-center justify-center h-64">Loading collaboration data...</div>;

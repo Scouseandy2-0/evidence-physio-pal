@@ -54,8 +54,36 @@ export const TreatmentProtocolBuilder = () => {
   if (!subscribed) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <PremiumFeature feature="the Treatment Protocol Builder">
-          <div></div>
+        <PremiumFeature feature="the Treatment Protocol Builder" showUpgrade={true}>
+          <div className="text-center py-12">
+            <Target className="h-16 w-16 mx-auto mb-6 text-muted-foreground" />
+            <h2 className="text-2xl font-bold mb-4">Treatment Protocol Builder</h2>
+            <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
+              Create structured, evidence-based treatment protocols with phased exercises and outcome measures.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto mb-8">
+              <div className="p-4 border rounded-lg">
+                <Clock className="h-8 w-8 mx-auto mb-2 text-primary" />
+                <h3 className="font-semibold mb-2">Phased Protocols</h3>
+                <p className="text-sm text-muted-foreground">Structure treatments in progressive phases</p>
+              </div>
+              <div className="p-4 border rounded-lg">
+                <Plus className="h-8 w-8 mx-auto mb-2 text-primary" />
+                <h3 className="font-semibold mb-2">Exercise Library</h3>
+                <p className="text-sm text-muted-foreground">Access evidence-based exercise recommendations</p>
+              </div>
+              <div className="p-4 border rounded-lg">
+                <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-primary" />
+                <h3 className="font-semibold mb-2">Safety Tracking</h3>
+                <p className="text-sm text-muted-foreground">Include contraindications and precautions</p>
+              </div>
+              <div className="p-4 border rounded-lg">
+                <CheckCircle className="h-8 w-8 mx-auto mb-2 text-primary" />
+                <h3 className="font-semibold mb-2">Outcome Measures</h3>
+                <p className="text-sm text-muted-foreground">Define expected outcomes and progress markers</p>
+              </div>
+            </div>
+          </div>
         </PremiumFeature>
       </div>
     );

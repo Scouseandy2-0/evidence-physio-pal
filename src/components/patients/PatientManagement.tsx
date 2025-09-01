@@ -61,8 +61,31 @@ export const PatientManagement = () => {
   if (!subscribed) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <PremiumFeature feature="Patient Management">
-          <div></div>
+        <PremiumFeature feature="Patient Management" showUpgrade={true}>
+          <div className="text-center py-12">
+            <Users className="h-16 w-16 mx-auto mb-6 text-muted-foreground" />
+            <h2 className="text-2xl font-bold mb-4">Patient Management System</h2>
+            <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
+              Manage your patient caseload with comprehensive tracking, session recording, and outcome monitoring.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto mb-8">
+              <div className="p-4 border rounded-lg">
+                <FileText className="h-8 w-8 mx-auto mb-2 text-primary" />
+                <h3 className="font-semibold mb-2">Patient Records</h3>
+                <p className="text-sm text-muted-foreground">Secure digital patient files with treatment history</p>
+              </div>
+              <div className="p-4 border rounded-lg">
+                <Calendar className="h-8 w-8 mx-auto mb-2 text-primary" />
+                <h3 className="font-semibold mb-2">Session Tracking</h3>
+                <p className="text-sm text-muted-foreground">Log sessions, interventions, and outcomes</p>
+              </div>
+              <div className="p-4 border rounded-lg">
+                <TrendingUp className="h-8 w-8 mx-auto mb-2 text-primary" />
+                <h3 className="font-semibold mb-2">Progress Monitoring</h3>
+                <p className="text-sm text-muted-foreground">Track patient progress and treatment effectiveness</p>
+              </div>
+            </div>
+          </div>
         </PremiumFeature>
       </div>
     );

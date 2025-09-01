@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, TrendingUp, Users, Clock, Target, Award } from "lucide-react";
+import { BarChart3, TrendingUp, Users, Clock, Target, Award, CheckCircle } from "lucide-react";
 import { PremiumFeature } from "@/components/subscription/PremiumFeature";
 
 interface AnalyticsData {
@@ -166,13 +166,27 @@ export const EnhancedAnalytics = () => {
 
   if (!subscribed) {
     return (
-      <PremiumFeature feature="advanced practice analytics">
+      <PremiumFeature feature="advanced practice analytics" showUpgrade={true}>
         <div className="text-center py-8">
           <BarChart3 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
           <h3 className="text-lg font-semibold mb-2">Advanced Practice Analytics</h3>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mb-4">
             Track patient outcomes, intervention effectiveness, and practice trends
           </p>
+          <div className="space-y-2">
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <CheckCircle className="h-4 w-4" />
+              <span>Real-time session tracking</span>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <CheckCircle className="h-4 w-4" />
+              <span>Intervention effectiveness analysis</span>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <CheckCircle className="h-4 w-4" />
+              <span>Patient outcome reporting</span>
+            </div>
+          </div>
         </div>
       </PremiumFeature>
     );

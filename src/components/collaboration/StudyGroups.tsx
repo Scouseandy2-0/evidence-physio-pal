@@ -6,6 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
+import { PremiumFeature } from "@/components/subscription/PremiumFeature";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, Plus, MessageSquare, Calendar, UserPlus, Crown } from "lucide-react";
 
@@ -35,6 +37,7 @@ interface StudyGroupMember {
 export const StudyGroups = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { subscribed } = useSubscription();
   const [studyGroups, setStudyGroups] = useState<StudyGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -208,6 +211,34 @@ export const StudyGroups = () => {
       });
     }
   };
+
+  if (!subscribed) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <PremiumFeature feature="Study Groups" showUpgrade={true}>
+          <div className="text-center py-12">
+            <Users className="h-16 w-16 mx-auto mb-6 text-muted-foreground" />
+            <h2 className="text-2xl font-bold mb-4">Study Groups</h2>
+            <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
+              Join collaborative learning groups and professional development communities.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto mb-8">
+              <div className="p-4 border rounded-lg">
+                <Users className="h-8 w-8 mx-auto mb-2 text-primary" />
+                <h3 className="font-semibold mb-2">Group Learning</h3>
+                <p className="text-sm text-muted-foreground">Collaborate with peers in specialized study groups</p>
+              </div>
+              <div className="p-4 border rounded-lg">
+                <MessageSquare className="h-8 w-8 mx-auto mb-2 text-primary" />
+                <h3 className="font-semibold mb-2">Discussion Forums</h3>
+                <p className="text-sm text-muted-foreground">Engage in professional discussions and knowledge sharing</p>
+              </div>
+            </div>
+          </div>
+        </PremiumFeature>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
