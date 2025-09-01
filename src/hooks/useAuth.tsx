@@ -17,27 +17,53 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('useAuth: Setting up authentication context');
+    
+    // Check for existing session first
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      console.log('useAuth: Initial session check', { session: !!session, error });
+      
+      if (error) {
+        console.error('useAuth: Session check error:', error);
+      }
+      
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    }).catch((error) => {
+      console.error('useAuth: Session check failed:', error);
+      setLoading(false);
+    });
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('useAuth: Auth state changed', { event, session: !!session });
+        
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log('useAuth: Cleaning up auth context listener');
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    console.log('useAuth: Signing out user');
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('useAuth: Sign out error:', error);
+      } else {
+        console.log('useAuth: Sign out successful');
+      }
+    } catch (error) {
+      console.error('useAuth: Sign out exception:', error);
+    }
   };
 
   return (

@@ -19,32 +19,62 @@ export const AuthPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setAuthLoading(false);
-        
-        if (session?.user) {
-          navigate("/");
-        }
+    console.log('AuthPage: Setting up authentication listener');
+    
+    // Check for existing session first
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      console.log('AuthPage: Initial session check', { session: !!session, error });
+      
+      if (error) {
+        console.error('AuthPage: Session check error:', error);
+        toast({
+          title: "Authentication Error",
+          description: "Failed to check authentication status. Please try refreshing the page.",
+          variant: "destructive",
+        });
       }
-    );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+      
       setSession(session);
       setUser(session?.user ?? null);
       setAuthLoading(false);
       
       if (session?.user) {
+        console.log('AuthPage: User authenticated, redirecting to home');
         navigate("/");
       }
+    }).catch((error) => {
+      console.error('AuthPage: Session check failed:', error);
+      setAuthLoading(false);
+      toast({
+        title: "Authentication Error",
+        description: "Failed to initialize authentication. Please try refreshing the page.",
+        variant: "destructive",
+      });
     });
 
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log('AuthPage: Auth state changed', { event, session: !!session });
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        setAuthLoading(false);
+        
+        if (event === 'SIGNED_IN' && session?.user) {
+          console.log('AuthPage: User signed in, redirecting to home');
+          navigate("/");
+        } else if (event === 'SIGNED_OUT') {
+          console.log('AuthPage: User signed out');
+        }
+      }
+    );
+
+    return () => {
+      console.log('AuthPage: Cleaning up auth listener');
+      subscription.unsubscribe();
+    };
+  }, [navigate, toast]);
 
   const handleSignUp = async (formData: FormData) => {
     setLoading(true);
@@ -54,31 +84,45 @@ export const AuthPage = () => {
     const lastName = formData.get("lastName") as string;
     const professionalTitle = formData.get("professionalTitle") as string;
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/`,
-        data: {
-          first_name: firstName,
-          last_name: lastName,
-          professional_title: professionalTitle,
-        },
-      },
-    });
+    console.log('AuthPage: Attempting sign up', { email, firstName, lastName });
 
-    if (error) {
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            professional_title: professionalTitle,
+          },
+        },
+      });
+
+      if (error) {
+        console.error('AuthPage: Sign up error:', error);
+        toast({
+          title: "Sign up failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        console.log('AuthPage: Sign up successful');
+        toast({
+          title: "Sign up successful!",
+          description: "Please check your email to confirm your account.",
+        });
+      }
+    } catch (error) {
+      console.error('AuthPage: Sign up exception:', error);
       toast({
         title: "Sign up failed",
-        description: error.message,
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Sign up successful!",
-        description: "Please check your email to confirm your account.",
-      });
     }
+    
     setLoading(false);
   };
 
@@ -87,18 +131,33 @@ export const AuthPage = () => {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    console.log('AuthPage: Attempting sign in', { email });
 
-    if (error) {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        console.error('AuthPage: Sign in error:', error);
+        toast({
+          title: "Sign in failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        console.log('AuthPage: Sign in successful');
+      }
+    } catch (error) {
+      console.error('AuthPage: Sign in exception:', error);
       toast({
         title: "Sign in failed",
-        description: error.message,
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     }
+    
     setLoading(false);
   };
 

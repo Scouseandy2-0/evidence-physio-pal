@@ -44,20 +44,28 @@ export const RealDataPopulator = () => {
   }, []);
 
   const checkExistingData = async () => {
+    console.log('RealDataPopulator: Checking existing evidence data');
     try {
-      const { data, error } = await supabase
+      const { count, error } = await supabase
         .from('evidence')
-        .select('id', { count: 'exact' });
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true);
       
-      if (!error) {
-        setTotalEvidenceCount(data?.length || 0);
+      if (error) {
+        console.error('RealDataPopulator: Database query error:', error);
+        throw error;
       }
+      
+      console.log('RealDataPopulator: Found evidence count:', count);
+      setTotalEvidenceCount(count || 0);
     } catch (error) {
-      console.error('Error checking existing data:', error);
+      console.error('RealDataPopulator: Error checking existing data:', error);
+      setTotalEvidenceCount(0);
     }
   };
 
   const populateRealData = async () => {
+    console.log('RealDataPopulator: Starting data population');
     setIsPopulating(true);
     setProgress(0);
     setResults([]);
@@ -67,35 +75,41 @@ export const RealDataPopulator = () => {
 
     try {
       for (const searchTerm of searchTerms) {
+        console.log(`RealDataPopulator: Processing search term: ${searchTerm}`);
         setCurrentOperation(`Processing: ${searchTerm}`);
         
         for (const source of sources) {
-          setCurrentOperation(`${searchTerm} - ${source.name}`);
+          const operationMsg = `${searchTerm} - ${source.name}`;
+          setCurrentOperation(operationMsg);
+          console.log(`RealDataPopulator: ${operationMsg}`);
           
           try {
             const { data, error } = await supabase.functions.invoke(`${source.id}-integration`, {
               body: {
                 searchTerms: searchTerm,
                 condition: searchTerm,
-                maxResults: 4 // Increased for better data volume
+                maxResults: 6 // Increased for better data volume
               }
             });
+
+            if (error) {
+              console.error(`RealDataPopulator: Edge function error for ${source.name}:`, error);
+            }
+
+            const itemCount = error ? 0 : (data?.articles?.length || data?.reviews?.length || data?.studies?.length || data?.guidelines?.length || data?.processedArticles?.length || data?.processedStudies?.length || 0);
+            console.log(`RealDataPopulator: ${source.name} returned ${itemCount} items for "${searchTerm}"`);
 
             const newResult = {
               source: source.name,
               term: searchTerm,
-              success: !error,
-              count: error ? 0 : (data?.articles?.length || data?.reviews?.length || data?.studies?.length || data?.guidelines?.length || 0)
+              success: !error && itemCount > 0,
+              count: itemCount
             };
 
             setResults(prev => [...prev, newResult]);
-
-            if (error) {
-              console.error(`Error with ${source.name} for ${searchTerm}:`, error);
-            }
             
           } catch (error) {
-            console.error(`Failed ${source.name} for ${searchTerm}:`, error);
+            console.error(`RealDataPopulator: Exception with ${source.name} for ${searchTerm}:`, error);
             setResults(prev => [...prev, {
               source: source.name,
               term: searchTerm,
@@ -108,22 +122,24 @@ export const RealDataPopulator = () => {
           setProgress((completedOperations / totalOperations) * 100);
           
           // Small delay to avoid overwhelming APIs
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 1500));
         }
         
         // Slightly longer delay between search terms
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 2500));
       }
       
       // Check final count
       await checkExistingData();
       
+      console.log('RealDataPopulator: Data population complete');
       toast({
         title: "Data Population Complete",
         description: `Successfully populated evidence database with real data from external sources`,
       });
       
     } catch (error: any) {
+      console.error('RealDataPopulator: Population failed:', error);
       toast({
         title: "Population Error",
         description: error.message || "Failed to populate real data",
