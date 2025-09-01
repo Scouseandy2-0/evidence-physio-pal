@@ -24,7 +24,12 @@ export const RealDataPopulator = () => {
     "manual therapy",
     "exercise therapy",
     "spinal cord injury",
-    "COPD rehabilitation"
+    "COPD rehabilitation",
+    "neck pain",
+    "hip osteoarthritis",
+    "vestibular rehabilitation",
+    "cardiac rehabilitation",
+    "neuroplasticity"
   ];
 
   const sources = [
@@ -71,7 +76,8 @@ export const RealDataPopulator = () => {
             const { data, error } = await supabase.functions.invoke(`${source.id}-integration`, {
               body: {
                 searchTerms: searchTerm,
-                maxResults: 3 // Smaller batches for better performance
+                condition: searchTerm,
+                maxResults: 4 // Increased for better data volume
               }
             });
 
