@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Award,
   Calendar,
@@ -29,21 +30,30 @@ import {
 interface CPDActivity {
   id: string;
   title: string;
-  type: 'conference' | 'course' | 'webinar' | 'workshop' | 'reading' | 'research';
+  activity_type: 'conference' | 'course' | 'webinar' | 'workshop' | 'reading' | 'research';
   category: string;
-  hours: number;
-  date: string;
-  status: 'completed' | 'in_progress' | 'planned';
-  evidence_url?: string;
-  reflection: string;
-  learning_outcomes: string[];
+  hours_claimed: number;
+  date_completed: string;
+  status?: 'completed' | 'in_progress' | 'planned';
+  certificate_url?: string;
+  reflection?: string;
+  learning_outcomes?: string[];
+  provider?: string;
+  description?: string;
+  cpd_points?: number;
+  verification_method?: string;
+  notes?: string;
 }
 
-interface CPDGoal {
-  category: string;
-  target_hours: number;
-  completed_hours: number;
-  deadline: string;
+interface CPDRequirement {
+  id: string;
+  professional_body: string;
+  region: string;
+  healthcare_role: string;
+  period_years: number;
+  required_hours: number;
+  category_requirements: any;
+  specific_requirements: string[];
 }
 
 export const CPDTracker = () => {
@@ -51,13 +61,13 @@ export const CPDTracker = () => {
   const { toast } = useToast();
   
   const [activities, setActivities] = useState<CPDActivity[]>([]);
-  const [goals, setGoals] = useState<CPDGoal[]>([]);
+  const [requirements, setRequirements] = useState<CPDRequirement[]>([]);
   const [newActivity, setNewActivity] = useState<Partial<CPDActivity>>({
     title: '',
-    type: 'conference',
+    activity_type: 'conference',
     category: '',
-    hours: 0,
-    date: '',
+    hours_claimed: 0,
+    date_completed: '',
     status: 'completed',
     reflection: '',
     learning_outcomes: []
@@ -65,85 +75,52 @@ export const CPDTracker = () => {
   const [showAddForm, setShowAddForm] = useState(false);
 
   useEffect(() => {
-    loadCPDData();
-  }, []);
+    if (user) {
+      loadCPDData();
+    }
+  }, [user]);
 
-  const loadCPDData = () => {
-    // Mock data - in real implementation, fetch from database
-    const mockActivities: CPDActivity[] = [
-      {
-        id: '1',
-        title: 'International Physiotherapy Conference 2024',
-        type: 'conference',
-        category: 'Professional Development',
-        hours: 8,
-        date: '2024-03-15',
-        status: 'completed',
-        reflection: 'Excellent conference with latest research on manual therapy techniques. Key takeaways include new evidence on dry needling effectiveness.',
-        learning_outcomes: ['Updated manual therapy techniques', 'Evidence-based dry needling', 'Patient communication strategies']
-      },
-      {
-        id: '2',
-        title: 'Advanced Neurological Rehabilitation Course',
-        type: 'course',
-        category: 'Clinical Skills',
-        hours: 16,
-        date: '2024-04-20',
-        status: 'completed',
-        reflection: 'Comprehensive course covering latest stroke rehabilitation protocols and neuroplasticity principles.',
-        learning_outcomes: ['Advanced stroke protocols', 'Neuroplasticity applications', 'Outcome measurement tools']
-      },
-      {
-        id: '3',
-        title: 'Evidence-Based Practice in MSK Conditions',
-        type: 'webinar',
-        category: 'Evidence-Based Practice',
-        hours: 2,
-        date: '2024-06-10',
-        status: 'in_progress',
-        reflection: '',
-        learning_outcomes: []
-      },
-      {
-        id: '4',
-        title: 'Advanced Manual Therapy Workshop',
-        type: 'workshop',
-        category: 'Clinical Skills',
-        hours: 12,
-        date: '2024-09-15',
-        status: 'planned',
-        reflection: '',
-        learning_outcomes: []
-      }
-    ];
+  const loadCPDData = async () => {
+    try {
+      // Fetch user's CPD activities
+      const { data: activitiesData, error: activitiesError } = await supabase
+        .from('cpd_activities')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('date_completed', { ascending: false });
 
-    const mockGoals: CPDGoal[] = [
-      {
-        category: 'Professional Development',
-        target_hours: 15,
-        completed_hours: 8,
-        deadline: '2024-12-31'
-      },
-      {
-        category: 'Clinical Skills',
-        target_hours: 20,
-        completed_hours: 16,
-        deadline: '2024-12-31'
-      },
-      {
-        category: 'Evidence-Based Practice',
-        target_hours: 10,
-        completed_hours: 2,
-        deadline: '2024-12-31'
-      }
-    ];
+      if (activitiesError) throw activitiesError;
 
-    setActivities(mockActivities);
-    setGoals(mockGoals);
+      setActivities(activitiesData?.map(activity => ({
+        ...activity,
+        category: activity.category || 'General'
+      })) || []);
+      
+      // Create mock requirements for now since the table might not be populated yet
+      const mockRequirements: CPDRequirement[] = [
+        {
+          id: '1',
+          professional_body: 'APTA',
+          region: 'USA',
+          healthcare_role: 'physiotherapist',
+          period_years: 2,
+          required_hours: 30,
+          category_requirements: {},
+          specific_requirements: ['Clinical Practice', 'Ethics', 'Research']
+        }
+      ];
+      setRequirements(mockRequirements);
+    } catch (error: any) {
+      toast({
+        title: "Error loading CPD data",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
-  const addActivity = () => {
-    if (!newActivity.title || !newActivity.hours || !newActivity.date) {
+  const addActivity = async () => {
+    if (!newActivity.title || !newActivity.hours_claimed || !newActivity.date_completed) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
@@ -152,35 +129,53 @@ export const CPDTracker = () => {
       return;
     }
 
-    const activity: CPDActivity = {
-      id: Date.now().toString(),
-      title: newActivity.title!,
-      type: newActivity.type!,
-      category: newActivity.category!,
-      hours: newActivity.hours!,
-      date: newActivity.date!,
-      status: newActivity.status!,
-      reflection: newActivity.reflection || '',
-      learning_outcomes: newActivity.learning_outcomes || []
-    };
+    try {
+      const { error } = await supabase
+        .from('cpd_activities')
+        .insert({
+          user_id: user?.id,
+          title: newActivity.title!,
+          activity_type: newActivity.activity_type!,
+          category: newActivity.category!,
+          hours_claimed: newActivity.hours_claimed!,
+          date_completed: newActivity.date_completed!,
+          description: newActivity.description,
+          reflection: newActivity.reflection,
+          learning_outcomes: newActivity.learning_outcomes,
+          provider: newActivity.provider,
+          certificate_url: newActivity.certificate_url,
+          verification_method: newActivity.verification_method,
+          cpd_points: newActivity.cpd_points,
+          notes: newActivity.notes
+        });
 
-    setActivities(prev => [...prev, activity]);
-    setNewActivity({
-      title: '',
-      type: 'conference',
-      category: '',
-      hours: 0,
-      date: '',
-      status: 'completed',
-      reflection: '',
-      learning_outcomes: []
-    });
-    setShowAddForm(false);
+      if (error) throw error;
 
-    toast({
-      title: "Activity Added",
-      description: "CPD activity has been recorded successfully.",
-    });
+      setNewActivity({
+        title: '',
+        activity_type: 'conference',
+        category: '',
+        hours_claimed: 0,
+        date_completed: '',
+        status: 'completed',
+        reflection: '',
+        learning_outcomes: []
+      });
+      setShowAddForm(false);
+
+      toast({
+        title: "Activity Added",
+        description: "CPD activity has been recorded successfully.",
+      });
+
+      loadCPDData();
+    } catch (error: any) {
+      toast({
+        title: "Error adding activity",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -204,11 +199,8 @@ export const CPDTracker = () => {
     }
   };
 
-  const totalHours = activities
-    .filter(a => a.status === 'completed')
-    .reduce((sum, a) => sum + a.hours, 0);
-
-  const totalRequired = goals.reduce((sum, g) => sum + g.target_hours, 0);
+  const totalHours = activities.reduce((sum, a) => sum + a.hours_claimed, 0);
+  const totalRequired = requirements.reduce((sum, r) => sum + r.required_hours, 0);
   const overallProgress = totalRequired > 0 ? (totalHours / totalRequired) * 100 : 0;
 
   return (
@@ -296,18 +288,19 @@ export const CPDTracker = () => {
                 <CardDescription>Track your progress towards CPD goals</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {goals.map(goal => {
-                  const progress = (goal.completed_hours / goal.target_hours) * 100;
+                {requirements.map(requirement => {
+                  const completedHours = activities.reduce((sum, a) => sum + a.hours_claimed, 0);
+                  const progress = (completedHours / requirement.required_hours) * 100;
                   return (
-                    <div key={goal.category} className="space-y-2">
+                    <div key={requirement.id} className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span className="font-medium">{goal.category}</span>
-                        <span>{goal.completed_hours}/{goal.target_hours} hours</span>
+                        <span className="font-medium">{requirement.professional_body}</span>
+                        <span>{completedHours}/{requirement.required_hours} hours</span>
                       </div>
                       <Progress value={progress} className="h-2" />
                       <div className="flex justify-between text-xs text-muted-foreground">
                         <span>{Math.round(progress)}% complete</span>
-                        <span>Due: {new Date(goal.deadline).toLocaleDateString()}</span>
+                        <span>{requirement.period_years} year cycle</span>
                       </div>
                     </div>
                   );
@@ -324,23 +317,20 @@ export const CPDTracker = () => {
               <CardContent>
                 <div className="space-y-3">
                   {activities.slice(0, 5).map(activity => {
-                    const Icon = getTypeIcon(activity.type);
+                    const Icon = getTypeIcon(activity.activity_type);
                     return (
                       <div key={activity.id} className="flex items-center gap-3 p-3 border rounded">
-                        <div className={`p-2 rounded-md ${getStatusColor(activity.status)}`}>
+                        <div className="p-2 rounded-md bg-blue-500">
                           <Icon className="h-4 w-4 text-white" />
                         </div>
                         <div className="flex-1">
                           <h4 className="font-medium text-sm">{activity.title}</h4>
                           <p className="text-xs text-muted-foreground">
-                            {activity.hours} hours • {new Date(activity.date).toLocaleDateString()}
+                            {activity.hours_claimed} hours • {new Date(activity.date_completed).toLocaleDateString()}
                           </p>
                         </div>
-                        <Badge variant={
-                          activity.status === 'completed' ? 'default' : 
-                          activity.status === 'in_progress' ? 'secondary' : 'outline'
-                        }>
-                          {activity.status.replace('_', ' ')}
+                        <Badge variant="default">
+                          {activity.activity_type}
                         </Badge>
                       </div>
                     );
@@ -385,8 +375,8 @@ export const CPDTracker = () => {
                   <div className="space-y-2">
                     <Label>Type</Label>
                     <Select
-                      value={newActivity.type}
-                      onValueChange={(value) => setNewActivity(prev => ({ ...prev, type: value as any }))}
+                      value={newActivity.activity_type}
+                      onValueChange={(value) => setNewActivity(prev => ({ ...prev, activity_type: value as any }))}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -415,8 +405,8 @@ export const CPDTracker = () => {
                     <Label>Hours</Label>
                     <Input
                       type="number"
-                      value={newActivity.hours}
-                      onChange={(e) => setNewActivity(prev => ({ ...prev, hours: parseFloat(e.target.value) }))}
+                      value={newActivity.hours_claimed}
+                      onChange={(e) => setNewActivity(prev => ({ ...prev, hours_claimed: parseFloat(e.target.value) }))}
                       min="0"
                       step="0.5"
                     />
@@ -426,8 +416,8 @@ export const CPDTracker = () => {
                     <Label>Date</Label>
                     <Input
                       type="date"
-                      value={newActivity.date}
-                      onChange={(e) => setNewActivity(prev => ({ ...prev, date: e.target.value }))}
+                      value={newActivity.date_completed}
+                      onChange={(e) => setNewActivity(prev => ({ ...prev, date_completed: e.target.value }))}
                     />
                   </div>
                   
@@ -474,19 +464,19 @@ export const CPDTracker = () => {
 
           <div className="grid grid-cols-1 gap-4">
             {activities.map(activity => {
-              const Icon = getTypeIcon(activity.type);
+              const Icon = getTypeIcon(activity.activity_type);
               return (
                 <Card key={activity.id}>
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-md ${getStatusColor(activity.status)}`}>
+                        <div className="p-2 rounded-md bg-blue-500">
                           <Icon className="h-4 w-4 text-white" />
                         </div>
                         <div>
                           <h3 className="font-medium">{activity.title}</h3>
                           <p className="text-sm text-muted-foreground">
-                            {activity.category} • {activity.hours} hours • {new Date(activity.date).toLocaleDateString()}
+                            {activity.category} • {activity.hours_claimed} hours • {new Date(activity.date_completed).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
@@ -532,7 +522,9 @@ export const CPDTracker = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {goals.map(goal => {
+                {requirements.map(requirement => {
+                  const completedHours = activities.reduce((sum, a) => sum + a.hours_claimed, 0);
+                  const progress = (completedHours / requirement.required_hours) * 100;
                   const progress = (goal.completed_hours / goal.target_hours) * 100;
                   const remaining = goal.target_hours - goal.completed_hours;
                   
