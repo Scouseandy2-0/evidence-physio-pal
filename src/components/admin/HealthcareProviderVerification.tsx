@@ -81,19 +81,25 @@ export const HealthcareProviderVerification = () => {
 
   const fetchAllProfiles = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Check if user is admin first using secure function
+      const { data: isAdminData } = await supabase.rpc('is_admin');
+      
+      if (isAdminData) {
+        // Only admins can see provider profiles - secure access
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .not('healthcare_role', 'is', null)
+          .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setProfiles(data || []);
+        if (error) throw error;
+        setProfiles(data || []);
+      } else {
+        setProfiles([]);
+      }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch profiles",
-        variant: "destructive",
-      });
+      console.error('Error fetching provider profiles:', error);
+      setProfiles([]);
     } finally {
       setLoading(false);
     }
