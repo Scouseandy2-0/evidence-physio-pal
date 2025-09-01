@@ -35,24 +35,82 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
 
     try {
       setLoading(true);
+      
+      // First check if we have a record in the subscribers table
+      const { data: subscriberData, error: subscriberError } = await supabase
+        .from('subscribers')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (subscriberData && !subscriberError) {
+        // Use local data if available and recent
+        const updatedAt = new Date(subscriberData.updated_at);
+        const now = new Date();
+        const isRecent = (now.getTime() - updatedAt.getTime()) < 60000; // 1 minute
+
+        if (isRecent) {
+          setSubscribed(subscriberData.subscribed || false);
+          setSubscriptionTier(subscriberData.subscription_tier || null);
+          setSubscriptionEnd(subscriberData.subscription_end || null);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // If no recent data, check with Stripe
       const { data, error } = await supabase.functions.invoke('check-subscription', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Edge function error:', error);
+        
+        // Fallback to local data if edge function fails
+        if (subscriberData) {
+          setSubscribed(subscriberData.subscribed || false);
+          setSubscriptionTier(subscriberData.subscription_tier || null);
+          setSubscriptionEnd(subscriberData.subscription_end || null);
+        } else {
+          // Default to free if no data
+          setSubscribed(false);
+          setSubscriptionTier(null);
+          setSubscriptionEnd(null);
+        }
+        return;
+      }
 
       setSubscribed(data.subscribed || false);
       setSubscriptionTier(data.subscription_tier || null);
       setSubscriptionEnd(data.subscription_end || null);
     } catch (error: any) {
       console.error('Error checking subscription:', error);
-      toast({
-        title: "Error",
-        description: "Failed to check subscription status",
-        variant: "destructive",
-      });
+      
+      // Try to get fallback data from subscribers table
+      try {
+        const { data: fallbackData } = await supabase
+          .from('subscribers')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+          
+        if (fallbackData) {
+          setSubscribed(fallbackData.subscribed || false);
+          setSubscriptionTier(fallbackData.subscription_tier || null);
+          setSubscriptionEnd(fallbackData.subscription_end || null);
+        } else {
+          setSubscribed(false);
+          setSubscriptionTier(null);
+          setSubscriptionEnd(null);
+        }
+      } catch {
+        // Ultimate fallback
+        setSubscribed(false);
+        setSubscriptionTier(null);
+        setSubscriptionEnd(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -75,15 +133,38 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Checkout error:', error);
+        toast({
+          title: "Payment Error",
+          description: error.message || "Failed to create checkout session. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!data?.url) {
+        toast({
+          title: "Error",
+          description: "No checkout URL received. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       // Open Stripe checkout in a new tab
       window.open(data.url, '_blank');
+      
+      // Show success message
+      toast({
+        title: "Redirecting to Payment",
+        description: "Opening Stripe checkout in a new tab...",
+      });
     } catch (error: any) {
       console.error('Error creating checkout:', error);
       toast({
-        title: "Error",
-        description: "Failed to create checkout session",
+        title: "Payment Error",
+        description: "Failed to start checkout process. Please try again.",
         variant: "destructive",
       });
     }
@@ -106,15 +187,38 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Customer portal error:', error);
+        toast({
+          title: "Portal Error",
+          description: error.message || "Failed to open customer portal. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!data?.url) {
+        toast({
+          title: "Error",
+          description: "No portal URL received. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       // Open customer portal in a new tab
       window.open(data.url, '_blank');
+      
+      // Show success message
+      toast({
+        title: "Redirecting to Portal",
+        description: "Opening customer portal in a new tab...",
+      });
     } catch (error: any) {
       console.error('Error opening customer portal:', error);
       toast({
-        title: "Error",
-        description: "Failed to open customer portal",
+        title: "Portal Error",
+        description: "Failed to open customer portal. Please try again.",
         variant: "destructive",
       });
     }
