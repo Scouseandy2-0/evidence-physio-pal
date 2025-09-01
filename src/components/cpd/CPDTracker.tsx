@@ -93,7 +93,8 @@ export const CPDTracker = () => {
 
       setActivities(activitiesData?.map(activity => ({
         ...activity,
-        category: activity.category || 'General'
+        category: 'General', // Add default category since it doesn't exist in DB
+        activity_type: activity.activity_type as CPDActivity['activity_type'] // Type assertion
       })) || []);
       
       // Create mock requirements for now since the table might not be populated yet
@@ -524,29 +525,28 @@ export const CPDTracker = () => {
               <div className="space-y-6">
                 {requirements.map(requirement => {
                   const completedHours = activities.reduce((sum, a) => sum + a.hours_claimed, 0);
-                  const progress = (completedHours / requirement.required_hours) * 100;
-                  const progress = (goal.completed_hours / goal.target_hours) * 100;
-                  const remaining = goal.target_hours - goal.completed_hours;
+                  const progressValue = (completedHours / requirement.required_hours) * 100;
+                  const remaining = Math.max(0, requirement.required_hours - completedHours);
                   
                   return (
-                    <div key={goal.category} className="p-4 border rounded-lg">
+                    <div key={requirement.id} className="p-4 border rounded-lg">
                       <div className="flex justify-between items-start mb-3">
-                        <h3 className="font-medium">{goal.category}</h3>
-                        <Badge variant={progress >= 100 ? "default" : "secondary"}>
-                          {Math.round(progress)}% Complete
+                        <h3 className="font-medium">{requirement.professional_body}</h3>
+                        <Badge variant={progressValue >= 100 ? "default" : "secondary"}>
+                          {Math.round(progressValue)}% Complete
                         </Badge>
                       </div>
                       
                       <div className="space-y-2 mb-3">
                         <div className="flex justify-between text-sm">
-                          <span>Progress: {goal.completed_hours}/{goal.target_hours} hours</span>
-                          <span>Remaining: {Math.max(0, remaining)} hours</span>
+                          <span>Progress: {completedHours}/{requirement.required_hours} hours</span>
+                          <span>Remaining: {remaining} hours</span>
                         </div>
-                        <Progress value={progress} className="h-2" />
+                        <Progress value={progressValue} className="h-2" />
                       </div>
                       
                       <div className="flex justify-between items-center text-sm text-muted-foreground">
-                        <span>Deadline: {new Date(goal.deadline).toLocaleDateString()}</span>
+                        <span>Period: {requirement.period_years} years</span>
                         <span>
                           {remaining > 0 ? `${remaining} hours needed` : 'Goal achieved!'}
                         </span>
