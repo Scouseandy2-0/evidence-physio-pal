@@ -20,87 +20,164 @@ interface Guideline {
   keywords: string[];
 }
 
-// Professional associations and their guidelines
-const ASSOCIATIONS = {
-  APTA: {
-    name: 'American Physical Therapy Association',
-    baseUrl: 'https://www.apta.org',
-    guidelines: [
-      {
-        title: 'Clinical Practice Guideline for Low Back Pain',
-        condition: 'Low Back Pain',
-        summary: 'Evidence-based recommendations for the physical therapy management of patients with low back pain.',
-        recommendations: [
-          'Use of therapeutic exercise and manual therapy',
-          'Patient education and self-management strategies',
-          'Avoid passive modalities as standalone treatments'
-        ],
-        evidence_level: 'A',
-        date: '2024-01-15'
-      },
-      {
-        title: 'Stroke Rehabilitation Clinical Practice Guidelines',
-        condition: 'Stroke',
-        summary: 'Comprehensive guidelines for post-stroke rehabilitation interventions.',
-        recommendations: [
-          'Early mobilization within 24-48 hours',
-          'Task-specific training for motor recovery',
-          'Multidisciplinary team approach'
-        ],
-        evidence_level: 'A',
-        date: '2024-02-01'
-      }
-    ]
-  },
-  CSP: {
-    name: 'Chartered Society of Physiotherapy',
-    baseUrl: 'https://www.csp.org.uk',
-    guidelines: [
-      {
-        title: 'Management of Chronic Obstructive Pulmonary Disease',
-        condition: 'COPD',
-        summary: 'Evidence-based physiotherapy interventions for COPD management.',
-        recommendations: [
-          'Pulmonary rehabilitation programs',
-          'Breathing techniques and airway clearance',
-          'Exercise training and education'
-        ],
-        evidence_level: 'A',
-        date: '2024-01-20'
-      },
-      {
-        title: 'Knee Osteoarthritis Management Guidelines',
-        condition: 'Knee Osteoarthritis',
-        summary: 'Comprehensive approach to knee OA treatment in physiotherapy.',
-        recommendations: [
-          'Supervised exercise therapy',
-          'Weight management counseling',
-          'Manual therapy techniques'
-        ],
-        evidence_level: 'B',
-        date: '2024-02-10'
-      }
-    ]
-  },
-  WHO: {
-    name: 'World Health Organization',
-    baseUrl: 'https://www.who.int',
-    guidelines: [
-      {
-        title: 'Global Recommendations on Physical Activity for Health',
-        condition: 'General Health',
-        summary: 'WHO guidelines on physical activity and sedentary behavior.',
-        recommendations: [
-          'At least 150 minutes of moderate-intensity exercise weekly',
-          'Muscle strengthening activities 2+ days per week',
-          'Reduce sedentary time'
-        ],
-        evidence_level: 'A',
-        date: '2024-01-01'
-      }
-    ]
-  }
+interface NICEGuideline {
+  Title: string;
+  Published: string;
+  Type: string;
+  Overview: string;
+  LastModified: string;
+  Uri: string;
+  Guidance?: {
+    Recommendations?: Array<{
+      Text: string;
+      RecommendationText: string;
+    }>;
+  };
+}
+
+// NICE API endpoints and search configuration
+const NICE_API_BASE = 'https://www.nice.org.uk/api';
+const NICE_SEARCH_ENDPOINT = `${NICE_API_BASE}/feeds/guidance/published`;
+
+// Real NICE guidelines mapping for physiotherapy-relevant conditions
+const PHYSIOTHERAPY_CONDITIONS = {
+  'low back pain': 'low+back+pain',
+  'stroke': 'stroke+rehabilitation',
+  'knee osteoarthritis': 'osteoarthritis+knee',
+  'hip osteoarthritis': 'osteoarthritis+hip',
+  'shoulder impingement': 'shoulder+pain',
+  'chronic pain': 'chronic+pain',
+  'balance training': 'falls+prevention',
+  'manual therapy': 'manual+therapy',
+  'exercise therapy': 'exercise+therapy',
+  'spinal cord injury': 'spinal+cord',
+  'COPD rehabilitation': 'COPD+pulmonary',
+  'neck pain': 'neck+pain',
+  'vestibular rehabilitation': 'vertigo+dizziness',
+  'cardiac rehabilitation': 'cardiac+rehabilitation',
+  'neuroplasticity': 'brain+injury+rehabilitation'
 };
+
+async function fetchNICEGuidelines(searchTerm: string): Promise<Guideline[]> {
+  const guidelines: Guideline[] = [];
+  
+  try {
+    // Map search term to NICE-friendly query
+    const niceQuery = PHYSIOTHERAPY_CONDITIONS[searchTerm.toLowerCase()] || 
+                     searchTerm.replace(/\s+/g, '+');
+    
+    // Fetch guidelines from NICE API
+    const searchUrl = `${NICE_SEARCH_ENDPOINT}?q=${niceQuery}&pageSize=10`;
+    console.log(`Fetching from NICE API: ${searchUrl}`);
+    
+    const response = await fetch(searchUrl, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'PhysioEvidence/1.0'
+      }
+    });
+    
+    if (!response.ok) {
+      console.log(`NICE API response not OK: ${response.status}`);
+      return [];
+    }
+    
+    const data = await response.json();
+    const niceGuidelines = data.Results || [];
+    
+    console.log(`Found ${niceGuidelines.length} NICE guidelines for: ${searchTerm}`);
+    
+    for (const niceGuideline of niceGuidelines.slice(0, 5)) { // Limit to 5 per search
+      try {
+        // Extract recommendations from the guideline
+        let recommendations: string[] = [];
+        let summary = niceGuideline.Overview || 'NICE clinical guideline';
+        
+        // Fetch detailed guideline content if available
+        if (niceGuideline.Uri) {
+          try {
+            const detailResponse = await fetch(`${NICE_API_BASE}${niceGuideline.Uri}?format=json`);
+            if (detailResponse.ok) {
+              const detailData = await detailResponse.json();
+              if (detailData.Guidance?.Recommendations) {
+                recommendations = detailData.Guidance.Recommendations
+                  .slice(0, 5)
+                  .map((rec: any) => rec.RecommendationText || rec.Text || '')
+                  .filter((text: string) => text.length > 0);
+              }
+            }
+          } catch (detailError) {
+            console.log('Could not fetch detailed recommendations:', detailError.message);
+          }
+        }
+        
+        // Fallback recommendations based on condition type
+        if (recommendations.length === 0) {
+          recommendations = getDefaultRecommendations(searchTerm);
+        }
+        
+        const guideline: Guideline = {
+          id: `nice_${niceGuideline.Uri?.split('/').pop() || Date.now()}`,
+          title: niceGuideline.Title,
+          organization: 'NICE (National Institute for Health and Care Excellence)',
+          publication_date: niceGuideline.Published || niceGuideline.LastModified,
+          summary: summary.substring(0, 500), // Limit summary length
+          recommendations: recommendations,
+          evidence_level: 'A', // NICE guidelines are high quality
+          condition: searchTerm,
+          url: `https://www.nice.org.uk${niceGuideline.Uri}`,
+          keywords: [searchTerm, 'NICE', 'clinical guideline', niceGuideline.Type || 'guideline']
+        };
+        
+        guidelines.push(guideline);
+        
+      } catch (guidelineError) {
+        console.error('Error processing individual NICE guideline:', guidelineError);
+      }
+    }
+    
+  } catch (error) {
+    console.error(`Error fetching NICE guidelines for ${searchTerm}:`, error);
+  }
+  
+  return guidelines;
+}
+
+function getDefaultRecommendations(condition: string): string[] {
+  const conditionLower = condition.toLowerCase();
+  
+  if (conditionLower.includes('back pain')) {
+    return [
+      'Consider exercise programmes and manual therapy for acute low back pain',
+      'Offer psychological support alongside physical treatments',
+      'Avoid bed rest and encourage early mobilisation'
+    ];
+  } else if (conditionLower.includes('stroke')) {
+    return [
+      'Start rehabilitation as soon as clinically possible after stroke',
+      'Provide tailored exercise programmes to improve mobility',
+      'Include family and carers in rehabilitation planning'
+    ];
+  } else if (conditionLower.includes('osteoarthritis')) {
+    return [
+      'Offer core treatments including education, exercise and weight management',
+      'Consider manual therapy as an adjunct to core treatments',
+      'Provide individualised exercise programmes'
+    ];
+  } else if (conditionLower.includes('copd')) {
+    return [
+      'Offer pulmonary rehabilitation to all appropriate patients',
+      'Include exercise training as a core component',
+      'Provide education and self-management support'
+    ];
+  } else {
+    return [
+      'Follow evidence-based assessment and treatment protocols',
+      'Provide patient-centred care with shared decision making',
+      'Monitor outcomes and adjust treatment accordingly'
+    ];
+  }
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -114,63 +191,24 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log(`Searching professional guidelines for: ${searchTerms}`);
+    console.log(`Searching NICE guidelines for: ${searchTerms}`);
 
-    const guidelines: Guideline[] = [];
-    const searchLower = searchTerms.toLowerCase();
-    const conditionLower = condition.toLowerCase();
+    let allGuidelines: Guideline[] = [];
 
-    // Search through association guidelines
-    for (const [orgKey, orgData] of Object.entries(ASSOCIATIONS)) {
-      if (organization !== 'all' && orgKey.toLowerCase() !== organization.toLowerCase()) {
-        continue;
-      }
-
-      for (const guideline of orgData.guidelines) {
-        // Check if guideline matches search criteria
-        const titleMatch = guideline.title.toLowerCase().includes(searchLower);
-        const conditionMatch = !condition || guideline.condition.toLowerCase().includes(conditionLower);
-        const summaryMatch = guideline.summary.toLowerCase().includes(searchLower);
-
-        if (titleMatch || conditionMatch || summaryMatch) {
-          guidelines.push({
-            id: `${orgKey}_${Date.now()}_${guidelines.length}`,
-            title: guideline.title,
-            organization: orgData.name,
-            publication_date: guideline.date,
-            summary: guideline.summary,
-            recommendations: guideline.recommendations,
-            evidence_level: guideline.evidence_level,
-            condition: guideline.condition,
-            url: `${orgData.baseUrl}/guidelines/${guideline.title.toLowerCase().replace(/\s+/g, '-')}`,
-            keywords: [searchTerms, guideline.condition, orgData.name]
-          });
-        }
-      }
+    // Fetch real NICE guidelines
+    if (searchTerms && searchTerms.trim().length > 0) {
+      const niceGuidelines = await fetchNICEGuidelines(searchTerms);
+      allGuidelines = allGuidelines.concat(niceGuidelines);
     }
 
-    // Add more comprehensive guidelines if search is broad
-    if (searchTerms.includes('rehabilitation') || searchTerms.includes('therapy')) {
-      guidelines.push({
-        id: `comprehensive_${Date.now()}`,
-        title: 'International Classification of Functioning, Disability and Health (ICF)',
-        organization: 'World Health Organization',
-        publication_date: '2024-01-01',
-        summary: 'WHO framework for measuring health and disability at both individual and population levels.',
-        recommendations: [
-          'Use ICF framework for comprehensive assessment',
-          'Consider body functions, activities, and participation',
-          'Include environmental and personal factors'
-        ],
-        evidence_level: 'A',
-        condition: 'All Conditions',
-        url: 'https://www.who.int/standards/classifications/international-classification-of-functioning-disability-and-health',
-        keywords: [searchTerms, 'ICF', 'WHO', 'Framework']
-      });
+    // If no specific search term or looking for rehabilitation/therapy, add comprehensive guidelines
+    if (!searchTerms || searchTerms.includes('rehabilitation') || searchTerms.includes('therapy')) {
+      const comprehensiveGuidelines = await fetchNICEGuidelines('rehabilitation');
+      allGuidelines = allGuidelines.concat(comprehensiveGuidelines);
     }
 
     // Store guidelines in database
-    for (const guideline of guidelines) {
+    for (const guideline of allGuidelines) {
       try {
         // Check if guideline already exists
         const { data: existing } = await supabase
@@ -178,7 +216,7 @@ serve(async (req) => {
           .select('id')
           .eq('title', guideline.title)
           .eq('journal', guideline.organization)
-          .single();
+          .maybeSingle();
 
         if (!existing) {
           // Insert new guideline
@@ -218,15 +256,15 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ 
       success: true, 
-      message: `Successfully processed ${guidelines.length} professional guidelines`,
-      guidelines: guidelines.slice(0, 5), // Return first 5 for preview
-      organizations: Object.keys(ASSOCIATIONS)
+      message: `Successfully processed ${allGuidelines.length} NICE guidelines`,
+      guidelines: allGuidelines.slice(0, 5), // Return first 5 for preview
+      source: 'NICE Database'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Error in guidelines integration:', error);
+    console.error('Error in NICE guidelines integration:', error);
     return new Response(JSON.stringify({ 
       error: error.message,
       success: false 
