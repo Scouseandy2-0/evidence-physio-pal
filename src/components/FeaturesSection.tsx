@@ -1,6 +1,7 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { BookOpen, Users, Search, Award, TrendingUp, Shield } from "lucide-react"
+import { Link } from "react-router-dom"
 
 export const FeaturesSection = () => {
   const features = [
@@ -8,37 +9,43 @@ export const FeaturesSection = () => {
       icon: <BookOpen className="h-8 w-8 text-medical-blue" />,
       title: "Evidence Library",
       description: "Access peer-reviewed research from 50+ medical journals with real-time updates and quality ratings.",
-      action: "Browse Library"
+      action: "Browse Library",
+      link: "/evidence"
     },
     {
       icon: <Search className="h-8 w-8 text-medical-green" />,
       title: "Smart Search",
       description: "Find relevant evidence using AI-powered search with condition-specific filters and treatment protocols.",
-      action: "Try Search"
+      action: "Try Search",
+      link: "/evidence"
     },
     {
       icon: <Users className="h-8 w-8 text-medical-blue" />,
       title: "Assessment Tools",
       description: "Evidence-based assessment questionnaires and outcome measures for comprehensive patient evaluation.",
-      action: "View Tools"
+      action: "View Tools",
+      link: "/assessments"
     },
     {
       icon: <Award className="h-8 w-8 text-medical-green" />,
       title: "Quality Ratings",
       description: "GRADE system integration to help you understand the strength and quality of available evidence.",
-      action: "Learn More"
+      action: "Learn More",
+      link: "/evidence"
     },
     {
       icon: <TrendingUp className="h-8 w-8 text-medical-blue" />,
       title: "Treatment Protocols",
       description: "Step-by-step evidence-based treatment protocols with progression guidelines and outcome tracking.",
-      action: "Explore Protocols"
+      action: "Explore Protocols",
+      link: "/protocols"
     },
     {
       icon: <Shield className="h-8 w-8 text-medical-green" />,
       title: "Clinical Guidelines",
       description: "Latest clinical practice guidelines from professional physiotherapy associations worldwide.",
-      action: "View Guidelines"
+      action: "View Guidelines",
+      link: "/guidelines"
     }
   ]
 
@@ -69,9 +76,11 @@ export const FeaturesSection = () => {
                 <p className="text-muted-foreground mb-6">
                   {feature.description}
                 </p>
-                <Button variant="outline" className="w-full group-hover:border-medical-blue group-hover:text-medical-blue transition-colors">
-                  {feature.action}
-                </Button>
+                <Link to={feature.link}>
+                  <Button variant="outline" className="w-full group-hover:border-medical-blue group-hover:text-medical-blue transition-colors">
+                    {feature.action}
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           ))}

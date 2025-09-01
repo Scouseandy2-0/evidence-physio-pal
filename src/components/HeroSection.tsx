@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Search, BookOpen, Users, Award } from "lucide-react"
+import { Link } from "react-router-dom"
 import heroImage from "@/assets/physio-hero.jpg"
 
 export const HeroSection = () => {
@@ -26,14 +27,18 @@ export const HeroSection = () => {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button variant="medical" size="lg" className="flex-1 sm:flex-none">
-                <Search className="h-5 w-5 mr-2" />
-                Search Evidence Database
-              </Button>
-              <Button variant="outline" size="lg" className="flex-1 sm:flex-none">
-                <BookOpen className="h-5 w-5 mr-2" />
-                Browse Guidelines
-              </Button>
+              <Link to="/evidence">
+                <Button variant="medical" size="lg" className="flex-1 sm:flex-none w-full">
+                  <Search className="h-5 w-5 mr-2" />
+                  Search Evidence Database
+                </Button>
+              </Link>
+              <Link to="/guidelines">
+                <Button variant="outline" size="lg" className="flex-1 sm:flex-none w-full">
+                  <BookOpen className="h-5 w-5 mr-2" />
+                  Browse Guidelines
+                </Button>
+              </Link>
             </div>
 
             {/* Stats */}
