@@ -1,58 +1,87 @@
 import { useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useSubscription } from "@/hooks/useSubscription";
-import { CheckCircle, ArrowLeft } from "lucide-react";
+import { CheckCircle, Crown, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useSubscription } from "@/hooks/useSubscription";
+import { useToast } from "@/hooks/use-toast";
 
 export const SubscriptionSuccessPage = () => {
   const { checkSubscription } = useSubscription();
+  const { toast } = useToast();
 
   useEffect(() => {
     // Check subscription status after successful payment
     const timer = setTimeout(() => {
       checkSubscription();
+      toast({
+        title: "Welcome to Premium!",
+        description: "Your subscription is now active. Enjoy all premium features!",
+      });
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [checkSubscription]);
+  }, [checkSubscription, toast]);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <Card className="text-center">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/50 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md text-center">
         <CardHeader>
           <div className="mx-auto mb-4">
-            <CheckCircle className="h-16 w-16 text-green-600" />
+            <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
           </div>
-          <CardTitle className="text-2xl">Welcome to Premium!</CardTitle>
-          <CardDescription>
-            Your subscription has been activated successfully
-          </CardDescription>
+          <CardTitle className="flex items-center justify-center gap-2 text-2xl">
+            <Crown className="h-6 w-6 text-yellow-600" />
+            Payment Successful!
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
-            <h3 className="font-semibold">You now have access to:</h3>
-            <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• All 21 conditions across MSK, Respiratory, and Neurological categories</li>
-              <li>• Complete assessment tools library</li>
-              <li>• Treatment protocol builder</li>
-              <li>• Patient management system</li>
-              <li>• CPD tracking & certification</li>
-              <li>• Collaboration & peer review features</li>
-              <li>• Advanced analytics dashboard</li>
-            </ul>
+            <p className="text-lg font-medium">Welcome to PhysioEvidence Premium</p>
+            <p className="text-muted-foreground">
+              You now have access to all premium features including:
+            </p>
           </div>
           
+          <div className="text-left space-y-2">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <span className="text-sm">Advanced Analytics & Reporting</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <span className="text-sm">Patient Management System</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <span className="text-sm">Treatment Protocol Builder</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <span className="text-sm">All Condition Modules</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <span className="text-sm">CPD Tracking & Certification</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <span className="text-sm">Collaboration Tools</span>
+            </div>
+          </div>
+
           <div className="space-y-3">
-            <Link to="/dashboard">
-              <Button className="w-full" size="lg">
-                Go to Dashboard
+            <Link to="/" className="w-full">
+              <Button className="w-full">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Start Exploring Premium Features
               </Button>
             </Link>
-            <Link to="/">
+            <Link to="/subscription" className="w-full">
               <Button variant="outline" className="w-full">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Home
+                Manage Subscription
               </Button>
             </Link>
           </div>
