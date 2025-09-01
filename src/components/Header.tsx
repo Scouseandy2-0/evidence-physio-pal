@@ -56,6 +56,18 @@ export const Header = () => {
             {user && (
               <>
                 <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" asChild>
+                  <Link to="/guidelines">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Guidelines
+                  </Link>
+                </Button>
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" asChild>
+                  <Link to="/evidence">
+                    <Brain className="h-4 w-4 mr-2" />
+                    Evidence
+                  </Link>
+                </Button>
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" asChild>
                   <Link to="/patients">
                     <Users className="h-4 w-4 mr-2" />
                     Patients

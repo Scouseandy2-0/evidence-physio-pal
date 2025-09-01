@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import GuidelinesPage from "./pages/GuidelinesPage";
+import EvidencePage from "./pages/EvidencePage";
 import { AuthPage } from "./components/auth/AuthPage";
 import { AuthProvider } from "./hooks/useAuth";
 import { SubscriptionProvider } from "./hooks/useSubscription";
@@ -38,6 +40,8 @@ const App = () => (
             <Route path="/conditions" element={<ConditionModules />} />
             <Route path="/assessments" element={<AssessmentToolsLibrary />} />
             <Route path="/protocols" element={<TreatmentProtocolBuilder />} />
+            <Route path="/guidelines" element={<GuidelinesPage />} />
+            <Route path="/evidence" element={<EvidencePage />} />
             <Route path="/cpd" element={<CPDTracker />} />
             <Route path="/patients" element={<PatientManagement />} />
             <Route path="/collaboration" element={<CollaborationHub />} />

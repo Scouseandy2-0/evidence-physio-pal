@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -237,9 +238,11 @@ export const PersonalizedDashboard = () => {
             ))}
           </div>
 
-          <Button variant="outline" className="w-full">
-            <BookOpen className="h-4 w-4 mr-2" />
-            View All CPD Records
+          <Button variant="outline" className="w-full" asChild>
+            <Link to="/cpd">
+              <BookOpen className="h-4 w-4 mr-2" />
+              View All CPD Records
+            </Link>
           </Button>
         </CardContent>
       </Card>
@@ -321,16 +324,18 @@ export const PersonalizedDashboard = () => {
                   {dashboardData.recentEvidence.map(evidence => (
                     <RecentEvidenceCard key={evidence.id} evidence={evidence} />
                   ))}
-                  <Button variant="outline" className="w-full">
-                    View All Evidence
+                  <Button variant="outline" className="w-full" asChild>
+                    <Link to="/evidence">
+                      View All Evidence
+                    </Link>
                   </Button>
                 </div>
               ) : (
                 <div className="text-center py-8">
                   <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground">No recent evidence available</p>
-                  <Button variant="outline" className="mt-2">
-                    Browse Evidence Library
+                  <Button variant="outline" className="mt-2" asChild>
+                    <Link to="/evidence">Browse Evidence Library</Link>
                   </Button>
                 </div>
               )}
@@ -369,17 +374,21 @@ export const PersonalizedDashboard = () => {
                     </Badge>
                   </div>
                 ))}
-                <Button variant="outline" className="w-full">
-                  Create New Protocol
+                <Button variant="outline" className="w-full" asChild>
+                  <Link to="/protocols">
+                    Create New Protocol
+                  </Link>
                 </Button>
               </div>
             ) : (
               <div className="text-center py-8">
                 <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground mb-2">No protocols created yet</p>
-                <Button>
-                  <Target className="h-4 w-4 mr-2" />
-                  Create First Protocol
+                <Button asChild>
+                  <Link to="/protocols">
+                    <Target className="h-4 w-4 mr-2" />
+                    Create First Protocol
+                  </Link>
                 </Button>
               </div>
             )}
@@ -408,8 +417,10 @@ export const PersonalizedDashboard = () => {
                   </div>
                 </div>
               ))}
-              <Button variant="outline" className="w-full">
-                View All Notifications
+              <Button variant="outline" className="w-full" asChild>
+                <Link to="/dashboard">
+                  View All Notifications
+                </Link>
               </Button>
             </div>
           </CardContent>

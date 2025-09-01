@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { 
   FileText,
@@ -45,55 +46,94 @@ export const ClinicalGuidelinesLibrary = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    loadMockData();
+    fetchGuidelines();
   }, []);
 
-  const loadMockData = () => {
-    const mockGuidelines: ClinicalGuideline[] = [
-      {
-        id: '1',
-        title: 'Clinical Practice Guidelines for Low Back Pain',
-        organization: 'APTA',
-        condition_category: 'MSK',
-        publication_year: 2023,
-        last_updated: '2023-06-15',
-        guideline_url: 'https://www.apta.org/guidelines',
-        summary: 'Comprehensive evidence-based guidelines for the management of acute and chronic low back pain in adults.',
-        recommendations: [],
-        evidence_strength: 'High',
-        target_population: 'Adults with acute or chronic low back pain',
-        clinical_questions: ['What are the most effective interventions for acute LBP?', 'How should chronic LBP be managed?'],
-        key_recommendations: [
-          'Manual therapy techniques are recommended for acute LBP',
-          'Exercise therapy is strongly recommended for chronic LBP',
-          'Patient education should be provided in all cases'
-        ],
-        implementation_notes: 'Requires multidisciplinary approach and patient-centered care',
-        tags: ['low back pain', 'manual therapy', 'exercise', 'evidence-based']
-      },
-      {
-        id: '2',
-        title: 'Stroke Rehabilitation Guidelines',
-        organization: 'WHO',
-        condition_category: 'Neurological',
-        publication_year: 2022,
-        last_updated: '2022-12-01',
-        guideline_url: 'https://www.who.int/stroke-guidelines',
-        summary: 'International guidelines for comprehensive stroke rehabilitation across all phases of recovery.',
-        recommendations: [],
-        evidence_strength: 'Moderate',
-        target_population: 'Adults with stroke at any stage of recovery',
-        clinical_questions: ['What interventions improve motor recovery?', 'How should cognitive impairments be addressed?'],
-        key_recommendations: [
-          'Early mobilization within 24-48 hours post-stroke',
-          'Task-specific training for motor recovery',
-          'Cognitive rehabilitation for executive function'
-        ],
-        implementation_notes: 'Requires coordinated multidisciplinary team approach',
-        tags: ['stroke', 'neurological', 'rehabilitation', 'motor recovery']
-      }
-    ];
-    setGuidelines(mockGuidelines);
+  const fetchGuidelines = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('evidence')
+        .select('*')
+        .eq('study_type', 'Clinical Practice Guideline')
+        .order('publication_date', { ascending: false });
+
+      if (error) throw error;
+      
+      // Transform the data to match our interface
+      const transformedGuidelines: ClinicalGuideline[] = (data || []).map(item => {
+        const gradeAssessment = item.grade_assessment as any;
+        return {
+          id: item.id,
+          title: item.title,
+          organization: item.journal || item.authors?.[0] || 'Unknown Organization',
+          condition_category: getConditionCategory(item.tags || []),
+          publication_year: new Date(item.publication_date).getFullYear(),
+          last_updated: item.updated_at || item.created_at,
+          guideline_url: gradeAssessment?.url || '#',
+          summary: item.abstract || 'No summary available',
+          recommendations: [],
+          evidence_strength: item.evidence_level || 'Not specified',
+          target_population: gradeAssessment?.condition || 'General population',
+          clinical_questions: [],
+          key_recommendations: gradeAssessment?.recommendations || item.key_findings?.split(';') || [],
+          implementation_notes: item.clinical_implications || '',
+          tags: item.tags || []
+        };
+      });
+
+      setGuidelines(transformedGuidelines);
+    } catch (error: any) {
+      toast({
+        title: "Error fetching guidelines",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getConditionCategory = (tags: string[]): string => {
+    const tagStr = tags.join(' ').toLowerCase();
+    if (tagStr.includes('back') || tagStr.includes('pain') || tagStr.includes('osteoarthritis') || tagStr.includes('manual')) {
+      return 'MSK';
+    }
+    if (tagStr.includes('stroke') || tagStr.includes('brain') || tagStr.includes('neurological')) {
+      return 'Neurological';
+    }
+    if (tagStr.includes('copd') || tagStr.includes('respiratory') || tagStr.includes('pulmonary')) {
+      return 'Respiratory';
+    }
+    return 'General';
+  };
+
+  const fetchMoreGuidelines = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('guidelines-integration', {
+        body: {
+          searchTerms: 'physiotherapy',
+          organization: 'all',
+          condition: ''
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Guidelines Updated",
+        description: `Successfully fetched ${data.guidelines?.length || 0} new guidelines`,
+      });
+
+      // Refresh the guidelines list
+      await fetchGuidelines();
+    } catch (error: any) {
+      toast({
+        title: "Error fetching new guidelines",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const getEvidenceStrengthColor = (strength: string) => {
@@ -307,6 +347,10 @@ export const ClinicalGuidelinesLibrary = () => {
             <p className="text-sm text-muted-foreground">
               Showing {filteredGuidelines.length} of {guidelines.length} guidelines
             </p>
+            <Button onClick={fetchMoreGuidelines} variant="outline">
+              <Star className="h-4 w-4 mr-2" />
+              Fetch NICE Guidelines
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -320,9 +364,13 @@ export const ClinicalGuidelinesLibrary = () => {
               <CardContent className="text-center py-8">
                 <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium mb-2">No guidelines found</h3>
-                <p className="text-muted-foreground">
-                  Try adjusting your search or filter criteria.
+                <p className="text-muted-foreground mb-4">
+                  Try adjusting your search or filter criteria, or fetch the latest guidelines from NICE.
                 </p>
+                <Button onClick={fetchMoreGuidelines}>
+                  <Star className="h-4 w-4 mr-2" />
+                  Fetch NICE Guidelines
+                </Button>
               </CardContent>
             </Card>
           )}
