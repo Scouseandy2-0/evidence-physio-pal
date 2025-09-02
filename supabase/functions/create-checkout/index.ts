@@ -15,10 +15,20 @@ serve(async (req) => {
   try {
     console.log("Create checkout function started");
     
+    // Debug: List all environment variables that start with STRIPE
+    console.log("Environment debug - All env vars:", Object.keys(Deno.env.toObject()).filter(key => key.includes('STRIPE')));
+    
     // Check required environment variables
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    
+    console.log("Environment check:", {
+      hasStripeKey: !!stripeKey,
+      stripeKeyLength: stripeKey?.length || 0,
+      hasSupabaseUrl: !!supabaseUrl,
+      hasAnonKey: !!supabaseAnonKey
+    });
     
     if (!stripeKey) {
       console.error("STRIPE_SECRET_KEY environment variable is not set");
