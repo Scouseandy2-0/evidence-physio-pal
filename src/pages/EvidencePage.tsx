@@ -1,6 +1,8 @@
 import { Header } from "@/components/Header";
 import { EvidenceIntegration } from "@/components/evidence/EvidenceIntegration";
 import { RealDataPopulator } from "@/components/evidence/RealDataPopulator";
+import { DataPopulator } from "@/components/evidence/DataPopulator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const EvidencePage = () => {
   return (
@@ -14,8 +16,26 @@ const EvidencePage = () => {
               Access the latest research evidence from PubMed, Cochrane, and other trusted sources
             </p>
           </div>
-          <RealDataPopulator />
-          <EvidenceIntegration />
+          
+          <Tabs defaultValue="search" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="search">Search Evidence</TabsTrigger>
+              <TabsTrigger value="populate">Populate Data</TabsTrigger>
+              <TabsTrigger value="comprehensive">Comprehensive Sync</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="search" className="space-y-6">
+              <EvidenceIntegration />
+            </TabsContent>
+            
+            <TabsContent value="populate" className="space-y-6">
+              <DataPopulator />
+            </TabsContent>
+            
+            <TabsContent value="comprehensive" className="space-y-6">
+              <RealDataPopulator />
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
     </div>

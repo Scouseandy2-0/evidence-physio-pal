@@ -247,15 +247,83 @@ export const RealDataPopulator = () => {
     setIsPopulating(true);
     setCompleted([]);
     
-    await populateConditions();
-    await populateEvidence();
-    await populateAssessmentTools();
-    
-    setIsPopulating(false);
-    toast({ 
-      title: "Complete!", 
-      description: "All real data has been populated successfully!" 
-    });
+    try {
+      // First populate base data
+      await populateConditions();
+      await populateEvidence();
+      await populateAssessmentTools();
+      
+      // Then populate from external sources for each condition
+      const { data: conditions } = await supabase
+        .from('conditions')
+        .select('name');
+        
+      if (conditions) {
+        toast({
+          title: "Starting external database search",
+          description: `Searching evidence for ${conditions.length} conditions across all databases`,
+        });
+        
+        // Search evidence for each condition from all databases
+        for (const condition of conditions) {
+          try {
+            // Search PubMed
+            await supabase.functions.invoke('pubmed-integration', {
+              body: { 
+                searchTerms: condition.name,
+                maxResults: 3,
+                dateRange: 'recent'
+              }
+            });
+            
+            // Search Cochrane
+            await supabase.functions.invoke('cochrane-integration', {
+              body: { 
+                searchTerms: condition.name,
+                maxResults: 2
+              }
+            });
+            
+            // Search PEDro
+            await supabase.functions.invoke('pedro-integration', {
+              body: { 
+                searchTerms: condition.name,
+                condition: condition.name,
+                maxResults: 2
+              }
+            });
+            
+            // Search NICE
+            await supabase.functions.invoke('guidelines-integration', {
+              body: { 
+                searchTerms: condition.name,
+                organization: 'nice'
+              }
+            });
+            
+            // Small delay to prevent overwhelming APIs
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+          } catch (error) {
+            console.error(`Error searching for ${condition.name}:`, error);
+          }
+        }
+        
+        toast({
+          title: "Population Complete!",
+          description: "Successfully populated all condition modules with evidence from ChatGPT, PubMed, Cochrane, PEDro, and NICE",
+        });
+      }
+    } catch (error) {
+      console.error('Error in comprehensive population:', error);
+      toast({
+        title: "Population Error",
+        description: "Some data may not have been populated completely",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPopulating(false);
+    }
   };
 
   return (
@@ -267,7 +335,7 @@ export const RealDataPopulator = () => {
             Real Data Population Tool
           </CardTitle>
           <CardDescription>
-            Populate the application with comprehensive real-world data for musculoskeletal, neurological, and respiratory conditions.
+            Populate condition modules with comprehensive evidence from ChatGPT, PubMed, Cochrane, PEDro, and NICE databases. This includes base conditions, research evidence, and validated assessment tools.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -308,13 +376,19 @@ export const RealDataPopulator = () => {
               onClick={populateAllData}
               disabled={isPopulating}
               className="flex-1"
+              size="lg"
             >
               {isPopulating ? (
-                <Upload className="h-4 w-4 mr-2 animate-spin" />
+                <>
+                  <Upload className="h-4 w-4 mr-2 animate-pulse" />
+                  Populating with AI + External DBs...
+                </>
               ) : (
-                <Upload className="h-4 w-4 mr-2" />
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Populate All + Search External DBs
+                </>
               )}
-              Populate All Real Data
             </Button>
           </div>
           

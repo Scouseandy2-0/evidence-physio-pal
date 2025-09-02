@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound";
 import GuidelinesPage from "./pages/GuidelinesPage";
 import EvidencePage from "./pages/EvidencePage";
 import AssessmentPage from "./pages/AssessmentPage";
+import ConditionsPage from "./pages/ConditionsPage";
 import { AuthPage } from "./components/auth/AuthPage";
 import { AuthProvider } from "./hooks/useAuth";
 import { SubscriptionProvider } from "./hooks/useSubscription";
@@ -38,7 +39,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/dashboard" element={<PersonalizedDashboard />} />
-            <Route path="/conditions" element={<ConditionModules />} />
+            <Route path="/conditions" element={<ConditionsPage />} />
             <Route path="/assessments" element={<AssessmentToolsLibrary />} />
             <Route path="/assessment/:toolId" element={<AssessmentPage />} />
             <Route path="/protocols" element={<TreatmentProtocolBuilder />} />
