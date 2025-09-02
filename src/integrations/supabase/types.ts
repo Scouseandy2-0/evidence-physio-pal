@@ -370,6 +370,33 @@ export type Database = {
         }
         Relationships: []
       }
+      evidence_access_logs: {
+        Row: {
+          action_type: string
+          created_at: string
+          evidence_id: string | null
+          id: string
+          search_query: string | null
+          user_id: string
+        }
+        Insert: {
+          action_type?: string
+          created_at?: string
+          evidence_id?: string | null
+          id?: string
+          search_query?: string | null
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          evidence_id?: string | null
+          id?: string
+          search_query?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -847,6 +874,54 @@ export type Database = {
           },
         ]
       }
+      user_activity_stats: {
+        Row: {
+          activity_date: string
+          assessments_completed: number | null
+          collaboration_interactions: number | null
+          cpd_activities: number | null
+          created_at: string
+          evidence_searches: number | null
+          evidence_views: number | null
+          id: string
+          logins_count: number | null
+          protocols_created: number | null
+          protocols_shared: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_date?: string
+          assessments_completed?: number | null
+          collaboration_interactions?: number | null
+          cpd_activities?: number | null
+          created_at?: string
+          evidence_searches?: number | null
+          evidence_views?: number | null
+          id?: string
+          logins_count?: number | null
+          protocols_created?: number | null
+          protocols_shared?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_date?: string
+          assessments_completed?: number | null
+          collaboration_interactions?: number | null
+          cpd_activities?: number | null
+          created_at?: string
+          evidence_searches?: number | null
+          evidence_views?: number | null
+          id?: string
+          logins_count?: number | null
+          protocols_created?: number | null
+          protocols_shared?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_preferences: {
         Row: {
           created_at: string
@@ -919,6 +994,10 @@ export type Database = {
           target_user_id: string
         }
         Returns: boolean
+      }
+      update_user_activity_stat: {
+        Args: { increment_value?: number; stat_type: string }
+        Returns: undefined
       }
     }
     Enums: {
