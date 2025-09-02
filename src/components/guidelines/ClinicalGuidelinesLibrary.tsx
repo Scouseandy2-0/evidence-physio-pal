@@ -271,12 +271,29 @@ export const ClinicalGuidelinesLibrary = () => {
         <Separator />
 
         <div className="flex gap-2 pt-2">
-          <Button variant="outline" size="sm" className="flex-1">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex-1"
+            onClick={() => {
+              toast({
+                title: "Guideline Details",
+                description: `Viewing details for: ${guideline.title}`,
+              });
+            }}
+          >
             <FileText className="h-4 w-4 mr-2" />
             View Details
           </Button>
-          {guideline.guideline_url && (
-            <Button variant="default" size="sm" className="flex-1">
+          {guideline.guideline_url && guideline.guideline_url !== '#' && (
+            <Button 
+              variant="default" 
+              size="sm" 
+              className="flex-1"
+              onClick={() => {
+                window.open(guideline.guideline_url, '_blank', 'noopener,noreferrer');
+              }}
+            >
               <ExternalLink className="h-4 w-4 mr-2" />
               Open Guide
             </Button>
