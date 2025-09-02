@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Brain, MessageSquare, Mic, Volume2, Heart, BarChart3, Bell, Users, Sparkles } from "lucide-react";
 import { AISummarizer } from "@/components/ai/AISummarizer";
+import { ChatGPTInterface } from "@/components/ai/ChatGPTInterface";
 import { RealtimeChat } from "@/components/collaboration/RealtimeChat";
 import { AnatomyViewer3D } from "@/components/anatomy/AnatomyViewer3D";
 import { EnhancedAnalytics } from "@/components/analytics/EnhancedAnalytics";
@@ -23,10 +24,16 @@ export const AdvancedFeatures = () => {
       badge: "New"
     },
     {
-      id: "realtime-chat",
-      label: "AI Assistant",
+      id: "chatgpt",
+      label: "ChatGPT Assistant",
       icon: <MessageSquare className="h-4 w-4" />,
-      description: "Voice & text chat with AI"
+      description: "Advanced AI conversation with GPT-4"
+    },
+    {
+      id: "realtime-chat",
+      label: "Voice Chat",
+      icon: <Mic className="h-4 w-4" />,
+      description: "Real-time voice & text chat"
     },
     {
       id: "anatomy-3d",
