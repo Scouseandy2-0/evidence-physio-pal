@@ -146,6 +146,39 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_conversations: {
+        Row: {
+          context: string | null
+          created_at: string
+          id: string
+          messages: Json
+          response: string
+          specialty: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          context?: string | null
+          created_at?: string
+          id?: string
+          messages: Json
+          response: string
+          specialty?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          context?: string | null
+          created_at?: string
+          id?: string
+          messages?: Json
+          response?: string
+          specialty?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       collaboration_shared_protocols: {
         Row: {
           access_level: string
