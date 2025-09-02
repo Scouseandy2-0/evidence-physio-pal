@@ -7,6 +7,14 @@ import { Link } from "react-router-dom"
 export const Header = () => {
   const { user, signOut } = useAuth();
   const { subscribed } = useSubscription();
+  
+  // Debug logging for auth and subscription status
+  console.log("📊 Header status:", { 
+    hasUser: !!user, 
+    userEmail: user?.email, 
+    subscribed,
+    showUpgradeButton: !!user && !subscribed
+  });
 
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
