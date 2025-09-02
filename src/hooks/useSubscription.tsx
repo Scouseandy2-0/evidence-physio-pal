@@ -48,10 +48,17 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
       setSubscriptionEnd(data.subscription_end || null);
     } catch (error: any) {
       console.error('Error checking subscription:', error);
-      // Don't show error toast for subscription checks as it's automatic
-      setSubscribed(false);
-      setSubscriptionTier(null);
-      setSubscriptionEnd(null);
+      
+      // Handle specific error cases gracefully
+      if (error.message?.includes("temporarily unavailable")) {
+        // Service is down, but don't reset subscription state
+        console.log("Subscription service temporarily unavailable, keeping current state");
+      } else {
+        // Other errors, reset subscription state
+        setSubscribed(false);
+        setSubscriptionTier(null);
+        setSubscriptionEnd(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -68,6 +75,7 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
     }
 
     try {
+      setLoading(true);
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -76,15 +84,35 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
 
       if (error) throw error;
 
+      if (!data?.url) {
+        throw new Error("No checkout URL received");
+      }
+
       // Open Stripe checkout in a new tab
       window.open(data.url, '_blank');
+      
+      toast({
+        title: "Redirecting to Payment",
+        description: "Opening Stripe checkout in a new tab...",
+      });
     } catch (error: any) {
       console.error('Error creating checkout:', error);
+      
+      let errorMessage = "Failed to create checkout session. Please try again.";
+      
+      if (error.message?.includes("temporarily unavailable")) {
+        errorMessage = "Payment service is temporarily unavailable. Please try again in a few minutes.";
+      } else if (error.message?.includes("Authentication")) {
+        errorMessage = "Please sign in again to continue.";
+      }
+      
       toast({
         title: "Payment Error",
-        description: error.message || "Failed to create checkout session. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -99,6 +127,7 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
     }
 
     try {
+      setLoading(true);
       const { data, error } = await supabase.functions.invoke('customer-portal', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -107,15 +136,34 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
 
       if (error) throw error;
 
+      if (!data?.url) {
+        throw new Error("No portal URL received");
+      }
+
       // Open customer portal in a new tab
       window.open(data.url, '_blank');
+      
+      toast({
+        title: "Opening Customer Portal",
+        description: "Redirecting to manage your subscription...",
+      });
     } catch (error: any) {
       console.error('Error opening customer portal:', error);
+      
+      let errorMessage = "Failed to open customer portal";
+      if (error.message?.includes("No subscription found")) {
+        errorMessage = "No subscription found. Please create a subscription first.";
+      } else if (error.message?.includes("Authentication")) {
+        errorMessage = "Please sign in again to continue.";
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to open customer portal",
+        description: errorMessage,
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 

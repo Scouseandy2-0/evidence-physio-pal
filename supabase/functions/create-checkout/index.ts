@@ -25,6 +25,7 @@ serve(async (req) => {
     
     console.log("Environment check:", {
       hasStripeKey: !!stripeKey,
+      stripeKeyPrefix: stripeKey?.substring(0, 10) || 'undefined',
       stripeKeyLength: stripeKey?.length || 0,
       hasSupabaseUrl: !!supabaseUrl,
       hasAnonKey: !!supabaseAnonKey
@@ -32,12 +33,24 @@ serve(async (req) => {
     
     if (!stripeKey) {
       console.error("STRIPE_SECRET_KEY environment variable is not set");
-      throw new Error("Stripe configuration error - please contact support");
+      return new Response(JSON.stringify({ 
+        error: "Payment service temporarily unavailable. Please try again later or contact support.",
+        code: "STRIPE_CONFIG_ERROR"
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 503,
+      });
     }
     
     if (!supabaseUrl || !supabaseAnonKey) {
       console.error("Supabase environment variables are not set");
-      throw new Error("Database configuration error - please contact support");
+      return new Response(JSON.stringify({ 
+        error: "Database configuration error - please contact support",
+        code: "DB_CONFIG_ERROR"
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 503,
+      });
     }
     
     console.log("Environment variables verified");
@@ -113,9 +126,29 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error("Error in create-checkout:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    // Provide user-friendly error messages
+    let userMessage = "An unexpected error occurred. Please try again.";
+    let statusCode = 500;
+    
+    if (errorMessage.includes("Authentication")) {
+      userMessage = "Please sign in again to continue with payment.";
+      statusCode = 401;
+    } else if (errorMessage.includes("Stripe")) {
+      userMessage = "Payment service is temporarily unavailable. Please try again in a few minutes.";
+      statusCode = 503;
+    } else if (errorMessage.includes("customer")) {
+      userMessage = "Unable to process payment. Please contact support if this continues.";
+    }
+    
+    return new Response(JSON.stringify({ 
+      error: userMessage,
+      code: "CHECKOUT_ERROR",
+      details: errorMessage
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
+      status: statusCode,
     });
   }
 });
