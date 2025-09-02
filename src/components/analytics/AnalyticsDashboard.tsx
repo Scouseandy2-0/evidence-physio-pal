@@ -76,10 +76,32 @@ export const AnalyticsDashboard = () => {
 
   const fetchAnalytics = async () => {
     try {
-      // In a real app, these would be proper analytics queries
-      // For demo, we'll simulate some data
+      console.log("📊 AnalyticsDashboard: Starting to fetch analytics data for user:", user?.id);
       
-      // Fetch basic counts
+      // Fetch basic counts with proper error handling
+      const fetchQueries = async () => {
+        const queries = [
+          supabase.from('patients').select('id', { count: 'exact' }).eq('therapist_id', user?.id),
+          supabase.from('treatment_protocols').select('id', { count: 'exact' }).eq('created_by', user?.id),
+          supabase.from('analytics_sessions').select('id', { count: 'exact' }).eq('user_id', user?.id),
+          supabase.from('cpd_activities').select('hours_claimed').eq('user_id', user?.id),
+          supabase.from('collaboration_shared_protocols').select('id', { count: 'exact' }).eq('shared_by', user?.id),
+          supabase.from('protocol_reviews').select('rating').eq('reviewer_id', user?.id)
+        ];
+
+        const results = await Promise.allSettled(queries);
+        
+        return results.map((result, index) => {
+          if (result.status === 'fulfilled') {
+            console.log(`📊 Query ${index} successful:`, result.value);
+            return result.value;
+          } else {
+            console.warn(`📊 Query ${index} failed:`, result.reason);
+            return { data: null, count: 0, error: result.reason };
+          }
+        });
+      };
+
       const [
         patientsResult,
         protocolsResult,
@@ -87,21 +109,14 @@ export const AnalyticsDashboard = () => {
         cpdResult,
         sharedResult,
         reviewsResult
-      ] = await Promise.all([
-        supabase.from('patients').select('id', { count: 'exact' }).eq('therapist_id', user?.id),
-        supabase.from('treatment_protocols').select('id', { count: 'exact' }).eq('created_by', user?.id),
-        supabase.from('patient_sessions').select('id', { count: 'exact' }),
-        supabase.from('cpd_activities').select('hours_claimed').eq('user_id', user?.id),
-        supabase.from('collaboration_shared_protocols').select('id', { count: 'exact' }).eq('shared_by', user?.id),
-        supabase.from('protocol_reviews').select('rating').eq('reviewer_id', user?.id)
-      ]);
+      ] = await fetchQueries();
 
-      const totalCpdHours = cpdResult.data?.reduce((sum, activity) => sum + (activity.hours_claimed || 0), 0) || 0;
+      const totalCpdHours = cpdResult.data?.reduce((sum: number, activity: any) => sum + Number(activity.hours_claimed || 0), 0) || 0;
       const avgRating = reviewsResult.data?.length > 0 
-        ? reviewsResult.data.reduce((sum, review) => sum + (review.rating || 0), 0) / reviewsResult.data.length 
+        ? reviewsResult.data.reduce((sum: number, review: any) => sum + Number(review.rating || 0), 0) / reviewsResult.data.length 
         : 0;
 
-      setAnalytics({
+      const analyticsData = {
         totalPatients: patientsResult.count || 0,
         activeProtocols: protocolsResult.count || 0,
         completedSessions: sessionsResult.count || 0,
@@ -110,7 +125,10 @@ export const AnalyticsDashboard = () => {
         protocolsShared: sharedResult.count || 0,
         reviewsReceived: reviewsResult.data?.length || 0,
         evidenceAccessed: Math.floor(Math.random() * 100) + 50 // Simulated for demo
-      });
+      };
+
+      console.log("📊 AnalyticsDashboard: Final analytics data:", analyticsData);
+      setAnalytics(analyticsData);
 
       // Simulate usage metrics
       setUsage({

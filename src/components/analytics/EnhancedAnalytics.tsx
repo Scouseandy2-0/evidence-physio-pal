@@ -36,10 +36,14 @@ export const EnhancedAnalytics = () => {
   }, [user, subscribed, timeRange]);
 
   const fetchAnalyticsData = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log("📊 EnhancedAnalytics: No user available");
+      return;
+    }
 
     try {
       setLoading(true);
+      console.log("📊 EnhancedAnalytics: Starting to fetch analytics data for user:", user.id);
 
       // Calculate date range
       const endDate = new Date();
@@ -59,23 +63,27 @@ export const EnhancedAnalytics = () => {
           break;
       }
 
-      // Fetch analytics sessions
+      console.log("📊 EnhancedAnalytics: Date range:", { startDate: startDate.toISOString(), endDate: endDate.toISOString() });
+
+      // Fetch analytics sessions - simplified query to avoid JOIN issues
       const { data: sessions, error } = await supabase
         .from('analytics_sessions')
-        .select(`
-          *,
-          patients(primary_condition),
-          conditions(name)
-        `)
+        .select('*')
         .eq('user_id', user.id)
         .gte('created_at', startDate.toISOString())
         .lte('created_at', endDate.toISOString())
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("📊 EnhancedAnalytics: Database error:", error);
+        throw error;
+      }
+
+      console.log("📊 EnhancedAnalytics: Fetched sessions:", sessions?.length || 0);
 
       // Process analytics data
       const processedData = processAnalyticsData(sessions || []);
+      console.log("📊 EnhancedAnalytics: Processed data:", processedData);
       setAnalyticsData(processedData);
     } catch (error: any) {
       console.error('Error fetching analytics:', error);
