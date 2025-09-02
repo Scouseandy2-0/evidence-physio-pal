@@ -12,6 +12,7 @@ export const SubscriptionPage = () => {
   const [processing, setProcessing] = useState(false);
 
   const handleSubscribe = async () => {
+    console.log("🎯 handleSubscribe called - starting subscription process");
     setProcessing(true);
     await createCheckout();
     setProcessing(false);
