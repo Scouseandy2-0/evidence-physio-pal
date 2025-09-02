@@ -29,6 +29,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       setSession(session);
       setUser(session?.user ?? null);
+      
+      // Track login if user exists
+      if (session?.user) {
+        trackUserLogin(session.user.id);
+      }
+      
       setLoading(false);
     }).catch((error) => {
       console.error('useAuth: Session check failed:', error);
@@ -42,6 +48,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // Track login on auth state change to active session
+        if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+          trackUserLogin(session.user.id);
+        }
+        
         setLoading(false);
       }
     );
@@ -51,6 +63,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       subscription.unsubscribe();
     };
   }, []);
+
+  const trackUserLogin = async (userId: string) => {
+    try {
+      console.log('🔍 Tracking user login for:', userId);
+      const { error } = await supabase.rpc('update_user_activity_stat', {
+        stat_type: 'login',
+        increment_value: 1
+      });
+      
+      if (error) {
+        console.warn('Failed to track login activity:', error);
+      } else {
+        console.log('✅ Login activity tracked successfully');
+      }
+    } catch (error) {
+      console.warn('Login tracking error:', error);
+    }
+  };
 
   const signOut = async () => {
     console.log('useAuth: Signing out user');

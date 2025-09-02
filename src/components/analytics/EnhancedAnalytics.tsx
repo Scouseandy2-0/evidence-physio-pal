@@ -107,10 +107,10 @@ export const EnhancedAnalytics = () => {
     const patientSatisfaction = satisfactionScores.reduce((acc, session) => 
       acc + session.satisfaction_score, 0) / Math.max(satisfactionScores.length, 1);
 
-    // Condition breakdown
+    // Condition breakdown - get from session_type field or default naming
     const conditionBreakdown: { [key: string]: number } = {};
     sessions.forEach(session => {
-      const condition = session.conditions?.name || session.patients?.primary_condition || 'Unknown';
+      const condition = session.session_type || 'General Session';
       conditionBreakdown[condition] = (conditionBreakdown[condition] || 0) + 1;
     });
 

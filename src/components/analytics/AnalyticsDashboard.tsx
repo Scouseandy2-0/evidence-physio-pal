@@ -116,6 +116,34 @@ export const AnalyticsDashboard = () => {
         ? reviewsResult.data.reduce((sum: number, review: any) => sum + Number(review.rating || 0), 0) / reviewsResult.data.length 
         : 0;
 
+      // Now fetch evidence access data from the new table
+      const evidenceResult = await supabase
+        .from('evidence_access_logs')
+        .select('id', { count: 'exact' })
+        .eq('user_id', user?.id);
+
+      // Fetch activity stats for feature usage
+      const activityResult = await supabase
+        .from('user_activity_stats')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('activity_date', { ascending: false })
+        .limit(30);
+
+      console.log("📊 AnalyticsDashboard: Evidence access count:", evidenceResult.count);
+      console.log("📊 AnalyticsDashboard: Activity stats:", activityResult.data?.length);
+
+      // Calculate feature usage from activity stats
+      const featureUsage = activityResult.data?.reduce((acc, stat) => {
+        acc['Patient Management'] = (acc['Patient Management'] || 0) + (stat.collaboration_interactions || 0);
+        acc['Protocol Builder'] = (acc['Protocol Builder'] || 0) + (stat.protocols_created || 0);
+        acc['Evidence Search'] = (acc['Evidence Search'] || 0) + (stat.evidence_searches || 0);
+        acc['Assessment Tools'] = (acc['Assessment Tools'] || 0) + (stat.assessments_completed || 0);
+        acc['CPD Tracker'] = (acc['CPD Tracker'] || 0) + (stat.cpd_activities || 0);
+        acc['Collaboration'] = (acc['Collaboration'] || 0) + (stat.protocols_shared || 0);
+        return acc;
+      }, {} as { [key: string]: number }) || {};
+
       const analyticsData = {
         totalPatients: patientsResult.count || 0,
         activeProtocols: protocolsResult.count || 0,
@@ -124,27 +152,23 @@ export const AnalyticsDashboard = () => {
         averageRating: avgRating,
         protocolsShared: sharedResult.count || 0,
         reviewsReceived: reviewsResult.data?.length || 0,
-        evidenceAccessed: Math.floor(Math.random() * 100) + 50 // Simulated for demo
+        evidenceAccessed: evidenceResult.count || 0 // Now using real data
       };
 
       console.log("📊 AnalyticsDashboard: Final analytics data:", analyticsData);
       setAnalytics(analyticsData);
 
-      // Simulate usage metrics
-      setUsage({
-        dailyLogins: Array.from({ length: 30 }, () => Math.floor(Math.random() * 10)),
-        featuresUsed: {
-          'Patient Management': Math.floor(Math.random() * 50) + 20,
-          'Protocol Builder': Math.floor(Math.random() * 30) + 15,
-          'Evidence Search': Math.floor(Math.random() * 40) + 25,
-          'Assessment Tools': Math.floor(Math.random() * 35) + 20,
-          'CPD Tracker': Math.floor(Math.random() * 20) + 10,
-          'Collaboration': Math.floor(Math.random() * 25) + 15
-        },
+      // Update usage metrics with real data
+      const usageData = {
+        dailyLogins: activityResult.data?.map(stat => stat.logins_count || 0).slice(0, 30) || [],
+        featuresUsed: featureUsage,
         protocolsCreated: protocolsResult.count || 0,
-        assessmentsCompleted: Math.floor(Math.random() * 50) + 10,
+        assessmentsCompleted: activityResult.data?.reduce((sum, stat) => sum + (stat.assessments_completed || 0), 0) || 0,
         collaborationActivity: sharedResult.count || 0
-      });
+      };
+
+      console.log("📊 AnalyticsDashboard: Usage data:", usageData);
+      setUsage(usageData);
 
     } catch (error: any) {
       toast({
