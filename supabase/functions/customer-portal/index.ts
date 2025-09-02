@@ -21,37 +21,56 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
+    // Check required environment variables
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    
+    logStep("Environment check", { 
+      hasStripeKey: !!stripeKey, 
+      hasSupabaseUrl: !!supabaseUrl, 
+      hasServiceKey: !!supabaseServiceKey,
+      hasAnonKey: !!supabaseAnonKey
+    });
+    
+    if (!stripeKey) {
+      throw new Error("Stripe configuration error - please contact support");
+    }
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error("Database configuration error - please contact support");
+    }
+    
     logStep("Stripe key verified");
-
-    // Initialize Supabase client with the service role key
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } }
-    );
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("No authorization header provided");
     logStep("Authorization header found");
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
+    
+    // Use anon key for authentication
+    const authClient = createClient(supabaseUrl, supabaseAnonKey);
+    const { data: userData, error: userError } = await authClient.auth.getUser(token);
     if (userError) throw new Error(`Authentication error: ${userError.message}`);
     const user = userData.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
+    logStep("Looking up Stripe customer for:", user.email);
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     if (customers.data.length === 0) {
-      throw new Error("No Stripe customer found for this user");
+      logStep("No Stripe customer found");
+      throw new Error("No subscription found. Please create a subscription first.");
     }
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
-    const origin = req.headers.get("origin") || "http://localhost:3000";
+    const origin = req.headers.get("origin") || "https://evidence-physio-pal.lovable.app";
+    logStep("Creating portal session with origin:", origin);
+    
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: `${origin}/`,
