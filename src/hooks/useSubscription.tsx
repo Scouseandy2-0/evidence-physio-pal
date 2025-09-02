@@ -65,6 +65,7 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
   };
 
   const createCheckout = async () => {
+    console.log("🔄 createCheckout called", { user: !!user, session: !!session });
     if (!user || !session) {
       toast({
         title: "Authentication Required",
@@ -75,20 +76,32 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
     }
 
     try {
+      console.log("🚀 Starting checkout process...");
       setLoading(true);
+      
+      console.log("📡 Calling create-checkout function...");
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
       });
+      
+      console.log("📨 Edge function response:", { data, error });
 
-      if (error) throw error;
-
-      if (!data?.url) {
-        throw new Error("No checkout URL received");
+      if (error) {
+        console.error("❌ Edge function error:", error);
+        throw error;
       }
 
+      if (!data?.url) {
+        console.error("❌ No checkout URL received:", data);
+        throw new Error("No checkout URL received");
+      }
+      
+      console.log("✅ Got checkout URL:", data.url);
+
       // Open Stripe checkout in a new tab
+      console.log("🔗 Opening checkout URL in new tab...");
       window.open(data.url, '_blank');
       
       toast({
@@ -96,7 +109,11 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
         description: "Opening Stripe checkout in a new tab...",
       });
     } catch (error: any) {
-      console.error('Error creating checkout:', error);
+      console.error('💥 Error creating checkout:', error, { 
+        message: error.message, 
+        details: error.details,
+        code: error.code 
+      });
       
       let errorMessage = "Failed to create checkout session. Please try again.";
       
