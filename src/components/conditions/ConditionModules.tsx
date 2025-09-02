@@ -4,10 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useSubscription } from "@/hooks/useSubscription";
 import { PremiumFeature, FreeTierBanner } from "@/components/subscription/PremiumFeature";
+import { ChatGPTInterface } from "@/components/ai/ChatGPTInterface";
 import { 
   Search, 
   Bone, 
@@ -19,7 +21,12 @@ import {
   Calendar,
   AlertCircle,
   Lock,
-  Crown
+  Crown,
+  MessageSquare,
+  Database,
+  BookOpen,
+  Play,
+  Stethoscope
 } from "lucide-react";
 
 interface Condition {
@@ -69,6 +76,9 @@ export const ConditionModules = () => {
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'msk' | 'neurological' | 'respiratory'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selectedCondition, setSelectedCondition] = useState<Condition | null>(null);
+  const [showAIChat, setShowAIChat] = useState(false);
+  const [evidenceData, setEvidenceData] = useState<any[]>([]);
   const { toast } = useToast();
   const { subscribed } = useSubscription();
 
@@ -146,6 +156,59 @@ export const ConditionModules = () => {
     );
   };
 
+  const searchEvidence = async (conditionName: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('evidence')
+        .select('*')
+        .or(`title.ilike.%${conditionName}%,abstract.ilike.%${conditionName}%,tags.cs.{${conditionName}}`)
+        .eq('is_active', true)
+        .limit(10);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error: any) {
+      toast({
+        title: "Error fetching evidence",
+        description: error.message,
+        variant: "destructive",
+      });
+      return [];
+    }
+  };
+
+  const searchExternalSources = async (conditionName: string) => {
+    try {
+      // Search multiple databases
+      const [pubmedResult, cochraneResult, pedroResult] = await Promise.allSettled([
+        supabase.functions.invoke('pubmed-integration', {
+          body: { searchTerms: conditionName, maxResults: 5 }
+        }),
+        supabase.functions.invoke('cochrane-integration', {
+          body: { searchTerms: conditionName, maxResults: 3 }
+        }),
+        supabase.functions.invoke('pedro-integration', {
+          body: { searchTerms: conditionName, condition: conditionName, maxResults: 3 }
+        })
+      ]);
+
+      toast({
+        title: "Evidence Search Complete",
+        description: `Searched PubMed, Cochrane, and PEDro databases for ${conditionName}`,
+      });
+      
+      // Refresh local evidence after external search
+      return await searchEvidence(conditionName);
+    } catch (error: any) {
+      toast({
+        title: "External search error",
+        description: error.message,
+        variant: "destructive",
+      });
+      return [];
+    }
+  };
+
   const ConditionCard = ({ condition }: { condition: Condition }) => {
     const Icon = categoryIcons[condition.category];
     const tools = getAssessmentToolsForCondition(condition.id);
@@ -212,27 +275,63 @@ export const ConditionModules = () => {
             </div>
           )}
 
-          <Button 
-            variant="outline" 
-            className="w-full mt-4"
-            onClick={() => {
-              // Premium interactive features
-              if (subscribed) {
+          <div className="grid grid-cols-1 gap-2">
+            <Button 
+              variant="default" 
+              className="w-full"
+              onClick={() => {
+                setSelectedCondition(condition);
+                setShowAIChat(true);
+              }}
+            >
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Ask AI about {condition.name}
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={async () => {
+                if (!subscribed) {
+                  toast({
+                    title: "Premium Feature",
+                    description: "Upgrade to access evidence search",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                const evidence = await searchEvidence(condition.name);
+                setEvidenceData(evidence);
                 toast({
-                  title: "Condition Details",
-                  description: `Accessing detailed information for ${condition.name}`,
+                  title: "Evidence Search",
+                  description: `Found ${evidence.length} studies for ${condition.name}`,
                 });
-              } else {
-                toast({
-                  title: "Premium Feature",
-                  description: "Upgrade to Premium to access detailed condition information",
-                  variant: "destructive",
-                });
-              }
-            }}
-          >
-            {subscribed ? "View Details" : "Upgrade for Details"}
-          </Button>
+              }}
+            >
+              <Database className="h-4 w-4 mr-2" />
+              {subscribed ? "Search Evidence" : "Upgrade for Evidence"}
+            </Button>
+
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={async () => {
+                if (!subscribed) {
+                  toast({
+                    title: "Premium Feature", 
+                    description: "Upgrade to access external databases",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                const evidence = await searchExternalSources(condition.name);
+                setEvidenceData(evidence);
+              }}
+            >
+              <BookOpen className="h-4 w-4 mr-2" />
+              {subscribed ? "Search External DBs" : "Upgrade for External"}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );
@@ -428,6 +527,70 @@ export const ConditionModules = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* AI Chat Dialog */}
+      <Dialog open={showAIChat} onOpenChange={setShowAIChat}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              AI Assistant - {selectedCondition?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Get evidence-based guidance and clinical insights for {selectedCondition?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
+            {selectedCondition && (
+              <ChatGPTInterface 
+                initialContext={`Patient condition: ${selectedCondition.name}\nDescription: ${selectedCondition.description}\nCategory: ${categoryNames[selectedCondition.category]}\nICD Codes: ${selectedCondition.icd_codes?.join(', ')}`}
+                specialty={selectedCondition.category}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Evidence Results Dialog */}
+      <Dialog open={evidenceData.length > 0} onOpenChange={() => setEvidenceData([])}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5 text-primary" />
+              Evidence Results ({evidenceData.length})
+            </DialogTitle>
+            <DialogDescription>
+              Latest research evidence from multiple databases
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {evidenceData.map((evidence, index) => (
+              <Card key={evidence.id || index}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">{evidence.title}</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">{evidence.study_type}</Badge>
+                    <Badge variant={evidence.evidence_level === 'A' ? 'default' : 'secondary'}>
+                      Level {evidence.evidence_level}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">{evidence.journal}</span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground line-clamp-3">
+                    {evidence.abstract}
+                  </p>
+                  {evidence.key_findings && (
+                    <p className="text-sm mt-2 font-medium">
+                      Key Findings: {evidence.key_findings}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
