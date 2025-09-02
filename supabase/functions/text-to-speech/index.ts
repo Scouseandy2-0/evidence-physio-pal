@@ -18,15 +18,41 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
-    const { text, voice } = await req.json()
+    // Validate request body
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch (e) {
+      logStep("Invalid JSON in request body");
+      return new Response(JSON.stringify({ 
+        error: 'Invalid request format' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-    if (!text) {
-      throw new Error('Text is required')
+    const { text, voice } = requestBody;
+
+    if (!text || typeof text !== 'string' || text.trim().length === 0) {
+      logStep("Missing or invalid text parameter");
+      return new Response(JSON.stringify({ 
+        error: 'Text is required and must be a non-empty string' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) {
-      throw new Error('OPENAI_API_KEY is not set');
+      logStep("OpenAI API key missing");
+      return new Response(JSON.stringify({ 
+        error: 'Text-to-speech service temporarily unavailable' 
+      }), {
+        status: 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     logStep("Generating speech", { voice: voice || 'alloy', textLength: text.length });

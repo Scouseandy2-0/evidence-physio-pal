@@ -24,10 +24,49 @@ serve(async (req) => {
   }
 
   try {
-    const { searchTerms, maxResults = 20, dateRange = "1 year" } = await req.json();
+    console.log('PubMed integration function started');
     
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    // Validate environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Missing Supabase environment variables');
+      return new Response(JSON.stringify({ 
+        error: 'Database configuration error',
+        success: false 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    // Validate request body
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch (e) {
+      return new Response(JSON.stringify({ 
+        error: 'Invalid request format',
+        success: false 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    const { searchTerms, maxResults = 20, dateRange = "1 year" } = requestBody;
+    
+    if (!searchTerms || typeof searchTerms !== 'string' || searchTerms.trim().length === 0) {
+      return new Response(JSON.stringify({ 
+        error: 'Search terms are required',
+        success: false 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     console.log(`Searching PubMed for: ${searchTerms}`);

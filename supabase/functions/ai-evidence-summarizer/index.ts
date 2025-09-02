@@ -19,16 +19,43 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
+    // Validate environment variables
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) {
-      throw new Error('OPENAI_API_KEY is not set');
+      logStep("OpenAI API key missing");
+      return new Response(JSON.stringify({ 
+        error: 'AI service temporarily unavailable' 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 503,
+      });
     }
 
-    const { evidenceText, condition, requestType = 'summary' } = await req.json();
-    logStep("Received request", { condition, requestType });
+    // Validate request body
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch (e) {
+      logStep("Invalid JSON in request body");
+      return new Response(JSON.stringify({ 
+        error: 'Invalid request format' 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
+    }
 
-    if (!evidenceText) {
-      throw new Error('Evidence text is required');
+    const { evidenceText, condition, requestType = 'summary' } = requestBody;
+    logStep("Received request", { condition, requestType, hasEvidenceText: !!evidenceText });
+
+    if (!evidenceText || typeof evidenceText !== 'string' || evidenceText.trim().length === 0) {
+      logStep("Missing or invalid evidence text");
+      return new Response(JSON.stringify({ 
+        error: 'Evidence text is required and must be a non-empty string' 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
     }
 
     let systemPrompt = '';
@@ -74,7 +101,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4.1-2025-04-14',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -83,6 +110,8 @@ serve(async (req) => {
         temperature: 0.3,
       }),
     });
+
+    logStep("OpenAI API response received", { status: response.status });
 
     if (!response.ok) {
       const errorData = await response.json();
