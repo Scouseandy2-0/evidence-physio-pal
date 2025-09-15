@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { EvidenceSyncService } from "@/services/evidenceSync";
 
 interface AuthContextType {
   user: User | null;
@@ -67,16 +68,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const trackUserLogin = async (userId: string) => {
     try {
       console.log('🔍 Tracking user login for:', userId);
-      const { error } = await supabase.rpc('update_user_activity_stat', {
+      
+      // Track login activity
+      const { error: trackingError } = await supabase.rpc('update_user_activity_stat', {
         stat_type: 'login',
         increment_value: 1
       });
       
-      if (error) {
-        console.warn('Failed to track login activity:', error);
+      if (trackingError) {
+        console.warn('Failed to track login activity:', trackingError);
       } else {
         console.log('✅ Login activity tracked successfully');
       }
+      
+      // Start evidence sync in background - don't await to avoid blocking login
+      setTimeout(async () => {
+        try {
+          await EvidenceSyncService.syncEvidenceOnLogin(userId);
+        } catch (syncError) {
+          console.warn('Background evidence sync failed:', syncError);
+        }
+      }, 1000); // Delay sync by 1 second to allow UI to load first
+      
     } catch (error) {
       console.warn('Login tracking error:', error);
     }

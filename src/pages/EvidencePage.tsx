@@ -3,6 +3,7 @@ import { EvidenceIntegration } from "@/components/evidence/EvidenceIntegration";
 import { RealDataPopulator } from "@/components/evidence/RealDataPopulator";
 import { DataPopulator } from "@/components/evidence/DataPopulator";
 import { ProtocolDataPopulator } from "@/components/protocols/ProtocolDataPopulator";
+import { EvidenceSyncStatus } from "@/components/evidence/EvidenceSyncStatus";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const EvidencePage = () => {
@@ -26,6 +27,7 @@ const EvidencePage = () => {
             </TabsList>
             
             <TabsContent value="search" className="space-y-6">
+              <EvidenceSyncStatus />
               <EvidenceIntegration />
             </TabsContent>
             
