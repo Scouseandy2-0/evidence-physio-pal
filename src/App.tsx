@@ -13,12 +13,13 @@ import { AuthPage } from "./components/auth/AuthPage";
 import { AuthProvider } from "./hooks/useAuth";
 import { SubscriptionProvider } from "./hooks/useSubscription";
 import { ConditionModules } from "./components/conditions/ConditionModules";
-import { AssessmentToolsLibrary } from "./components/conditions/AssessmentToolsLibrary";
+import AssessmentsPage from "./pages/AssessmentsPage";
 import { PersonalizedDashboard } from "./components/dashboard/PersonalizedDashboard";
-import { TreatmentProtocolBuilder } from "./components/protocols/TreatmentProtocolBuilder";
-import { CPDTracker } from "./components/cpd/CPDTracker";
-import { PatientManagement } from "./components/patients/PatientManagement";
-import { CollaborationHub } from "./components/collaboration/CollaborationHub";
+
+import CPDPage from "./pages/CPDPage";
+import PatientsPage from "./pages/PatientsPage";
+import CollaborationPage from "./pages/CollaborationPage";
+import ProtocolsPage from "./pages/ProtocolsPage";
 import { AnalyticsDashboard } from "./components/analytics/AnalyticsDashboard";
 import { SubscriptionPage } from "./components/subscription/SubscriptionPage";
 import { SubscriptionSuccessPage } from "./components/subscription/SubscriptionSuccessPage";
@@ -40,14 +41,14 @@ const App = () => (
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/dashboard" element={<PersonalizedDashboard />} />
             <Route path="/conditions" element={<ConditionsPage />} />
-            <Route path="/assessments" element={<AssessmentToolsLibrary />} />
+            <Route path="/assessments" element={<AssessmentsPage />} />
             <Route path="/assessment/:toolId" element={<AssessmentPage />} />
-            <Route path="/protocols" element={<TreatmentProtocolBuilder />} />
+            <Route path="/protocols" element={<ProtocolsPage />} />
             <Route path="/guidelines" element={<GuidelinesPage />} />
             <Route path="/evidence" element={<EvidencePage />} />
-            <Route path="/cpd" element={<CPDTracker />} />
-            <Route path="/patients" element={<PatientManagement />} />
-            <Route path="/collaboration" element={<CollaborationHub />} />
+            <Route path="/cpd" element={<CPDPage />} />
+            <Route path="/patients" element={<PatientsPage />} />
+            <Route path="/collaboration" element={<CollaborationPage />} />
             <Route path="/analytics" element={<AnalyticsDashboard />} />
             <Route path="/advanced" element={<AdvancedFeatures />} />
             <Route path="/subscription" element={<SubscriptionPage />} />
