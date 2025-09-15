@@ -44,16 +44,16 @@ export const HeroSection = () => {
             {/* Stats */}
             <div className="grid grid-cols-3 gap-6 pt-8 border-t border-border">
               <div className="text-center">
-                <div className="text-2xl font-bold text-medical-blue">500+</div>
-                <div className="text-sm text-muted-foreground">Research Papers</div>
+                <div className="text-2xl font-bold text-medical-blue">137+</div>
+                <div className="text-sm text-muted-foreground">Evidence Papers</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-medical-green">50+</div>
-                <div className="text-sm text-muted-foreground">Medical Journals</div>
+                <div className="text-2xl font-bold text-medical-green">39+</div>
+                <div className="text-sm text-muted-foreground">Conditions</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-medical-blue">10k+</div>
-                <div className="text-sm text-muted-foreground">Practitioners</div>
+                <div className="text-2xl font-bold text-medical-blue">8+</div>
+                <div className="text-sm text-muted-foreground">Assessment Tools</div>
               </div>
             </div>
           </div>

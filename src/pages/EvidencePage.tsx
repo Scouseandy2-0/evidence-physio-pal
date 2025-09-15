@@ -2,6 +2,7 @@ import { Header } from "@/components/Header";
 import { EvidenceIntegration } from "@/components/evidence/EvidenceIntegration";
 import { RealDataPopulator } from "@/components/evidence/RealDataPopulator";
 import { DataPopulator } from "@/components/evidence/DataPopulator";
+import { ProtocolDataPopulator } from "@/components/protocols/ProtocolDataPopulator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const EvidencePage = () => {
@@ -21,7 +22,7 @@ const EvidencePage = () => {
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="search">Search Evidence</TabsTrigger>
               <TabsTrigger value="populate">Populate Data</TabsTrigger>
-              <TabsTrigger value="comprehensive">Comprehensive Sync</TabsTrigger>
+              <TabsTrigger value="real-populate">Comprehensive Sync</TabsTrigger>
             </TabsList>
             
             <TabsContent value="search" className="space-y-6">
@@ -32,8 +33,9 @@ const EvidencePage = () => {
               <DataPopulator />
             </TabsContent>
             
-            <TabsContent value="comprehensive" className="space-y-6">
+            <TabsContent value="real-populate" className="space-y-6">
               <RealDataPopulator />
+              <ProtocolDataPopulator />
             </TabsContent>
           </Tabs>
         </div>
