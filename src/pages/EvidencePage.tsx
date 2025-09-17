@@ -1,4 +1,5 @@
 import { Header } from "@/components/Header";
+import { SearchSection } from "@/components/SearchSection";
 import { EvidenceIntegration } from "@/components/evidence/EvidenceIntegration";
 import { RealDataPopulator } from "@/components/evidence/RealDataPopulator";
 import { DataPopulator } from "@/components/evidence/DataPopulator";
@@ -27,6 +28,7 @@ const EvidencePage = () => {
             </TabsList>
             
             <TabsContent value="search" className="space-y-6">
+              <SearchSection />
               <EvidenceSyncStatus />
               <EvidenceIntegration />
             </TabsContent>

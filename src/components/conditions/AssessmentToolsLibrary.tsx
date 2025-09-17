@@ -39,7 +39,11 @@ interface AssessmentTool {
   condition_ids: string[];
 }
 
-export const AssessmentToolsLibrary = () => {
+interface AssessmentToolsLibraryProps {
+  onToolSelect?: (toolId: string) => void;
+}
+
+export const AssessmentToolsLibrary = ({ onToolSelect }: AssessmentToolsLibraryProps = {}) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { subscribed } = useSubscription();
