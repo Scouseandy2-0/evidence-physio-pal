@@ -8,8 +8,10 @@ interface SubscriptionContextType {
   subscriptionTier: string | null;
   subscriptionEnd: string | null;
   loading: boolean;
+  isTrial: boolean;
+  trialEnd: string | null;
   checkSubscription: () => Promise<void>;
-  createCheckout: () => Promise<void>;
+  createCheckout: (tier?: string, priceId?: string, promoCode?: string) => Promise<void>;
   openCustomerPortal: () => Promise<void>;
 }
 
@@ -22,6 +24,8 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
   const [subscribed, setSubscribed] = useState(false);
   const [subscriptionTier, setSubscriptionTier] = useState<string | null>(null);
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
+  const [isTrial, setIsTrial] = useState(false);
+  const [trialEnd, setTrialEnd] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const checkSubscription = async () => {
@@ -29,6 +33,8 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
       setSubscribed(false);
       setSubscriptionTier(null);
       setSubscriptionEnd(null);
+      setIsTrial(false);
+      setTrialEnd(null);
       setLoading(false);
       return;
     }
@@ -46,6 +52,8 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
       setSubscribed(data.subscribed || false);
       setSubscriptionTier(data.subscription_tier || null);
       setSubscriptionEnd(data.subscription_end || null);
+      setIsTrial(data.is_trial || false);
+      setTrialEnd(data.trial_end || null);
     } catch (error: any) {
       console.error('Error checking subscription:', error);
       
@@ -58,13 +66,15 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
         setSubscribed(false);
         setSubscriptionTier(null);
         setSubscriptionEnd(null);
+        setIsTrial(false);
+        setTrialEnd(null);
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const createCheckout = async () => {
+  const createCheckout = async (tier: string = 'basic', priceId: string = 'price_basic', promoCode?: string) => {
     console.log("🔄 createCheckout called", { user: !!user, session: !!session });
     if (!user || !session) {
       toast({
@@ -84,6 +94,12 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
+        body: {
+          tier,
+          price_id: priceId,
+          promo_code: promoCode,
+          trial_days: 14
+        }
       });
       
       console.log("📨 Edge function response:", { data, error });
@@ -194,6 +210,8 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
       setSubscribed(false);
       setSubscriptionTier(null);
       setSubscriptionEnd(null);
+      setIsTrial(false);
+      setTrialEnd(null);
       setLoading(false);
     }
   }, [user, session]);
@@ -211,13 +229,15 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
 
   return (
     <SubscriptionContext.Provider value={{
-      subscribed,
-      subscriptionTier,
-      subscriptionEnd,
-      loading,
-      checkSubscription,
-      createCheckout,
-      openCustomerPortal,
+    subscribed,
+    subscriptionTier,
+    subscriptionEnd,
+    isTrial,
+    trialEnd,
+    loading,
+    checkSubscription,
+    createCheckout,
+    openCustomerPortal,
     }}>
       {children}
     </SubscriptionContext.Provider>

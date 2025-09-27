@@ -995,6 +995,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      update_subscription_analytics: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       update_user_activity_stat: {
         Args: { increment_value?: number; stat_type: string }
         Returns: undefined
