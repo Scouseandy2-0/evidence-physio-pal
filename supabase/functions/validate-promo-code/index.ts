@@ -4,6 +4,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '1; mode=block',
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains'
 };
 
 const supabase = createClient(
@@ -22,6 +26,23 @@ serve(async (req) => {
 
   try {
     const { code }: PromoCodeRequest = await req.json();
+
+    // Rate limiting check
+    const { error: rateLimitError } = await supabase.rpc('check_rate_limit', {
+      operation_type: 'promo_code_validation',
+      max_attempts: 10,
+      window_minutes: 5
+    });
+
+    if (rateLimitError) {
+      return new Response(
+        JSON.stringify({ error: 'Too many attempts. Please try again later.' }),
+        { 
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
 
     if (!code) {
       return new Response(
