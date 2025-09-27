@@ -93,3 +93,9 @@
     "vite": "^5.4.19"
   }
 }
+{
+  "scripts": {
+    "appflow:build": "npm run setup:ios && npm run build",
+    "setup:ios": "npx cap add ios && npx cap sync ios"
+  }
+}
