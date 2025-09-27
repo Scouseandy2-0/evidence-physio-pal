@@ -2,9 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
-import { IonReactRouter } from '@ionic/react-router';
-import { Route } from 'react-router-dom';
+import { IonApp, setupIonicReact } from '@ionic/react';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import GuidelinesPage from "./pages/GuidelinesPage";
@@ -40,8 +39,8 @@ const App = () => (
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <IonReactRouter>
-              <IonRouterOutlet>
+            <BrowserRouter>
+              <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/dashboard" element={<PersonalizedDashboard />} />
@@ -60,8 +59,8 @@ const App = () => (
                 <Route path="/subscription-success" element={<SubscriptionSuccessPage />} />
                 <Route path="/verification" element={<HealthcareProviderVerification />} />
                 <Route path="*" element={<NotFound />} />
-              </IonRouterOutlet>
-            </IonReactRouter>
+              </Routes>
+            </BrowserRouter>
           </TooltipProvider>
         </SubscriptionProvider>
       </AuthProvider>
