@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useActivityTracking } from "@/hooks/useActivityTracking";
 import {
   Calculator,
   Clock,
@@ -67,6 +68,7 @@ export const InteractiveAssessmentEngine = ({
 }: InteractiveAssessmentEngineProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { trackAssessmentCompleted } = useActivityTracking();
   const [tool, setTool] = useState<AssessmentTool | null>(null);
   const [currentStep, setCurrentStep] = useState<'info' | 'assessment' | 'results'>('info');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -297,10 +299,7 @@ export const InteractiveAssessmentEngine = ({
     setSaving(true);
     try {
       // Track assessment completion
-      await supabase.rpc('update_user_activity_stat', {
-        stat_type: 'assessment_completed',
-        increment_value: 1
-      });
+      await trackAssessmentCompleted();
 
       toast({
         title: "Assessment Saved",
