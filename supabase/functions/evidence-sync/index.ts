@@ -26,7 +26,21 @@ serve(async (req) => {
     console.log(`Starting evidence sync for: ${searchTerms}`);
     console.log(`Sources: ${sources.join(', ')}`);
 
-    const results = {
+    const results: {
+      success: boolean;
+      sources_processed: Array<{
+        source: string;
+        success: boolean;
+        message: string;
+        count: number;
+      }>;
+      total_articles: number;
+      errors: Array<{
+        source: string;
+        error: string;
+        message: string;
+      }>;
+    } = {
       success: true,
       sources_processed: [],
       total_articles: 0,
@@ -71,9 +85,10 @@ serve(async (req) => {
         }
       } catch (error) {
         console.error(`Error processing ${source}:`, error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         results.errors.push({
           source,
-          error: error.message,
+          error: errorMessage,
           message: 'Function call failed'
         });
       }
@@ -104,9 +119,10 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in evidence sync:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(JSON.stringify({ 
       success: false,
-      error: error.message,
+      error: errorMessage,
       message: 'Evidence sync failed'
     }), {
       status: 500,

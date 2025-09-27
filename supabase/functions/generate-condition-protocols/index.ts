@@ -109,7 +109,7 @@ serve(async (req) => {
         }
 
         // Generate protocol using AI
-        const protocol = await generateProtocolWithAI(condition, evidenceResults, openaiApiKey);
+        const protocol = await generateProtocolWithAI(condition, evidenceResults, openaiApiKey, supabase);
         
         if (protocol) {
           // Store the protocol in database
@@ -148,7 +148,8 @@ serve(async (req) => {
         
       } catch (error) {
         console.error(`Error processing ${condition.name}:`, error);
-        results.errors.push(`Failed to process ${condition.name}: ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        results.errors.push(`Failed to process ${condition.name}: ${errorMessage}`);
       }
     }
 
@@ -164,8 +165,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in generate-condition-protocols:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(JSON.stringify({ 
-      error: error.message,
+      error: errorMessage,
       success: false 
     }), {
       status: 500,
@@ -200,7 +202,8 @@ async function searchMultipleDatabases(condition: Condition, supabase: any): Pro
       })));
     }
   } catch (error) {
-    console.log(`PubMed search failed for ${condition.name}:`, error.message);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.log(`PubMed search failed for ${condition.name}:`, errorMessage);
   }
 
   // Search Cochrane
@@ -219,7 +222,8 @@ async function searchMultipleDatabases(condition: Condition, supabase: any): Pro
       })));
     }
   } catch (error) {
-    console.log(`Cochrane search failed for ${condition.name}:`, error.message);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.log(`Cochrane search failed for ${condition.name}:`, errorMessage);
   }
 
   // Search PEDro
@@ -238,7 +242,8 @@ async function searchMultipleDatabases(condition: Condition, supabase: any): Pro
       })));
     }
   } catch (error) {
-    console.log(`PEDro search failed for ${condition.name}:`, error.message);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.log(`PEDro search failed for ${condition.name}:`, errorMessage);
   }
 
   // Get existing evidence from database
@@ -261,7 +266,7 @@ async function searchMultipleDatabases(condition: Condition, supabase: any): Pro
   return allEvidence;
 }
 
-async function generateProtocolWithAI(condition: Condition, evidence: Evidence[], openaiApiKey: string): Promise<TreatmentProtocol | null> {
+async function generateProtocolWithAI(condition: Condition, evidence: Evidence[], openaiApiKey: string, supabase: any): Promise<TreatmentProtocol | null> {
   try {
     const evidenceSummary = evidence.slice(0, 10).map(e => 
       `${e.title} (${e.source}, ${e.evidence_level || 'Not specified'}): ${e.abstract || e.key_findings || e.clinical_implications || 'No summary available'}`

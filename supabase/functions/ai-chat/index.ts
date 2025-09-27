@@ -222,8 +222,9 @@ You should respond professionally, provide evidence-based information, and alway
 
   } catch (error) {
     console.error('AI Chat error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An error occurred while processing your request';
     return new Response(JSON.stringify({ 
-      error: error.message || 'An error occurred while processing your request'
+      error: errorMessage
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

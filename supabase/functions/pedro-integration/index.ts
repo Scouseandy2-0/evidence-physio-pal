@@ -153,7 +153,7 @@ serve(async (req) => {
               publication_date: study.publication_date,
               abstract: study.abstract,
               study_type: 'Randomized Controlled Trial',
-              evidence_level: study.pedro_score >= 8 ? 'A' : study.pedro_score >= 6 ? 'B' : 'C',
+              evidence_level: (study.pedro_score ?? 0) >= 8 ? 'A' : (study.pedro_score ?? 0) >= 6 ? 'B' : 'C',
               tags: study.keywords,
               key_findings: `PEDro Score: ${study.pedro_score}/10. Intervention: ${study.intervention_type}`,
               clinical_implications: `High-quality evidence for ${study.intervention_type} in ${study.condition} conditions.`,
@@ -187,8 +187,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in PEDro integration:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(JSON.stringify({ 
-      error: error.message,
+      error: errorMessage,
       success: false,
       note: 'PEDro integration uses web scraping and may be limited by website structure changes'
     }), {

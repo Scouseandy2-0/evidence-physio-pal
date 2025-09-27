@@ -105,7 +105,8 @@ serve(async (req) => {
           // Forward all messages to client
           socket.send(event.data);
         } catch (error) {
-          logStep("Error processing OpenAI message", { error: error.message });
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          logStep("Error processing OpenAI message", { error: errorMessage });
         }
       };
 
@@ -130,7 +131,8 @@ serve(async (req) => {
           openAISocket.send(event.data);
         }
       } catch (error) {
-        logStep("Error processing client message", { error: error.message });
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logStep("Error processing client message", { error: errorMessage });
       }
     };
 

@@ -178,8 +178,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in Cochrane integration:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(JSON.stringify({ 
-      error: error.message,
+      error: errorMessage,
       success: false,
       note: 'Cochrane Library may require special access or rate limiting'
     }), {
