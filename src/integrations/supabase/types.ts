@@ -969,6 +969,27 @@ export type Database = {
         }
         Returns: boolean
       }
+      audit_security_event: {
+        Args: { details?: Json; event_type: string; user_id?: string }
+        Returns: undefined
+      }
+      check_password_strength: {
+        Args: { password: string }
+        Returns: boolean
+      }
+      check_rate_limit: {
+        Args: {
+          max_attempts?: number
+          operation_type: string
+          user_id?: string
+          window_minutes?: number
+        }
+        Returns: boolean
+      }
+      get_security_headers: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_user_healthcare_status: {
         Args: Record<PropertyKey, never>
         Returns: {
