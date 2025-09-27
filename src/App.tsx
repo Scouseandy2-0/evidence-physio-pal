@@ -2,7 +2,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
+import { IonReactRouter } from '@ionic/react-router';
+import { Route } from 'react-router-dom';
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import GuidelinesPage from "./pages/GuidelinesPage";
@@ -26,42 +28,45 @@ import { SubscriptionSuccessPage } from "./components/subscription/SubscriptionS
 import { AdvancedFeatures } from "./components/advanced/AdvancedFeatures";
 import { HealthcareProviderVerification } from "./components/admin/HealthcareProviderVerification";
 
+setupIonicReact();
+
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <SubscriptionProvider>
-        <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/dashboard" element={<PersonalizedDashboard />} />
-            <Route path="/conditions" element={<ConditionsPage />} />
-            <Route path="/assessments" element={<AssessmentsPage />} />
-            <Route path="/assessment/:toolId" element={<AssessmentPage />} />
-            <Route path="/protocols" element={<ProtocolsPage />} />
-            <Route path="/guidelines" element={<GuidelinesPage />} />
-            <Route path="/evidence" element={<EvidencePage />} />
-            <Route path="/cpd" element={<CPDPage />} />
-            <Route path="/patients" element={<PatientsPage />} />
-            <Route path="/collaboration" element={<CollaborationPage />} />
-            <Route path="/analytics" element={<AnalyticsDashboard />} />
-            <Route path="/advanced" element={<AdvancedFeatures />} />
-            <Route path="/subscription" element={<SubscriptionPage />} />
-            <Route path="/subscription-success" element={<SubscriptionSuccessPage />} />
-            <Route path="/verification" element={<HealthcareProviderVerification />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-      </SubscriptionProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+  <IonApp>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <SubscriptionProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <IonReactRouter>
+              <IonRouterOutlet>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/dashboard" element={<PersonalizedDashboard />} />
+                <Route path="/conditions" element={<ConditionsPage />} />
+                <Route path="/assessments" element={<AssessmentsPage />} />
+                <Route path="/assessment/:toolId" element={<AssessmentPage />} />
+                <Route path="/protocols" element={<ProtocolsPage />} />
+                <Route path="/guidelines" element={<GuidelinesPage />} />
+                <Route path="/evidence" element={<EvidencePage />} />
+                <Route path="/cpd" element={<CPDPage />} />
+                <Route path="/patients" element={<PatientsPage />} />
+                <Route path="/collaboration" element={<CollaborationPage />} />
+                <Route path="/analytics" element={<AnalyticsDashboard />} />
+                <Route path="/advanced" element={<AdvancedFeatures />} />
+                <Route path="/subscription" element={<SubscriptionPage />} />
+                <Route path="/subscription-success" element={<SubscriptionSuccessPage />} />
+                <Route path="/verification" element={<HealthcareProviderVerification />} />
+                <Route path="*" element={<NotFound />} />
+              </IonRouterOutlet>
+            </IonReactRouter>
+          </TooltipProvider>
+        </SubscriptionProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  </IonApp>
 );
 
 export default App;
