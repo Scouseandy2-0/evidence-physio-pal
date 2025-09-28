@@ -7,7 +7,7 @@
   "preview": "vite preview",
   "appflow:build": "npm run setup:ios && npm run build",
   "setup:ios": "npx cap add ios && npx cap sync ios"
-}
+
 
   },
   "dependencies": {
