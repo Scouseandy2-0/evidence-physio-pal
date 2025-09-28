@@ -11,13 +11,13 @@ import { useNavigate } from "react-router-dom";
 interface AssessmentTool {
   id: string;
   name: string;
-  description: string;
-  tool_type: string;
-  scoring_method: string;
+  description: string | null;
+  tool_type: string | null;
+  scoring_method: string | null;
   interpretation_guide: any;
   psychometric_properties: any;
   reference_values: any;
-  instructions: string;
+  instructions: string | null;
   condition_ids: string[];
 }
 
@@ -84,7 +84,7 @@ export const InteractiveAssessment = ({ tool }: InteractiveAssessmentProps) => {
             <h4 className="font-medium mb-2">Instructions</h4>
             <div className="p-4 bg-muted/50 rounded-lg">
               <p className="text-sm leading-relaxed">
-                {tool.instructions || `This is a ${tool.tool_type.toLowerCase()} assessment tool. Please follow the instructions carefully and answer all questions honestly. The assessment should take approximately 10-15 minutes to complete.`}
+                {tool.instructions || `This is a ${tool.tool_type?.toLowerCase() || 'standard'} assessment tool. Please follow the instructions carefully and answer all questions honestly. The assessment should take approximately 10-15 minutes to complete.`}
               </p>
             </div>
           </div>

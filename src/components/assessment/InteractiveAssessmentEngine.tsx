@@ -24,10 +24,10 @@ import {
 interface AssessmentTool {
   id: string;
   name: string;
-  description: string;
-  tool_type: string;
-  scoring_method: string;
-  instructions: string;
+  description: string | null;
+  tool_type: string | null;
+  scoring_method: string | null;
+  instructions: string | null;
   psychometric_properties: any;
   interpretation_guide: any;
 }

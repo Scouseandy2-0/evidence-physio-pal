@@ -81,12 +81,12 @@ export const AnalyticsDashboard = () => {
       // Fetch basic counts with proper error handling
       const fetchQueries = async () => {
         const queries = [
-          supabase.from('patients').select('id', { count: 'exact' }).eq('therapist_id', user?.id),
-          supabase.from('treatment_protocols').select('id', { count: 'exact' }).eq('created_by', user?.id),
-          supabase.from('analytics_sessions').select('id', { count: 'exact' }).eq('user_id', user?.id),
-          supabase.from('cpd_activities').select('hours_claimed').eq('user_id', user?.id),
-          supabase.from('collaboration_shared_protocols').select('id', { count: 'exact' }).eq('shared_by', user?.id),
-          supabase.from('protocol_reviews').select('rating').eq('reviewer_id', user?.id)
+          supabase.from('patients').select('id', { count: 'exact' }).eq('therapist_id', user?.id || ''),
+          supabase.from('treatment_protocols').select('id', { count: 'exact' }).eq('created_by', user?.id || ''),
+          supabase.from('analytics_sessions').select('id', { count: 'exact' }).eq('user_id', user?.id || ''),
+          supabase.from('cpd_activities').select('hours_claimed').eq('user_id', user?.id || ''),
+          supabase.from('collaboration_shared_protocols').select('id', { count: 'exact' }).eq('shared_by', user?.id || ''),
+          supabase.from('protocol_reviews').select('rating').eq('reviewer_id', user?.id || '')
         ];
 
         const results = await Promise.allSettled(queries);
@@ -112,21 +112,21 @@ export const AnalyticsDashboard = () => {
       ] = await fetchQueries();
 
       const totalCpdHours = cpdResult.data?.reduce((sum: number, activity: any) => sum + Number(activity.hours_claimed || 0), 0) || 0;
-      const avgRating = reviewsResult.data?.length > 0 
-        ? reviewsResult.data.reduce((sum: number, review: any) => sum + Number(review.rating || 0), 0) / reviewsResult.data.length 
+      const avgRating = (reviewsResult.data?.length || 0) > 0 
+        ? (reviewsResult.data || []).reduce((sum: number, review: any) => sum + Number(review.rating || 0), 0) / (reviewsResult.data?.length || 1)
         : 0;
 
       // Now fetch evidence access data from the new table
       const evidenceResult = await supabase
         .from('evidence_access_logs')
         .select('id', { count: 'exact' })
-        .eq('user_id', user?.id);
+        .eq('user_id', user?.id || '');
 
       // Fetch activity stats for feature usage
       const activityResult = await supabase
         .from('user_activity_stats')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', user?.id || '')
         .order('activity_date', { ascending: false })
         .limit(30);
 

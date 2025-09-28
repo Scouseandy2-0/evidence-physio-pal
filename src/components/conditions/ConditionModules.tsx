@@ -33,23 +33,23 @@ interface Condition {
   id: string;
   name: string;
   category: 'msk' | 'neurological' | 'respiratory';
-  description: string;
-  icd_codes: string[];
-  keywords: string[];
+  description: string | null;
+  icd_codes: string[] | null;
+  keywords: string[] | null;
   prevalence_data: any;
 }
 
 interface AssessmentTool {
   id: string;
   name: string;
-  description: string;
-  tool_type: string;
-  scoring_method: string;
+  description: string | null;
+  tool_type: string | null;
+  scoring_method: string | null;
   interpretation_guide: any;
   psychometric_properties: any;
   reference_values: any;
-  condition_ids: string[];
-  instructions?: string;
+  condition_ids: string[] | null;
+  instructions?: string | null;
 }
 
 const categoryIcons = {

@@ -29,14 +29,14 @@ import {
 interface AssessmentTool {
   id: string;
   name: string;
-  description: string;
-  tool_type: string;
-  scoring_method: string;
+  description: string | null;
+  tool_type: string | null;
+  scoring_method: string | null;
   interpretation_guide: any;
   psychometric_properties: any;
   reference_values: any;
-  instructions: string;
-  condition_ids: string[];
+  instructions: string | null;
+  condition_ids: string[] | null;
 }
 
 interface AssessmentToolsLibraryProps {

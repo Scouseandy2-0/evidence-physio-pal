@@ -21,10 +21,13 @@ interface Profile {
   last_name: string | null;
   healthcare_role: HealthcareRole | null;
   license_number: string | null;
-  license_verified: boolean;
+  license_verified: boolean | null;
   license_expiry_date: string | null;
   department: string | null;
-  approved_for_patient_access: boolean;
+  approved_for_patient_access: boolean | null;
+  professional_title: string | null;
+  registration_number: string | null;
+  specialization: string[] | null;
   created_at: string;
   updated_at: string;
 }
@@ -66,10 +69,10 @@ export const HealthcareProviderVerification = () => {
 
   const fetchUserProfile = async () => {
     try {
-      const { data, error } = await supabase
+  const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', user?.id || '')
         .single();
 
       if (error && error.code !== 'PGRST116') throw error;

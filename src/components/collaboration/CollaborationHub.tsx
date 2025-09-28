@@ -35,14 +35,14 @@ interface SharedProtocol {
   protocol_id: string;
   shared_by: string;
   shared_with: string | null;
-  is_public: boolean;
+  is_public: boolean | null;
   access_level: string;
   created_at: string;
   protocol: {
     name: string;
-    description: string;
-    created_by: string;
-    is_validated: boolean;
+    description: string | null;
+    created_by: string | null;
+    is_validated: boolean | null;
   };
 }
 
@@ -50,9 +50,9 @@ interface ProtocolReview {
   id: string;
   protocol_id: string;
   reviewer_id: string;
-  rating: number;
-  review_text: string;
-  recommendations: string;
+  rating: number | null;
+  review_text: string | null;
+  recommendations: string | null;
   status: string;
   created_at: string;
   reviewer_profile?: any;
@@ -113,7 +113,7 @@ export const CollaborationHub = () => {
       const { data: myProtos, error: myError } = await supabase
         .from('treatment_protocols')
         .select('*')
-        .eq('created_by', user?.id);
+        .eq('created_by', user?.id || '');
 
       if (myError) throw myError;
 
@@ -197,7 +197,7 @@ export const CollaborationHub = () => {
         .from('protocol_reviews')
         .insert({
           protocol_id: reviewModal.protocol.id,
-          reviewer_id: user?.id,
+          reviewer_id: user?.id || '',
           rating: newReview.rating,
           review_text: newReview.review_text,
           recommendations: newReview.recommendations,
@@ -455,7 +455,7 @@ export const CollaborationHub = () => {
                           <Star
                             key={star}
                             className={`h-4 w-4 ${
-                              star <= review.rating 
+                              star <= (review.rating || 0) 
                                 ? 'fill-yellow-400 text-yellow-400' 
                                 : 'text-gray-300'
                             }`}
