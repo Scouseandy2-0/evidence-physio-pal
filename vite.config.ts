@@ -11,8 +11,8 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
-    mode === 'development' && componentTagger(),
-    mode === 'production' && legacy({
+    componentTagger(),
+    legacy({
       targets: ['iOS >= 13', 'Safari >= 13'],
       modernPolyfills: true,
       renderLegacyChunks: true,
