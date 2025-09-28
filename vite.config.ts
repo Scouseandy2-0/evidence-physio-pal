@@ -1,6 +1,7 @@
 // vite.config.ts
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
+import legacy from '@vitejs/plugin-legacy'
 import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig(async ({ command }) => {
@@ -15,6 +16,15 @@ export default defineConfig(async ({ command }) => {
     } catch (e) {
       console.warn('[vite] lovable-tagger not loaded:', (e as Error).message)
     }
+  } else {
+    // Add legacy bundle for iOS 13/Safari 13 compatibility
+    plugins.push(
+      legacy({
+        targets: ['iOS >= 13', 'Safari >= 13'],
+        modernPolyfills: true,
+        renderLegacyChunks: true,
+      })
+    )
   }
 
   return {
@@ -24,9 +34,14 @@ export default defineConfig(async ({ command }) => {
         '@': fileURLToPath(new URL('./src', import.meta.url))
       }
     },
+    server: {
+      port: 8080
+    },
+    build: {
+      target: ['safari13', 'es2018']
+    },
     optimizeDeps: { exclude: ['lovable-tagger'] },
     ssr: { noExternal: ['lovable-tagger'] }
   }
 })
-
 
