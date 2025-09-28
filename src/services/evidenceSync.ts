@@ -60,13 +60,12 @@ export class EvidenceSyncService {
         ? conditions.slice(0, 3).join(' OR ') // Limit to avoid rate limits
         : 'physiotherapy rehabilitation';
         
-      const { data, error } = await supabase.functions.invoke('pubmed-integration', {
-        body: { 
-          query: searchTerms,
-          maxResults: 10,
-          autoSync: true
-        }
-      });
+       const { data, error } = await supabase.functions.invoke('pubmed-integration', {
+         body: { 
+           searchTerms: searchTerms,
+           maxResults: 10
+         }
+       });
       
       if (error) {
         console.warn('PubMed sync warning:', error);
@@ -86,13 +85,12 @@ export class EvidenceSyncService {
         ? conditions.slice(0, 2).join(' OR ')
         : 'physiotherapy';
         
-      const { data, error } = await supabase.functions.invoke('cochrane-integration', {
-        body: { 
-          query: searchTerms,
-          maxResults: 5,
-          autoSync: true
-        }
-      });
+       const { data, error } = await supabase.functions.invoke('cochrane-integration', {
+         body: { 
+           searchTerms: searchTerms,
+           maxResults: 5
+         }
+       });
       
       if (error) {
         console.warn('Cochrane sync warning:', error);
@@ -112,13 +110,13 @@ export class EvidenceSyncService {
         ? conditions.slice(0, 2).join(' OR ')
         : 'physiotherapy';
         
-      const { data, error } = await supabase.functions.invoke('pedro-integration', {
-        body: { 
-          query: searchTerms,
-          maxResults: 5,
-          autoSync: true
-        }
-      });
+       const { data, error } = await supabase.functions.invoke('pedro-integration', {
+         body: { 
+           searchTerms: searchTerms,
+           condition: conditions[0] || '',
+           maxResults: 5
+         }
+       });
       
       if (error) {
         console.warn('PEDro sync warning:', error);
@@ -138,13 +136,12 @@ export class EvidenceSyncService {
         ? conditions.slice(0, 2).join(' OR ')
         : 'physiotherapy rehabilitation';
         
-      const { data, error } = await supabase.functions.invoke('guidelines-integration', {
-        body: { 
-          query: searchTerms,
-          maxResults: 5,
-          autoSync: true
-        }
-      });
+       const { data, error } = await supabase.functions.invoke('guidelines-integration', {
+         body: { 
+           searchTerms: searchTerms,
+           organization: 'all'
+         }
+       });
       
       if (error) {
         console.warn('NICE sync warning:', error);
