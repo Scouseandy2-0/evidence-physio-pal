@@ -1,4 +1,10 @@
 {
+  "name": "evidence-physio-pal",
+  "version": "0.0.0",
+  "type": "module",
+  // ...rest of your existing package.json
+},
+{
   "scripts": {
     "dev": "vite",
     "build": "vite build",
