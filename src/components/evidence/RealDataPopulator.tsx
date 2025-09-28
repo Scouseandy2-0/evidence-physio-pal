@@ -137,108 +137,42 @@ export const RealDataPopulator = () => {
 
   const populateConditions = async () => {
     try {
-      for (const condition of realConditionsData) {
-        const { error } = await supabase
-          .from('conditions')
-          .insert({
-            name: condition.name,
-            category: condition.category as any,
-            description: condition.description,
-            icd_codes: condition.icd_codes,
-            keywords: condition.keywords,
-            prevalence_data: condition.prevalence_data
-          });
-
-        if (error) {
-          console.error('Error inserting condition:', error);
-        }
-      }
+      const { error } = await supabase.functions.invoke('admin-populate', {
+        body: { task: 'conditions', conditions: realConditionsData }
+      });
+      if (error) throw error;
       setCompleted(prev => [...prev, 'conditions']);
       toast({ title: "Success", description: "Conditions populated successfully!" });
     } catch (error) {
-      console.error('Error populating conditions:', error);
+      console.error('Error populating conditions via function:', error);
       toast({ title: "Error", description: "Failed to populate conditions", variant: "destructive" });
     }
   };
 
   const populateEvidence = async () => {
     try {
-      // First get condition IDs to properly link evidence
-      const { data: conditions } = await supabase
-        .from('conditions')
-        .select('id, name');
-
-      for (const evidence of realEvidenceData) {
-        // Map condition names to IDs
-        const conditionIds = evidence.condition_ids
-          .map(conditionName => conditions?.find(c => c.name === conditionName)?.id)
-          .filter(Boolean);
-
-        const { error } = await supabase
-          .from('evidence')
-          .insert([{
-            title: evidence.title,
-            authors: evidence.authors,
-            journal: evidence.journal,
-            publication_date: evidence.publication_date,
-            study_type: evidence.study_type,
-            abstract: evidence.abstract,
-            key_findings: evidence.key_findings,
-            clinical_implications: evidence.clinical_implications,
-            evidence_level: evidence.evidence_level as any,
-            condition_ids: conditionIds,
-            tags: evidence.tags,
-            pmid: evidence.pmid,
-            doi: evidence.doi
-          }] as any);
-
-        if (error) {
-          console.error('Error inserting evidence:', error);
-        }
-      }
+      const { error } = await supabase.functions.invoke('admin-populate', {
+        body: { task: 'evidence', evidence: realEvidenceData }
+      });
+      if (error) throw error;
       setCompleted(prev => [...prev, 'evidence']);
       toast({ title: "Success", description: "Evidence populated successfully!" });
     } catch (error) {
-      console.error('Error populating evidence:', error);
+      console.error('Error populating evidence via function:', error);
       toast({ title: "Error", description: "Failed to populate evidence", variant: "destructive" });
     }
   };
 
   const populateAssessmentTools = async () => {
     try {
-      // Get condition IDs for linking
-      const { data: conditions } = await supabase
-        .from('conditions')
-        .select('id, name');
-
-      for (const tool of realAssessmentTools) {
-        // Map condition names to IDs  
-        const conditionIds = tool.condition_ids
-          .map(conditionName => conditions?.find(c => c.name === conditionName)?.id)
-          .filter(Boolean);
-
-        const { error } = await supabase
-          .from('assessment_tools')
-          .insert([{
-            name: tool.name,
-            tool_type: tool.tool_type,
-            description: tool.description,
-            condition_ids: conditionIds,
-            instructions: tool.instructions,
-            scoring_method: tool.scoring_method,
-            interpretation_guide: tool.interpretation_guide,
-            reference_values: tool.reference_values,
-            psychometric_properties: tool.psychometric_properties
-          }] as any);
-
-        if (error) {
-          console.error('Error inserting assessment tool:', error);
-        }
-      }
+      const { error } = await supabase.functions.invoke('admin-populate', {
+        body: { task: 'assessment_tools', assessmentTools: realAssessmentTools }
+      });
+      if (error) throw error;
       setCompleted(prev => [...prev, 'assessment_tools']);
       toast({ title: "Success", description: "Assessment tools populated successfully!" });
     } catch (error) {
-      console.error('Error populating assessment tools:', error);
+      console.error('Error populating assessment tools via function:', error);
       toast({ title: "Error", description: "Failed to populate assessment tools", variant: "destructive" });
     }
   };
