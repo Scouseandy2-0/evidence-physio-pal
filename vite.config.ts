@@ -23,9 +23,6 @@ export default defineConfig(({ mode }) => ({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
-  build: {
-    target: ['safari13', 'es2018']
-  },
   optimizeDeps: {
     exclude: ["lovable-tagger"],
   },
