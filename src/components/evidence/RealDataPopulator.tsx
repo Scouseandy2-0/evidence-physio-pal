@@ -176,7 +176,7 @@ export const RealDataPopulator = () => {
 
         const { error } = await supabase
           .from('evidence')
-          .insert({
+          .insert([{
             title: evidence.title,
             authors: evidence.authors,
             journal: evidence.journal,
@@ -190,7 +190,7 @@ export const RealDataPopulator = () => {
             tags: evidence.tags,
             pmid: evidence.pmid,
             doi: evidence.doi
-          });
+          }] as any);
 
         if (error) {
           console.error('Error inserting evidence:', error);
@@ -219,7 +219,7 @@ export const RealDataPopulator = () => {
 
         const { error } = await supabase
           .from('assessment_tools')
-          .insert({
+          .insert([{
             name: tool.name,
             tool_type: tool.tool_type,
             description: tool.description,
@@ -229,7 +229,7 @@ export const RealDataPopulator = () => {
             interpretation_guide: tool.interpretation_guide,
             reference_values: tool.reference_values,
             psychometric_properties: tool.psychometric_properties
-          });
+          }] as any);
 
         if (error) {
           console.error('Error inserting assessment tool:', error);

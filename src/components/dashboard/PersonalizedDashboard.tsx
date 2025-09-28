@@ -67,7 +67,7 @@ export const PersonalizedDashboard = () => {
       const { data: preferences } = await supabase
         .from('user_preferences')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', user?.id || '')
         .single();
 
       // Fetch recent evidence based on user's preferred conditions
@@ -81,7 +81,7 @@ export const PersonalizedDashboard = () => {
       const { data: protocols } = await supabase
         .from('treatment_protocols')
         .select('*')
-        .eq('created_by', user?.id)
+        .eq('created_by', user?.id || '')
         .order('created_at', { ascending: false })
         .limit(3);
 

@@ -128,8 +128,8 @@ export const ConditionModules = () => {
   const filteredConditions = conditions.filter(condition => {
     const matchesCategory = selectedCategory === 'all' || condition.category === selectedCategory;
     const matchesSearch = condition.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         condition.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         condition.keywords.some(keyword => keyword.toLowerCase().includes(searchTerm.toLowerCase()));
+                         (condition.description && condition.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (condition.keywords && condition.keywords.some(keyword => keyword.toLowerCase().includes(searchTerm.toLowerCase())));
     return matchesCategory && matchesSearch;
   });
 

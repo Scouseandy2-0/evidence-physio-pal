@@ -68,7 +68,7 @@ export const ClinicalGuidelinesLibrary = () => {
           title: item.title,
           organization: item.journal || item.authors?.[0] || 'Unknown Organization',
           condition_category: getConditionCategory(item.tags || []),
-          publication_year: new Date(item.publication_date).getFullYear(),
+          publication_year: item.publication_date ? new Date(item.publication_date).getFullYear() : new Date().getFullYear(),
           last_updated: item.updated_at || item.created_at,
           guideline_url: gradeAssessment?.url || '#',
           summary: item.abstract || 'No summary available',

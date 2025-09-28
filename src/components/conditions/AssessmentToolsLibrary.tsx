@@ -78,7 +78,7 @@ export const AssessmentToolsLibrary = ({ onToolSelect }: AssessmentToolsLibraryP
     }
   };
 
-  const toolTypes = [...new Set(tools.map(tool => tool.tool_type).filter(Boolean))];
+  const toolTypes = [...new Set(tools.map(tool => tool.tool_type).filter(Boolean))] as string[];
   
   const categories = [
     { id: 'pain', name: 'Pain Assessment', keywords: ['pain', 'vas', 'nprs', 'mcgill', 'catastrophizing'] },
@@ -104,7 +104,7 @@ export const AssessmentToolsLibrary = ({ onToolSelect }: AssessmentToolsLibraryP
 
   const filteredTools = tools.filter(tool => {
     const matchesSearch = tool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         tool.description.toLowerCase().includes(searchTerm.toLowerCase());
+                         (tool.description && tool.description.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesType = selectedType === 'all' || tool.tool_type === selectedType;
     const matchesCategory = selectedCategory === 'all' || getCategoryForTool(tool) === selectedCategory;
     return matchesSearch && matchesType && matchesCategory;

@@ -18,7 +18,7 @@ interface AssessmentTool {
   psychometric_properties: any;
   reference_values: any;
   instructions: string | null;
-  condition_ids: string[];
+  condition_ids: string[] | null;
 }
 
 interface InteractiveAssessmentProps {
