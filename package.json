@@ -14,7 +14,8 @@
     "preview": "vite preview",
     "appflow:build": "npm run build && npm run setup:ios",
     "setup:ios": "bash -lc 'if [ -d ios ]; then echo \"iOS project already present\"; else npx cap add ios; fi; npx cap sync ios'"
-  },
+  }
+},
   "dependencies": {
     "@capacitor/android": "^7.4.3",
     "@capacitor/cli": "^7.4.3",

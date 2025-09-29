@@ -8,6 +8,18 @@ const urlsToCache = [
   '/static/css/main.css',
   '/manifest.json'
 ];
+// Import { Capacitor } from '@capacitor/core'
+
+const isNative = Capacitor?.isNativePlatform?.() ?? false
+
+if (!isNative && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(r => console.log('SW registered:', r))
+      .catch(err => console.log('SW registration failed:', err))
+  })
+}
+
 
 // Install event
 self.addEventListener('install', (event) => {
