@@ -3,9 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "engines": {
-    "node": ">=18.18.0"
-  },
+  "engines": { "node": ">=18.18.0" },
   "scripts": {
     "dev": "vite",
     "build": "NODE_OPTIONS=--max-old-space-size=4096 vite build",
@@ -14,8 +12,7 @@
     "preview": "vite preview",
     "appflow:build": "npm run build && npm run setup:ios",
     "setup:ios": "bash -lc 'if [ -d ios ]; then echo \"iOS project already present\"; else npx cap add ios; fi; npx cap sync ios'"
-  }
-},
+  },
   "dependencies": {
     "@capacitor/android": "^7.4.3",
     "@capacitor/cli": "^7.4.3",
@@ -56,7 +53,6 @@
     "@react-three/fiber": "^8.18.0",
     "@supabase/supabase-js": "^2.56.0",
     "@tanstack/react-query": "^5.83.0",
-    "@vitejs/plugin-legacy": "^5.4.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -76,7 +72,6 @@
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
-    "terser": "^5.44.0",
     "three": "^0.179.1",
     "vaul": "^0.9.9",
     "zod": "^3.25.76"
