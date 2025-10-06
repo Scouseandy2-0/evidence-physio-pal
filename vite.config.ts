@@ -18,6 +18,10 @@ export default defineConfig(async ({ command }) => {
   }
 
   return {
+    server: {
+      host: "::",
+      port: 8080,
+    },
     base: '', // use relative URLs for Capacitor
     plugins,
     resolve: {
