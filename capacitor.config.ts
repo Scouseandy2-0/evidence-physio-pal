@@ -5,6 +5,8 @@ const config: CapacitorConfig = {
   appName: 'physioapp',
   webDir: 'dist',
   server: {
+    url: 'https://a02e8b8d-2be5-4928-a892-be4933ee8029.lovableproject.com?forceHideBadge=true',
+    cleartext: true,
     androidScheme: 'https'
   },
   plugins: {
