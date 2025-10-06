@@ -26,6 +26,7 @@ import { SubscriptionPage } from "./components/subscription/SubscriptionPage";
 import { SubscriptionSuccessPage } from "./components/subscription/SubscriptionSuccessPage";
 import { AdvancedFeatures } from "./components/advanced/AdvancedFeatures";
 import { HealthcareProviderVerification } from "./components/admin/HealthcareProviderVerification";
+import { OnboardingFlow } from "./components/onboarding/OnboardingFlow";
 
 setupIonicReact();
 
@@ -42,6 +43,7 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
+                <Route path="/onboarding" element={<OnboardingFlow />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/dashboard" element={<PersonalizedDashboard />} />
                 <Route path="/conditions" element={<ConditionsPage />} />
