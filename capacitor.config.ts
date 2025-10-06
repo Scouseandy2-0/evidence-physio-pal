@@ -5,8 +5,7 @@ const config: CapacitorConfig = {
   appName: 'evidence-physio-pal',
   webDir: 'dist',
   server: {
-    androidScheme: 'https',
-    cleartext: false
+    androidScheme: 'https'
   },
   plugins: {
     SplashScreen: {
