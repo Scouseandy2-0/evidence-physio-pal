@@ -1,5 +1,6 @@
 // Register service worker for PWA functionality
-if ('serviceWorker' in navigator) {
+// Only register if not running as a native app
+if ('serviceWorker' in navigator && !window.Capacitor?.isNativePlatform?.()) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
