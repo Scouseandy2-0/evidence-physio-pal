@@ -41,6 +41,13 @@ export const SearchSection = () => {
     searchDatabase("")
   }, [])
 
+  useEffect(() => {
+    // Re-search when filters change (only for database search)
+    if (searchSource === 'database') {
+      searchDatabase(searchTerm)
+    }
+  }, [filters])
+
   const searchDatabase = async (query: string) => {
     setLoading(true)
     try {
