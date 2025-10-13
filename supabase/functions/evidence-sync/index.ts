@@ -94,20 +94,8 @@ serve(async (req) => {
       }
     }
 
-    // Update sync status in database
-    const { error: statusError } = await supabase
-      .from('user_preferences')
-      .update({
-        display_preferences: {
-          last_sync: new Date().toISOString(),
-          sync_results: results
-        }
-      })
-      .eq('user_id', 'system'); // System-wide status
-
-    if (statusError) {
-      console.error('Error updating sync status:', statusError);
-    }
+    // Log sync completion (removed system-wide status update as it requires valid UUID)
+    console.log(`Sync completed successfully: ${results.total_articles} articles from ${results.sources_processed.length} sources`);
 
     return new Response(JSON.stringify({
       ...results,
