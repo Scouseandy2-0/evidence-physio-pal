@@ -280,9 +280,6 @@ export const AnalyticsDashboard = () => {
         <div className="flex justify-between items-center">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="clinical">Clinical Metrics</TabsTrigger>
-            <TabsTrigger value="engagement">Engagement</TabsTrigger>
-            <TabsTrigger value="professional">Professional Development</TabsTrigger>
           </TabsList>
           
           <div className="flex gap-2">
@@ -379,14 +376,6 @@ export const AnalyticsDashboard = () => {
                   <div className="flex justify-between">
                     <span className="text-sm">Articles Accessed</span>
                     <span className="font-medium">{analytics.evidenceAccessed}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm">Searches Performed</span>
-                    <span className="font-medium">{Math.floor(analytics.evidenceAccessed * 0.7)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm">Evidence Grade A/B</span>
-                    <span className="font-medium">{Math.floor(analytics.evidenceAccessed * 0.6)}</span>
                   </div>
                 </div>
               </CardContent>
