@@ -8,13 +8,15 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Mail, Lock, User as UserIcon, FileText } from "lucide-react";
+import { Loader2, Mail, Lock, User as UserIcon, FileText, Chrome } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export const AuthPage = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -110,8 +112,9 @@ export const AuthPage = () => {
       } else {
         console.log('AuthPage: Sign up successful');
         toast({
-          title: "Sign up successful!",
-          description: "Please check your email to confirm your account.",
+          title: "Almost there!",
+          description: "Check your email and click the confirmation link to activate your account.",
+          duration: 8000,
         });
       }
     } catch (error) {
@@ -161,6 +164,79 @@ export const AuthPage = () => {
     setLoading(false);
   };
 
+  const handleMagicLink = async (formData: FormData) => {
+    setLoading(true);
+    const email = formData.get("email") as string;
+
+    console.log('AuthPage: Sending magic link', { email });
+
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+        },
+      });
+
+      if (error) {
+        console.error('AuthPage: Magic link error:', error);
+        toast({
+          title: "Failed to send magic link",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        console.log('AuthPage: Magic link sent');
+        setMagicLinkSent(true);
+        toast({
+          title: "Check your email!",
+          description: "We've sent you a magic link to sign in.",
+        });
+      }
+    } catch (error) {
+      console.error('AuthPage: Magic link exception:', error);
+      toast({
+        title: "Failed to send magic link",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    }
+    
+    setLoading(false);
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    console.log('AuthPage: Attempting Google sign in');
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
+      });
+
+      if (error) {
+        console.error('AuthPage: Google sign in error:', error);
+        toast({
+          title: "Google sign in failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('AuthPage: Google sign in exception:', error);
+      toast({
+        title: "Google sign in failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    }
+    
+    setLoading(false);
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -179,11 +255,79 @@ export const AuthPage = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
+          <Tabs defaultValue="magic" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="magic">Magic Link</TabsTrigger>
+              <TabsTrigger value="signin">Password</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
             </TabsList>
+            
+            <TabsContent value="magic">
+              {magicLinkSent ? (
+                <Alert className="my-4">
+                  <Mail className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Check your email!</strong> We've sent you a magic link. Click it to sign in instantly - no password needed.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <>
+                  <Alert className="my-4">
+                    <AlertDescription>
+                      Enter your email and we'll send you a magic link to sign in - no password required!
+                    </AlertDescription>
+                  </Alert>
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.currentTarget);
+                    handleMagicLink(formData);
+                  }} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="magic-email">Email</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="magic-email"
+                          name="email"
+                          type="email"
+                          placeholder="your.email@example.com"
+                          className="pl-10"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Send Magic Link
+                    </Button>
+                  </form>
+                </>
+              )}
+              
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                </div>
+              </div>
+              
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={handleGoogleSignIn}
+                disabled={loading}
+              >
+                {loading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Chrome className="mr-2 h-4 w-4" />
+                )}
+                Sign in with Google
+              </Button>
+            </TabsContent>
             
             <TabsContent value="signin">
               <form onSubmit={(e) => {
@@ -227,6 +371,11 @@ export const AuthPage = () => {
             </TabsContent>
             
             <TabsContent value="signup">
+              <Alert className="my-4">
+                <AlertDescription>
+                  After signing up, you'll receive a confirmation email. Click the link to activate your account.
+                </AlertDescription>
+              </Alert>
               <form onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
