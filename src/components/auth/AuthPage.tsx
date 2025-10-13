@@ -23,60 +23,50 @@ export const AuthPage = () => {
   useEffect(() => {
     console.log('AuthPage: Setting up authentication listener');
     
-    // Check for existing session first
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      console.log('AuthPage: Initial session check', { session: !!session, error });
-      
-      if (error) {
-        console.error('AuthPage: Session check error:', error);
-        toast({
-          title: "Authentication Error",
-          description: "Failed to check authentication status. Please try refreshing the page.",
-          variant: "destructive",
-        });
-      }
-      
-      setSession(session);
-      setUser(session?.user ?? null);
-      setAuthLoading(false);
-      
-      if (session?.user) {
-        console.log('AuthPage: User authenticated, redirecting to home');
-        navigate("/");
-      }
-    }).catch((error) => {
-      console.error('AuthPage: Session check failed:', error);
-      setAuthLoading(false);
-      toast({
-        title: "Authentication Error",
-        description: "Failed to initialize authentication. Please try refreshing the page.",
-        variant: "destructive",
-      });
-    });
-
-    // Set up auth state listener
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log('AuthPage: Auth state changed', { event, session: !!session });
         
         setSession(session);
         setUser(session?.user ?? null);
-        setAuthLoading(false);
         
-        if (event === 'SIGNED_IN' && session?.user) {
-          console.log('AuthPage: User signed in, redirecting to home');
-          navigate("/");
-        } else if (event === 'SIGNED_OUT') {
-          console.log('AuthPage: User signed out');
+        if (session?.user) {
+          console.log('AuthPage: User authenticated, redirecting to home');
+          setTimeout(() => navigate("/"), 100);
         }
+        
+        setAuthLoading(false);
       }
     );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      console.log('AuthPage: Initial session check', { session: !!session, error });
+      
+      if (error) {
+        console.error('AuthPage: Session check error:', error);
+      }
+      
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        console.log('AuthPage: User authenticated, redirecting to home');
+        setTimeout(() => navigate("/"), 100);
+      }
+      
+      setAuthLoading(false);
+    }).catch((error) => {
+      console.error('AuthPage: Session check failed:', error);
+      setAuthLoading(false);
+    });
 
     return () => {
       console.log('AuthPage: Cleaning up auth listener');
       subscription.unsubscribe();
     };
-  }, [navigate, toast]);
+  }, [navigate]);
 
   const handleSignUp = async (formData: FormData) => {
     setLoading(true);
