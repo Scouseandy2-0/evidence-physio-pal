@@ -33,6 +33,11 @@ export const AuthPage = () => {
         
         if (session?.user) {
           console.log('AuthPage: User authenticated, redirecting to home');
+          if (window.location.hash) {
+            const url = new URL(window.location.href);
+            url.hash = '';
+            window.history.replaceState({}, document.title, url.toString());
+          }
           setTimeout(() => navigate("/"), 100);
         }
         
@@ -53,6 +58,11 @@ export const AuthPage = () => {
       
       if (session?.user) {
         console.log('AuthPage: User authenticated, redirecting to home');
+        if (window.location.hash) {
+          const url = new URL(window.location.href);
+          url.hash = '';
+          window.history.replaceState({}, document.title, url.toString());
+        }
         setTimeout(() => navigate("/"), 100);
       }
       

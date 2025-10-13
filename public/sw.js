@@ -1,48 +1,67 @@
-const CACHE_NAME = 'physio-evidence-v1';
+const CACHE_NAME = 'physio-evidence-v3';
 const urlsToCache = [
   '/',
-  '/conditions',
-  '/protocols',
-  '/assessments',
   '/manifest.json'
 ];
 
-
-// Install event
+// Ensure new SW activates immediately
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('Opened cache');
-        return cache.addAll(urlsToCache);
-      })
+      .then((cache) => cache.addAll(urlsToCache))
+      .catch(() => {})
   );
 });
 
-// Fetch event
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request);
-      }
-    )
-  );
-});
-
-// Activate event
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
+    caches.keys().then((cacheNames) =>
+      Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
-      );
-    })
+      )
+    ).then(() => self.clients.claim())
   );
+});
+
+// Network-first for navigations and core assets to avoid stale app shell
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  const isNavigation = req.mode === 'navigate';
+  const isCoreAsset = ['script', 'style', 'worker'].includes(req.destination);
+
+  if (isNavigation || isCoreAsset) {
+    event.respondWith(
+      fetch(req)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+          return response;
+        })
+        .catch(() => caches.match(req).then((res) => res || caches.match('/')))
+    );
+    return;
+  }
+
+  // Cache-first for other GET requests
+  if (req.method === 'GET') {
+    event.respondWith(
+      caches.match(req).then((cached) => {
+        const fetchPromise = fetch(req)
+          .then((networkRes) => {
+            try {
+              const copy = networkRes.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+            } catch (_) {}
+            return networkRes;
+          })
+          .catch(() => cached);
+        return cached || fetchPromise;
+      })
+    );
+  }
 });
