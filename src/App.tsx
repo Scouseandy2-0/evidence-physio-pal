@@ -16,11 +16,12 @@ import { SubscriptionProvider } from "./hooks/useSubscription";
 import { ConditionModules } from "./components/conditions/ConditionModules";
 import AssessmentsPage from "./pages/AssessmentsPage";
 import { PersonalizedDashboard } from "./components/dashboard/PersonalizedDashboard";
-
 import CPDPage from "./pages/CPDPage";
 import PatientsPage from "./pages/PatientsPage";
 import CollaborationPage from "./pages/CollaborationPage";
 import ProtocolsPage from "./pages/ProtocolsPage";
+import SecurityPage from "./pages/SecurityPage";
+import SubscriptionAnalyticsPage from "./pages/SubscriptionAnalyticsPage";
 import { AnalyticsDashboard } from "./components/analytics/AnalyticsDashboard";
 import { SubscriptionPage } from "./components/subscription/SubscriptionPage";
 import { SubscriptionSuccessPage } from "./components/subscription/SubscriptionSuccessPage";
@@ -59,7 +60,9 @@ const App = () => (
                 <Route path="/advanced" element={<AdvancedFeatures />} />
                 <Route path="/subscription" element={<SubscriptionPage />} />
                 <Route path="/subscription-success" element={<SubscriptionSuccessPage />} />
+                <Route path="/subscription-analytics" element={<SubscriptionAnalyticsPage />} />
                 <Route path="/verification" element={<HealthcareProviderVerification />} />
+                <Route path="/security" element={<SecurityPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
