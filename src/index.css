@@ -127,9 +127,18 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html, body, #root {
+    height: auto;
+    min-height: 100%;
+  }
+
   body {
     @apply bg-background text-foreground;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  main {
     -webkit-overflow-scrolling: touch;
   }
 }
