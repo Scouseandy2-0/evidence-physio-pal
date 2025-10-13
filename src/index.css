@@ -129,5 +129,7 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }

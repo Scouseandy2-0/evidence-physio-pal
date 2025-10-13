@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { IonApp, setupIonicReact } from '@ionic/react';
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -29,12 +29,12 @@ import { AdvancedFeatures } from "./components/advanced/AdvancedFeatures";
 import { HealthcareProviderVerification } from "./components/admin/HealthcareProviderVerification";
 import { OnboardingFlow } from "./components/onboarding/OnboardingFlow";
 
-setupIonicReact();
+
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <IonApp>
+  <>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <SubscriptionProvider>
@@ -70,7 +70,7 @@ const App = () => (
         </SubscriptionProvider>
       </AuthProvider>
     </QueryClientProvider>
-  </IonApp>
+  </>
 );
 
 export default App;
