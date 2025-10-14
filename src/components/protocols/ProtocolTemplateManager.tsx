@@ -28,6 +28,12 @@ interface ProtocolTemplate {
   frequency_per_week: number;
   is_validated: boolean;
   created_at: string;
+  condition_id: string | null;
+  protocol_steps: any;
+  evidence_ids: string[] | null;
+  contraindications: string[] | null;
+  precautions: string[] | null;
+  expected_outcomes: string | null;
 }
 
 export const ProtocolTemplateManager = () => {
@@ -83,6 +89,12 @@ export const ProtocolTemplateManager = () => {
           description: template.description,
           duration_weeks: template.duration_weeks,
           frequency_per_week: template.frequency_per_week,
+          condition_id: template.condition_id,
+          protocol_steps: template.protocol_steps,
+          evidence_ids: template.evidence_ids,
+          contraindications: template.contraindications,
+          precautions: template.precautions,
+          expected_outcomes: template.expected_outcomes,
           created_by: user.id,
           is_validated: false
         })
@@ -96,9 +108,10 @@ export const ProtocolTemplateManager = () => {
         description: "Protocol cloned successfully. You can now customize it.",
       });
     } catch (error: any) {
+      console.error('Clone error:', error);
       toast({
         title: "Error",
-        description: "Failed to clone protocol",
+        description: error.message || "Failed to clone protocol",
         variant: "destructive",
       });
     } finally {
