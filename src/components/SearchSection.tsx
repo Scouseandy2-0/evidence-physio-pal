@@ -339,14 +339,13 @@ export const SearchSection = () => {
                         <Star className="h-4 w-4 mr-1" />
                         Save
                       </Button>
+                      {result.doi || result.pmid ? (
                         <Button variant="outline" size="sm" asChild>
                           <a 
                             href={
                               result.doi
                                 ? `https://doi.org/${result.doi}`
-                                : result.pmid
-                                ? `https://pubmed.ncbi.nlm.nih.gov/${result.pmid}/`
-                                : `https://scholar.google.com/scholar?q=${encodeURIComponent(result.title)}`
+                                : `https://pubmed.ncbi.nlm.nih.gov/${result.pmid}/`
                             }
                             target="_blank"
                             rel="noopener noreferrer"
@@ -355,18 +354,30 @@ export const SearchSection = () => {
                             View Full Text
                           </a>
                         </Button>
-                        {result.journal?.toLowerCase().includes('cochrane') && (
-                          <Button variant="ghost" size="sm" asChild>
-                            <a
-                              href={`https://www.cochranelibrary.com/search?searchText=${encodeURIComponent(result.title)}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              <Search className="h-4 w-4 mr-1" />
-                              Search Cochrane
-                            </a>
-                          </Button>
-                        )}
+                      ) : (
+                        <Button variant="outline" size="sm" asChild>
+                          <a
+                            href={`https://scholar.google.com/scholar?q=${encodeURIComponent(result.title)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <Search className="h-4 w-4 mr-1" />
+                            Search on Scholar
+                          </a>
+                        </Button>
+                      )}
+                      {result.journal?.toLowerCase().includes('cochrane') && (
+                        <Button variant="ghost" size="sm" asChild>
+                          <a
+                            href={`https://www.cochranelibrary.com/search?searchText=${encodeURIComponent(result.title)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <Search className="h-4 w-4 mr-1" />
+                            Search Cochrane
+                          </a>
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>
