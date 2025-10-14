@@ -63,6 +63,10 @@ export const ClinicalGuidelinesLibrary = () => {
       // Transform the data to match our interface
       const transformedGuidelines: ClinicalGuideline[] = (data || []).map(item => {
         const gradeAssessment = item.grade_assessment as any;
+        // Try multiple sources for the URL: grade_assessment.url, doi, or fallback
+        const guidelineUrl = gradeAssessment?.url || item.doi || 
+          (item.title?.toLowerCase().includes('nice') ? 'https://www.nice.org.uk/guidance' : '#');
+        
         return {
           id: item.id,
           title: item.title,
@@ -70,7 +74,7 @@ export const ClinicalGuidelinesLibrary = () => {
           condition_category: getConditionCategory(item.tags || []),
           publication_year: item.publication_date ? new Date(item.publication_date).getFullYear() : new Date().getFullYear(),
           last_updated: item.updated_at || item.created_at,
-          guideline_url: gradeAssessment?.url || '#',
+          guideline_url: guidelineUrl,
           summary: item.abstract || 'No summary available',
           recommendations: [],
           evidence_strength: item.evidence_level || 'Not specified',

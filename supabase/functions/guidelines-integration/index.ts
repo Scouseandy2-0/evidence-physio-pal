@@ -273,6 +273,7 @@ serve(async (req) => {
               key_findings: guideline.recommendations.join('; '),
               clinical_implications: `Professional guideline from ${guideline.organization} for ${guideline.condition} management.`,
               is_active: true,
+              doi: guideline.url, // Store URL in doi field as primary location
               grade_assessment: {
                 source: guideline.organization,
                 type: 'Clinical Practice Guideline',
