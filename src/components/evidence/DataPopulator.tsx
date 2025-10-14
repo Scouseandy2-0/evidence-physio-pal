@@ -315,6 +315,47 @@ const extractFirstJSONArray = (input: string): string | null => {
   return null;
 };
 
+// Helpers to sanitize JSON-like text (outside strings)
+const sanitizeCommasOutsideStrings = (input: string) => {
+  let out = '';
+  let inString = false;
+  let stringChar = '';
+  let escape = false;
+  const nonWs = (idx: number, dir: -1 | 1) => {
+    for (let i = idx; i >= 0 && i < input.length; i += dir) {
+      const c = input[i];
+      if (!/\s/.test(c)) return c;
+    }
+    return '';
+  };
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i];
+    if (inString) {
+      out += ch;
+      if (escape) { escape = false; continue; }
+      if (ch === '\\') { escape = true; continue; }
+      if (ch === stringChar) { inString = false; }
+      continue;
+    }
+    if (ch === '"' || ch === "'") { inString = true; stringChar = ch; out += ch; continue; }
+    if (ch === ',') {
+      const prev = nonWs(i - 1, -1);
+      const next = nonWs(i + 1, 1);
+      // Skip leading or trailing commas like [, or ,]
+      if (prev === '[' || prev === '{' || next === ']' || next === '}') {
+        continue;
+      }
+    }
+    out += ch;
+  }
+  return out;
+};
+
+const quoteUnquotedKeys = (input: string) => {
+  // Add quotes around unquoted object keys: { key: -> { "key": and , key: -> , "key":
+  return input.replace(/([\{,]\s*)([A-Za-z_][A-Za-z0-9_\-]*)(\s*:\s*)/g, '$1"$2"$3');
+};
+
 // Pre-clean and extract array
 let preClean = responseText
   .replace(/\uFEFF/g, '')
@@ -332,27 +373,57 @@ if (extractedArray) {
   if (arrayMatch) responseText = arrayMatch[0];
 }
 
-// Final cleanup
+// Final cleanup and sanitization
 responseText = responseText
   .trim()
-  .replace(/,\s*([}\]])/g, '$1')
+  .replace(/,\s*([}\]])/g, '$1') // remove trailing commas
   .replace(/\r\n/g, '\n')
   .replace(/^\s+|\s+$/gm, '');
+
+// Extra comma cleanups and quoting keys (best effort, outside strings)
+responseText = sanitizeCommasOutsideStrings(responseText);
+responseText = quoteUnquotedKeys(responseText);
 
 console.log('Parsing assessment tools response (length):', responseText.length);
 console.log('Preview:', responseText.substring(0, 300));
 
 let toolsData: any;
+const attemptParses = (txt: string) => {
+  try { return JSON.parse(txt); } catch {}
+  const sanitized = quoteUnquotedKeys(sanitizeCommasOutsideStrings(txt).replace(/,\s*([}\]])/g, '$1'));
+  try { return JSON.parse(sanitized); } catch {}
+  try { return JSON5.parse(sanitized); } catch (e) { throw e; }
+};
+
 try {
-  toolsData = JSON.parse(responseText);
-} catch (e1) {
-  console.log('Standard JSON parse failed, trying JSON5:', e1);
+  toolsData = attemptParses(responseText);
+} catch (e2: any) {
+  console.warn('Parsing failed, attempting strict AI retry...', e2?.message);
   try {
-    toolsData = JSON5.parse(responseText);
-  } catch (e2: any) {
-    console.error('Both JSON and JSON5 parsing failed:', e2);
-    console.error('Response text:', responseText);
-    throw new Error(`Failed to parse AI response: ${e2.message}`);
+    const { data: retryData, error: retryError } = await supabase.functions.invoke('ai-chat', {
+      body: {
+        messages: [{
+          role: 'user',
+          content: `[STRICT JSON OUTPUT REQUIRED]\nReturn ONLY a JSON array. Use double quotes for all keys and strings. No trailing commas. No comments. No markdown. Schema example: [ { \"name\": \"string\", \"description\": \"string\", \"tool_type\": \"questionnaire\"|\"performance test\", \"scoring_method\": \"string\", \"condition_ids\": [], \"interpretation_guide\": {\"low\": \"0-20\", \"moderate\": \"21-40\", \"high\": \"41-100\"}, \"psychometric_properties\": {\"reliability\": \"High\", \"validity\": \"Established\"}, \"reference_values\": {\"normal\": \"0-20\", \"mild\": \"21-40\"}, \"instructions\": \"string\" } ]\nProvide 20 tools (e.g., DASH, NDI, Oswestry, Berg Balance Scale, 6MWT, TUG). Output ONLY the JSON array.`
+        }],
+        context: 'Generate physiotherapy assessment tools for clinical database (strict JSON)',
+        specialty: 'physiotherapy'
+      }
+    });
+    if (retryError) throw retryError;
+    let retryText = retryData.response as string;
+    retryText = stripCodeFences(retryText);
+    const arrRetry = extractFirstJSONArray(retryText) || (retryText.match(/\[[\s\S]*\]/)?.[0] ?? retryText);
+    const cleanedRetry = quoteUnquotedKeys(sanitizeCommasOutsideStrings(arrRetry)
+      .trim()
+      .replace(/,\s*([}\]])/g, '$1')
+      .replace(/\r\n/g, '\n')
+      .replace(/^\s+|\s+$/gm, ''));
+    toolsData = attemptParses(cleanedRetry);
+  } catch (finalErr: any) {
+    console.error('AI retry also failed:', finalErr);
+    console.error('Original text:', responseText);
+    throw new Error(`Failed to parse AI response: ${finalErr?.message ?? 'Unknown error'}`);
   }
 }
         
