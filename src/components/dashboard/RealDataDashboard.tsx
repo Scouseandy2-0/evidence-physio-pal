@@ -30,6 +30,8 @@ export const RealDataDashboard = () => {
 
   const fetchDatabaseStats = async () => {
     try {
+      console.log('[RealDataDashboard] Fetching database stats...');
+      
       // Get counts from all tables
       const [conditionsResult, evidenceResult, toolsResult, protocolsResult, usersResult, recentResult] = await Promise.all([
         supabase.from('conditions').select('*', { count: 'exact', head: true }),
@@ -43,6 +45,14 @@ export const RealDataDashboard = () => {
           .order('created_at', { ascending: false })
           .limit(5)
       ]);
+
+      console.log('[RealDataDashboard] Raw counts:', {
+        conditions: conditionsResult.count,
+        evidence: evidenceResult.count,
+        assessmentTools: toolsResult.count,
+        protocols: protocolsResult.count,
+        users: usersResult.count
+      });
 
       setStats({
         conditions: conditionsResult.count || 0,
