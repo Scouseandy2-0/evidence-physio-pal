@@ -77,22 +77,43 @@ serve(async (req) => {
     let updatedCount = 0;
 
     for (const update of updates) {
-      const { data: guidelines } = await supabase
-        .from('evidence')
-        .select('*')
-        .eq('study_type', 'Clinical Practice Guideline')
-        .ilike('title', `%${update.searchTerm}%`);
+      // Try multiple search strategies to find the guideline
+      const searchQueries = [
+        supabase.from('evidence').select('*').eq('study_type', 'Clinical Practice Guideline').ilike('title', `%${update.searchTerm}%`),
+        supabase.from('evidence').select('*').eq('study_type', 'Clinical Practice Guideline').ilike('abstract', `%${update.searchTerm}%`),
+        supabase.from('evidence').select('*').eq('study_type', 'Clinical Practice Guideline').contains('tags', [update.searchTerm])
+      ];
 
-      if (guidelines && guidelines.length > 0) {
-        for (const guideline of guidelines) {
+      const allGuidelines = new Set<string>();
+      
+      for (const query of searchQueries) {
+        const { data: guidelines } = await query;
+        if (guidelines && guidelines.length > 0) {
+          guidelines.forEach(g => allGuidelines.add(g.id));
+        }
+      }
+
+      // Update all found guidelines
+      for (const guidelineId of allGuidelines) {
+        const { data: guideline } = await supabase
+          .from('evidence')
+          .select('*')
+          .eq('id', guidelineId)
+          .single();
+
+        if (guideline) {
           const updatedGradeAssessment = {
             ...(guideline.grade_assessment || {}),
-            url: update.url
+            url: update.url,
+            title: update.title
           };
 
           const { error } = await supabase
             .from('evidence')
-            .update({ grade_assessment: updatedGradeAssessment })
+            .update({ 
+              grade_assessment: updatedGradeAssessment,
+              doi: update.url  // Also update DOI field as fallback
+            })
             .eq('id', guideline.id);
 
           if (!error) {
