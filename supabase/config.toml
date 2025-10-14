@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.generate-assessment-tools]
 verify_jwt = false
+
+[functions.generate-condition-protocols]
+verify_jwt = false
