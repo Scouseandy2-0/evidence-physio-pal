@@ -246,37 +246,17 @@ export const DataPopulator = () => {
 
       if (error) throw error;
 
-      updateTaskStatus('generate-assessment-tools', { progress: 70 });
+updateTaskStatus('generate-assessment-tools', { progress: 90 });
 
-      // Insert assessment tools (already validated by edge function)
-      try {
-        const toolsData = genData?.tools;
-        if (!Array.isArray(toolsData)) {
-          throw new Error('Edge function did not return a valid tools array');
-        }
+const inserted = Number(genData?.inserted ?? 0);
+const total = Number(genData?.total ?? 0);
+const skipped = Number(genData?.skipped ?? Math.max(0, total - inserted));
 
-        let successCount = 0;
-        for (const tool of toolsData) {
-          const { error: insertError } = await supabase
-            .from('assessment_tools')
-            .insert(tool);
-
-          if (insertError) {
-            console.error('Error inserting assessment tool:', insertError);
-          } else {
-            successCount++;
-          }
-        }
-
-        updateTaskStatus('generate-assessment-tools', {
-          status: 'completed',
-          progress: 100,
-          results: `Generated ${successCount}/${toolsData.length} assessment tools`
-        });
-      } catch (parseError: any) {
-        console.error('Insertion error:', parseError);
-        throw new Error(`Failed to insert assessment tools: ${parseError.message}`);
-      }
+updateTaskStatus('generate-assessment-tools', {
+  status: 'completed',
+  progress: 100,
+  results: `Inserted ${inserted}/${total} assessment tools${skipped ? ` (${skipped} skipped)` : ''}`
+});
 
     } catch (error: any) {
       updateTaskStatus('generate-assessment-tools', { 

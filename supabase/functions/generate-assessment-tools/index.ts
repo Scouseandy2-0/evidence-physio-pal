@@ -1,6 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.56.0";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -176,22 +176,63 @@ Examples include: DASH, NDI, Oswestry, Berg Balance Scale, 6MWT, Timed Up and Go
       });
     }
 
-    // Best-effort normalization
-    const normalized = tools.map((t: any) => ({
-      name: String(t?.name ?? "Unnamed Tool"),
-      description: String(t?.description ?? ""),
-      tool_type: (t?.tool_type === "questionnaire" || t?.tool_type === "performance test") ? t.tool_type : "questionnaire",
-      scoring_method: String(t?.scoring_method ?? ""),
-      condition_ids: Array.isArray(t?.condition_ids) ? t.condition_ids : [],
-      interpretation_guide: t?.interpretation_guide ?? {},
-      psychometric_properties: t?.psychometric_properties ?? {},
-      reference_values: t?.reference_values ?? {},
-      instructions: String(t?.instructions ?? ""),
-    }));
+// Best-effort normalization
+const normalized = tools.map((t: any) => ({
+  name: String(t?.name ?? "Unnamed Tool"),
+  description: String(t?.description ?? ""),
+  tool_type: (t?.tool_type === "questionnaire" || t?.tool_type === "performance test") ? t.tool_type : "questionnaire",
+  scoring_method: String(t?.scoring_method ?? ""),
+  condition_ids: Array.isArray(t?.condition_ids) ? t.condition_ids : [],
+  interpretation_guide: t?.interpretation_guide ?? {},
+  psychometric_properties: t?.psychometric_properties ?? {},
+  reference_values: t?.reference_values ?? {},
+  instructions: String(t?.instructions ?? ""),
+}));
 
-    return new Response(JSON.stringify({ tools: normalized }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+// Persist to DB using service role to bypass RLS (trusted backend)
+const supabaseUrl = Deno.env.get('SUPABASE_URL');
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+if (!supabaseUrl || !supabaseKey) {
+  console.error('Supabase credentials missing');
+  return new Response(JSON.stringify({ error: 'Server configuration error' }), {
+    status: 500,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Avoid inserting duplicates by name
+let existingNames = new Set<string>();
+try {
+  const { data: existing, error: existingError } = await supabase
+    .from('assessment_tools')
+    .select('name');
+  if (existingError) {
+    console.error('Failed to fetch existing assessment tools:', existingError);
+  } else {
+    existingNames = new Set((existing ?? []).map((r: any) => String(r.name)));
+  }
+} catch (e) {
+  console.error('Error loading existing tools:', e);
+}
+
+const toInsert = normalized.filter((t: any) => !existingNames.has(t.name));
+let inserted = 0;
+if (toInsert.length > 0) {
+  const { error: insertError } = await supabase.from('assessment_tools').insert(toInsert);
+  if (insertError) {
+    console.error('Failed to insert assessment tools:', insertError);
+  } else {
+    inserted = toInsert.length;
+  }
+}
+
+const result = { inserted, skipped: normalized.length - inserted, total: normalized.length };
+
+return new Response(JSON.stringify(result), {
+  headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+});
   } catch (error) {
     console.error("generate-assessment-tools error:", error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
