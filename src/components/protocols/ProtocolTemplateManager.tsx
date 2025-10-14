@@ -78,54 +78,34 @@ export const ProtocolTemplateManager = () => {
   };
 
   const handleClone = async (template: ProtocolTemplate) => {
-    if (!user) {
+    // Require active session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
       toast({
-        title: "Authentication Required",
-        description: "Please log in to clone protocols",
+        title: "Login required",
+        description: "Please log in to clone protocols.",
         variant: "destructive",
       });
       return;
     }
-    
+
     setCloning(template.id);
     try {
-      // Verify user is authenticated
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        throw new Error("No active session. Please log in again.");
-      }
-
-      const { data, error } = await supabase
-        .from('treatment_protocols')
-        .insert({
-          name: `${template.name} (Copy)`,
-          description: template.description,
-          duration_weeks: template.duration_weeks,
-          frequency_per_week: template.frequency_per_week,
-          condition_id: template.condition_id,
-          protocol_steps: template.protocol_steps,
-          evidence_ids: template.evidence_ids,
-          contraindications: template.contraindications,
-          precautions: template.precautions,
-          expected_outcomes: template.expected_outcomes,
-          created_by: session.user.id,
-          is_validated: false
-        })
-        .select()
-        .single();
+      const { data, error } = await supabase.functions.invoke('clone-protocol', {
+        body: { protocolId: template.id },
+      });
 
       if (error) throw error;
 
       toast({
-        title: "Success",
+        title: "Cloned",
         description: "Protocol cloned successfully. You can now customize it.",
       });
     } catch (error: any) {
       console.error('Clone error:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to clone protocol. Please ensure you are logged in.",
+        description: error?.message || "Failed to clone protocol.",
         variant: "destructive",
       });
     } finally {
