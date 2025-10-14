@@ -205,6 +205,10 @@ export const PersonalizedDashboard = () => {
   const RecentEvidenceCard = ({ evidence }: { evidence: any }) => {
     // Determine the best external link for the evidence
     const getEvidenceLink = () => {
+      // Check grade_assessment.url first (for guidelines)
+      if (evidence.grade_assessment?.url && evidence.grade_assessment.url !== '#') {
+        return evidence.grade_assessment.url;
+      }
       if (evidence.doi) {
         // Special handling for Cochrane DOIs
         if (evidence.doi.includes('14651858') || evidence.journal?.toLowerCase().includes('cochrane')) {
