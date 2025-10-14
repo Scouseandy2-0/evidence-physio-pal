@@ -13,6 +13,7 @@ interface SubscriptionContextType {
   checkSubscription: () => Promise<void>;
   createCheckout: (tier?: string, priceId?: string, promoCode?: string) => Promise<void>;
   openCustomerPortal: () => Promise<void>;
+  hasAccess: (requiredTier?: string) => boolean;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | null>(null);
@@ -200,6 +201,17 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
     }
   };
 
+  // Check if user has access based on tier hierarchy
+  const hasAccess = (requiredTier?: string) => {
+    if (!requiredTier) return subscribed;
+    
+    const tierHierarchy = ['basic', 'professional', 'enterprise'];
+    const userTierIndex = subscriptionTier ? tierHierarchy.indexOf(subscriptionTier) : -1;
+    const requiredTierIndex = tierHierarchy.indexOf(requiredTier);
+    
+    return subscribed && userTierIndex >= requiredTierIndex;
+  };
+
   // Check subscription on auth state changes
   useEffect(() => {
     if (user) {
@@ -238,6 +250,7 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
     checkSubscription,
     createCheckout,
     openCustomerPortal,
+    hasAccess,
     }}>
       {children}
     </SubscriptionContext.Provider>

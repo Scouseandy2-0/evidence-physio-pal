@@ -11,21 +11,27 @@ interface PremiumFeatureProps {
   children: ReactNode;
   feature?: string;
   showUpgrade?: boolean;
+  requiredTier?: 'basic' | 'professional' | 'enterprise';
 }
 
 export const PremiumFeature = ({ 
   children, 
   feature = "this feature", 
-  showUpgrade = true 
+  showUpgrade = true,
+  requiredTier = 'basic'
 }: PremiumFeatureProps) => {
-  const { subscribed, loading } = useSubscription();
+  const { hasAccess, loading } = useSubscription();
   const { user } = useAuth();
 
   if (loading) {
-    return <div className="animate-pulse">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
   }
 
-  if (subscribed) {
+  if (hasAccess(requiredTier)) {
     return <>{children}</>;
   }
 
@@ -46,17 +52,19 @@ export const PremiumFeature = ({
           Premium Feature
         </CardTitle>
         <CardDescription>
-          Upgrade to access {feature} and unlock the full potential of PhysioEvidence
+          Upgrade to {requiredTier.charAt(0).toUpperCase() + requiredTier.slice(1)} tier or higher to access {feature}
         </CardDescription>
       </CardHeader>
       <CardContent className="text-center space-y-4">
         <div className="space-y-2">
           <Badge variant="outline" className="border-yellow-600 text-yellow-600">
             <Zap className="h-3 w-3 mr-1" />
-            £3.99/month
+            {requiredTier === 'basic' && '£3.99/month'}
+            {requiredTier === 'professional' && '£9.99/month'}
+            {requiredTier === 'enterprise' && '£19.99/month'}
           </Badge>
           <p className="text-sm text-muted-foreground">
-            Get access to all conditions, protocols, patient management, and more
+            Get unlimited access to all premium features
           </p>
         </div>
         
@@ -86,10 +94,10 @@ interface FreeTierBannerProps {
 }
 
 export const FreeTierBanner = ({ currentItem, totalItems, category }: FreeTierBannerProps) => {
-  const { subscribed } = useSubscription();
+  const { hasAccess } = useSubscription();
   const { user } = useAuth();
 
-  if (subscribed) return null;
+  if (hasAccess('basic')) return null;
 
   return (
     <Card className="mb-6 border-yellow-200 bg-yellow-50">
