@@ -85,19 +85,37 @@ export const PersonalizedDashboard = () => {
         .order('created_at', { ascending: false })
         .limit(3);
 
+      // Fetch CPD progress from actual records
+      const { data: cpdActivities } = await supabase
+        .from('cpd_activities')
+        .select('hours_claimed')
+        .eq('user_id', user?.id || '');
+
+      const completedHours = cpdActivities?.reduce((sum, activity) => 
+        sum + Number(activity.hours_claimed), 0) || 0;
+
+      // Fetch recent notifications
+      const { data: notifications } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user?.id || '')
+        .order('created_at', { ascending: false })
+        .limit(3);
+
       setDashboardData({
         recentEvidence: evidence || [],
         savedProtocols: protocols || [],
         cpdProgress: {
-          completed: 25,
-          required: 40,
+          completed: completedHours,
+          required: 40, // Standard annual requirement
           deadline: '2024-12-31'
         },
-        notifications: [
-          { id: 1, type: 'evidence', message: 'New systematic review available for Low Back Pain', time: '2 hours ago' },
-          { id: 2, type: 'protocol', message: 'Your stroke protocol was validated by peer review', time: '1 day ago' },
-          { id: 3, type: 'cpd', message: 'CPD deadline approaching - 3 months remaining', time: '3 days ago' }
-        ],
+        notifications: (notifications || []).map(n => ({
+          id: n.id,
+          type: n.type,
+          message: n.message,
+          time: new Date(n.created_at).toLocaleDateString()
+        })),
         favoriteConditions: preferences?.preferred_conditions || []
       });
 
@@ -113,37 +131,32 @@ export const PersonalizedDashboard = () => {
   };
 
   const fetchCPDRecords = async () => {
-    // Mock CPD data - in real implementation, this would come from a CPD table
-    const mockCPDRecords: CPDRecord[] = [
-      {
-        id: '1',
-        activity_type: 'Conference',
-        title: 'International Physiotherapy Conference 2024',
-        date: '2024-03-15',
-        hours: 8,
-        category: 'Professional Development',
-        status: 'completed'
-      },
-      {
-        id: '2',
-        activity_type: 'Course',
-        title: 'Advanced Manual Therapy Techniques',
-        date: '2024-06-20',
-        hours: 12,
-        category: 'Clinical Skills',
-        status: 'in_progress'
-      },
-      {
-        id: '3',
-        activity_type: 'Webinar',
-        title: 'Evidence-Based Practice in Neurological Rehabilitation',
-        date: '2024-09-10',
-        hours: 2,
-        category: 'Evidence-Based Practice',
-        status: 'planned'
-      }
-    ];
-    setCpdRecords(mockCPDRecords);
+    try {
+      const { data: cpdActivities, error } = await supabase
+        .from('cpd_activities')
+        .select('*')
+        .eq('user_id', user?.id || '')
+        .order('date_completed', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+
+      // Transform database records to match the CPDRecord interface
+      const transformedRecords: CPDRecord[] = (cpdActivities || []).map(activity => ({
+        id: activity.id,
+        activity_type: activity.activity_type,
+        title: activity.title,
+        date: activity.date_completed,
+        hours: Number(activity.hours_claimed),
+        category: activity.activity_type,
+        status: 'completed' as const // All records in the table are completed
+      }));
+
+      setCpdRecords(transformedRecords);
+    } catch (error: any) {
+      console.error('Error fetching CPD records:', error);
+      setCpdRecords([]);
+    }
   };
 
   const QuickStatsCard = ({ icon: Icon, title, value, trend, color }: any) => (
