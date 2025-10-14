@@ -27,9 +27,9 @@ export const ProtocolDataPopulator = () => {
             7. Precautions (array of strings)
             8. Expected outcomes (detailed paragraph)
             
-            Format as JSON with these exact keys: name, description, protocol_steps, duration_weeks, frequency_per_week, contraindications, precautions, expected_outcomes
+            Return ONLY a valid JSON object with these exact keys: name, description, protocol_steps, duration_weeks, frequency_per_week, contraindications, precautions, expected_outcomes
             
-            Make it comprehensive and evidence-based for physiotherapy practice.`
+            Do not include any markdown formatting, code blocks, or explanatory text. Return only the raw JSON object.`
           }],
           specialty: 'physiotherapy'
         }
@@ -38,7 +38,17 @@ export const ProtocolDataPopulator = () => {
       if (response.error) throw response.error;
 
       try {
-        const protocolData = JSON.parse(response.data.response);
+        // Clean the AI response - remove markdown code blocks if present
+        let cleanedResponse = response.data.response.trim();
+        
+        // Remove markdown JSON code blocks
+        if (cleanedResponse.startsWith('```json')) {
+          cleanedResponse = cleanedResponse.replace(/^```json\s*\n/, '').replace(/\n```$/, '');
+        } else if (cleanedResponse.startsWith('```')) {
+          cleanedResponse = cleanedResponse.replace(/^```\s*\n/, '').replace(/\n```$/, '');
+        }
+        
+        const protocolData = JSON.parse(cleanedResponse);
         
         const { error: insertError } = await supabase
           .from('treatment_protocols')
