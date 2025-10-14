@@ -27,7 +27,8 @@ import {
   Star,
   CheckCircle,
   Edit,
-  Save
+  Save,
+  ExternalLink
 } from "lucide-react";
 
 interface DashboardData {
@@ -298,29 +299,44 @@ export const PersonalizedDashboard = () => {
     const externalLink = getEvidenceLink();
 
     return (
-      <Card className="mb-3 hover:shadow-md transition-shadow">
+      <Card className="mb-3 hover:shadow-md transition-shadow border-l-4 border-l-primary/20">
         <CardContent className="p-4">
-          <div className="flex justify-between items-start mb-2">
-            {externalLink ? (
-              <a 
-                href={externalLink} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="hover:underline flex-1"
-              >
-                <h4 className="font-medium text-sm line-clamp-2 text-primary">{evidence.title}</h4>
-              </a>
-            ) : (
-              <h4 className="font-medium text-sm line-clamp-2">{evidence.title}</h4>
-            )}
-            <Badge variant="outline" className="ml-2">
-              {evidence.evidence_level}
-            </Badge>
-          </div>
-          <p className="text-xs text-muted-foreground mb-2">{evidence.journal}</p>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Calendar className="h-3 w-3" />
-            <span>{new Date(evidence.publication_date).toLocaleDateString()}</span>
+          <div className="space-y-3">
+            <div className="flex justify-between items-start gap-3">
+              <div className="flex-1">
+                <h4 className="font-medium text-sm line-clamp-2 mb-1">{evidence.title}</h4>
+                <p className="text-xs text-muted-foreground">{evidence.journal}</p>
+              </div>
+              <Badge variant="outline" className="shrink-0">
+                {evidence.evidence_level}
+              </Badge>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Calendar className="h-3 w-3" />
+                <span>{new Date(evidence.publication_date).toLocaleDateString()}</span>
+              </div>
+              
+              {externalLink && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  asChild
+                  className="h-8"
+                >
+                  <a 
+                    href={externalLink} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="gap-1"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    View Article
+                  </a>
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
