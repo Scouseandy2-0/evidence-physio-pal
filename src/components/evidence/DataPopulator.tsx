@@ -276,42 +276,85 @@ CRITICAL: Return ONLY the JSON array starting with [ and ending with ]. No other
       try {
         let responseText = data.response;
         
-        // Extract JSON from markdown code blocks if present
-        const jsonMatch = responseText.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
-        if (jsonMatch) {
-          responseText = jsonMatch[1];
-        } else {
-          // Try to find JSON array in the response
-          const arrayMatch = responseText.match(/\[[\s\S]*\]/);
-          if (arrayMatch) {
-            responseText = arrayMatch[0];
-          }
+// Robust JSON extraction: remove code fences, normalize quotes, then extract first top-level JSON array
+const stripCodeFences = (txt: string) => txt.replace(/```(?:json)?/gi, '```').replace(/```/g, '');
+const extractFirstJSONArray = (input: string): string | null => {
+  let inString = false;
+  let stringChar = '';
+  let escape = false;
+  let depth = 0;
+  let start = -1;
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i];
+    if (inString) {
+      if (escape) { escape = false; continue; }
+      if (ch === '\\') { escape = true; continue; }
+      if (ch === stringChar) { inString = false; continue; }
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      inString = true;
+      stringChar = ch;
+      continue;
+    }
+    if (ch === '[') {
+      if (depth === 0) start = i;
+      depth++;
+      continue;
+    }
+    if (ch === ']') {
+      if (depth > 0) {
+        depth--;
+        if (depth === 0 && start !== -1) {
+          return input.slice(start, i + 1);
         }
-        
-        // Clean up the response text
-        responseText = responseText
-          .trim()
-          .replace(/[\u2018\u2019]/g, "'")
-          .replace(/[\u201C\u201D]/g, '"')
-          .replace(/,\s*([}\]])/g, '$1')
-          .replace(/\r\n/g, '\n')
-          .replace(/^\s+|\s+$/gm, '');
-        
-        console.log('Parsing assessment tools response:', responseText.substring(0, 300));
-        
-        let toolsData: any;
-        try {
-          toolsData = JSON.parse(responseText);
-        } catch (e1) {
-          console.log('Standard JSON parse failed, trying JSON5:', e1);
-          try {
-            toolsData = JSON5.parse(responseText);
-          } catch (e2: any) {
-            console.error('Both JSON and JSON5 parsing failed:', e2);
-            console.error('Response text:', responseText);
-            throw new Error(`Failed to parse AI response: ${e2.message}`);
-          }
-        }
+      }
+      continue;
+    }
+  }
+  return null;
+};
+
+// Pre-clean and extract array
+let preClean = responseText
+  .replace(/\uFEFF/g, '')
+  .replace(/[\u2018\u2019]/g, "'")
+  .replace(/[\u201C\u201D]/g, '"');
+
+let withoutFences = stripCodeFences(preClean);
+const extractedArray = extractFirstJSONArray(withoutFences);
+
+// Fallback to previous regex if needed
+if (extractedArray) {
+  responseText = extractedArray;
+} else {
+  const arrayMatch = withoutFences.match(/\[[\s\S]*\]/);
+  if (arrayMatch) responseText = arrayMatch[0];
+}
+
+// Final cleanup
+responseText = responseText
+  .trim()
+  .replace(/,\s*([}\]])/g, '$1')
+  .replace(/\r\n/g, '\n')
+  .replace(/^\s+|\s+$/gm, '');
+
+console.log('Parsing assessment tools response (length):', responseText.length);
+console.log('Preview:', responseText.substring(0, 300));
+
+let toolsData: any;
+try {
+  toolsData = JSON.parse(responseText);
+} catch (e1) {
+  console.log('Standard JSON parse failed, trying JSON5:', e1);
+  try {
+    toolsData = JSON5.parse(responseText);
+  } catch (e2: any) {
+    console.error('Both JSON and JSON5 parsing failed:', e2);
+    console.error('Response text:', responseText);
+    throw new Error(`Failed to parse AI response: ${e2.message}`);
+  }
+}
         
         if (!Array.isArray(toolsData)) {
           throw new Error('AI response is not a valid array');
