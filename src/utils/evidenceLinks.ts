@@ -24,10 +24,10 @@ export function getExternalEvidenceLink(e: EvidenceLike): string | null {
     return doiRaw;
   }
 
-  // 3) Cochrane special handling (their canonical path is on cochranelibrary)
+  // 3) Cochrane special handling - use standard DOI resolver
   // Cochrane DOIs typically include 10.1002/14651858.CDxxxxxx
   if (doiRaw && (doiRaw.includes('14651858') || journalLower.includes('cochrane'))) {
-    return `https://www.cochranelibrary.com/cdsr/doi/${doiRaw}/full`;
+    return `https://doi.org/${doiRaw}`;
   }
 
   // 4) Other journal special cases
