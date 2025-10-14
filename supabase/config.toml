@@ -27,3 +27,6 @@ memory_mb = 512
 
 [functions.clone-protocol]
 verify_jwt = true
+
+[functions.populate-nice-guidelines]
+verify_jwt = false
