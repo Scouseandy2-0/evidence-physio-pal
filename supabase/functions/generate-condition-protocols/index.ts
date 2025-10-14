@@ -79,10 +79,18 @@ serve(async (req) => {
 
     console.log('Starting comprehensive protocol generation...');
 
-    // Fetch all conditions
-    const { data: conditions, error: conditionsError } = await supabase
-      .from('conditions')
-      .select('*');
+    // Parse optional payload and fetch target condition(s)
+    let conditionId: string | null = null;
+    try {
+      const payload = await req.json();
+      conditionId = payload?.conditionId ?? null;
+    } catch {
+      // no body provided
+    }
+
+    const { data: conditions, error: conditionsError } = conditionId
+      ? await supabase.from('conditions').select('*').eq('id', conditionId)
+      : await supabase.from('conditions').select('*');
 
     if (conditionsError) {
       throw new Error(`Failed to fetch conditions: ${conditionsError.message}`);
@@ -380,35 +388,61 @@ Base all recommendations strictly on the provided evidence. Include evidence lev
       throw new Error(`Invalid protocol data structure for ${condition.name}`);
     }
     
-    // Store evidence in database first to get IDs
+    // Store evidence in database first to get IDs (avoid ON CONFLICT without unique index)
     const evidenceIds: string[] = [];
-    for (const evidenceItem of evidence.slice(0, 5)) { // Store top 5 evidence items
-      const { data: storedEvidence } = await supabase
-        .from('evidence')
-        .upsert({
-          title: evidenceItem.title,
-          abstract: evidenceItem.abstract,
-          authors: evidenceItem.authors || [],
-          journal: evidenceItem.journal,
-          publication_date: evidenceItem.publication_date,
-          evidence_level: evidenceItem.evidence_level,
-          study_type: evidenceItem.study_type,
-          clinical_implications: evidenceItem.clinical_implications,
-          key_findings: evidenceItem.key_findings,
-          condition_ids: [condition.id],
-          pmid: evidenceItem.pmid,
-          doi: evidenceItem.doi,
-          tags: [condition.name, condition.category],
-          is_active: true
-        }, {
-          onConflict: 'pmid',
-          ignoreDuplicates: true
-        })
-        .select('id')
-        .single();
-      
-      if (storedEvidence) {
-        evidenceIds.push(storedEvidence.id);
+    for (const evidenceItem of evidence.slice(0, 5)) {
+      try {
+        let existingId: string | null = null;
+
+        if (evidenceItem.pmid) {
+          const { data: existingByPmid } = await supabase
+            .from('evidence')
+            .select('id')
+            .eq('pmid', evidenceItem.pmid)
+            .maybeSingle();
+          existingId = existingByPmid?.id ?? null;
+        } else if (evidenceItem.doi) {
+          const { data: existingByDoi } = await supabase
+            .from('evidence')
+            .select('id')
+            .eq('doi', evidenceItem.doi)
+            .maybeSingle();
+          existingId = existingByDoi?.id ?? null;
+        }
+
+        if (existingId) {
+          evidenceIds.push(existingId);
+          continue;
+        }
+
+        const { data: inserted, error: insertErr } = await supabase
+          .from('evidence')
+          .insert({
+            title: evidenceItem.title,
+            abstract: evidenceItem.abstract,
+            authors: evidenceItem.authors || [],
+            journal: evidenceItem.journal,
+            publication_date: evidenceItem.publication_date,
+            evidence_level: evidenceItem.evidence_level,
+            study_type: evidenceItem.study_type,
+            clinical_implications: evidenceItem.clinical_implications,
+            key_findings: evidenceItem.key_findings,
+            condition_ids: [condition.id],
+            pmid: evidenceItem.pmid,
+            doi: evidenceItem.doi,
+            tags: [condition.name, condition.category],
+            is_active: true
+          })
+          .select('id')
+          .single();
+
+        if (insertErr) {
+          console.warn('Insert evidence failed, continuing:', insertErr.message);
+          continue;
+        }
+        if (inserted?.id) evidenceIds.push(inserted.id);
+      } catch (evErr) {
+        console.warn('Evidence store error:', evErr);
       }
     }
 

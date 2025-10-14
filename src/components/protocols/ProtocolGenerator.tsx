@@ -37,19 +37,45 @@ export const ProtocolGenerator = () => {
     setCurrentCondition("Initializing...");
 
     try {
-      const { data, error } = await supabase.functions.invoke('generate-condition-protocols', {
-        body: {}
-      });
+      // Fetch all conditions and process one-by-one to avoid Edge Function timeouts
+      const { data: conditions, error: condErr } = await supabase
+        .from('conditions')
+        .select('id, name')
+        .order('name');
 
-      if (error) throw error;
+      if (condErr) throw condErr;
 
-      setResults(data.results);
-      setProgress(100);
+      const total = conditions?.length || 0;
+      let processed = 0;
+      let generated = 0;
+      const errors: string[] = [];
+
+      for (const condition of conditions || []) {
+        setCurrentCondition(condition.name);
+        try {
+          const { data, error } = await supabase.functions.invoke('generate-condition-protocols', {
+            body: { conditionId: condition.id }
+          });
+          if (error) {
+            errors.push(`${condition.name}: ${error.message || 'invoke error'}`);
+          } else {
+            const genCount = data?.results?.generatedProtocols ?? 0;
+            generated += genCount;
+          }
+        } catch (e: any) {
+          errors.push(`${condition.name}: ${e?.message || 'request failed'}`);
+        }
+        processed++;
+        setProgress(Math.round((processed / total) * 100));
+      }
+
+      const finalResults = { totalConditions: total, processedConditions: processed, generatedProtocols: generated, errors };
+      setResults(finalResults);
       setCurrentCondition("Completed");
 
       toast({
         title: "Protocol Generation Complete",
-        description: `Successfully generated ${data.results.generatedProtocols} evidence-based protocols`,
+        description: `Successfully generated ${generated} evidence-based protocols`,
       });
 
     } catch (error: any) {
