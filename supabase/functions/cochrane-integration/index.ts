@@ -73,7 +73,10 @@ Return as JSON array with this structure:
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
+    let content = data.choices[0].message.content;
+    
+    // Strip markdown code blocks if present
+    content = content.replace(/```json\s*\n?/g, '').replace(/```\s*$/g, '').trim();
     
     // Parse JSON response
     const reviews = JSON.parse(content);

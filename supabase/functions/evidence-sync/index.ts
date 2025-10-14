@@ -47,8 +47,8 @@ serve(async (req) => {
       errors: []
     };
 
-    // Call each integration function
-    for (const source of sources) {
+    // Call all integration functions in parallel for speed
+    const integrationPromises = sources.map(async (source) => {
       try {
         console.log(`Processing ${source}...`);
         
@@ -68,28 +68,53 @@ serve(async (req) => {
 
         if (response.ok) {
           const data = await response.json();
-          results.sources_processed.push({
+          return {
             source,
             success: true,
             message: data.message,
             count: data.articles?.length || data.reviews?.length || data.studies?.length || data.guidelines?.length || 0
-          });
-          results.total_articles += results.sources_processed[results.sources_processed.length - 1].count;
+          };
         } else {
           const errorData = await response.json().catch(() => ({}));
-          results.errors.push({
+          return {
             source,
+            success: false,
             error: errorData.error || `HTTP ${response.status}`,
-            message: errorData.note || 'Unknown error'
-          });
+            message: errorData.note || 'Unknown error',
+            count: 0
+          };
         }
       } catch (error) {
         console.error(`Error processing ${source}:`, error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        results.errors.push({
+        return {
           source,
+          success: false,
           error: errorMessage,
-          message: 'Function call failed'
+          message: 'Function call failed',
+          count: 0
+        };
+      }
+    });
+
+    // Wait for all integrations to complete
+    const integrationResults = await Promise.all(integrationPromises);
+
+    // Process results
+    for (const result of integrationResults) {
+      if (result.success) {
+        results.sources_processed.push({
+          source: result.source,
+          success: true,
+          message: result.message,
+          count: result.count
+        });
+        results.total_articles += result.count;
+      } else {
+        results.errors.push({
+          source: result.source,
+          error: result.error || 'Unknown error',
+          message: result.message
         });
       }
     }
