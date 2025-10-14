@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, Trash2, Edit, Clock, Calendar } from "lucide-react";
+import { Eye, Trash2, Edit, Clock, Calendar, RefreshCw } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -25,7 +25,7 @@ interface Protocol {
   evidence_ids: string[] | null;
 }
 
-export const MyProtocols = () => {
+export const MyProtocols = ({ refreshTrigger = 0 }: { refreshTrigger?: number }) => {
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProtocol, setSelectedProtocol] = useState<Protocol | null>(null);
@@ -34,7 +34,7 @@ export const MyProtocols = () => {
 
   useEffect(() => {
     fetchMyProtocols();
-  }, []);
+  }, [refreshTrigger]);
 
   const fetchMyProtocols = async () => {
     try {
@@ -121,16 +121,26 @@ export const MyProtocols = () => {
           <p className="text-muted-foreground text-center mb-4">
             You haven't created or cloned any protocols yet.
           </p>
-          <p className="text-sm text-muted-foreground text-center">
+          <p className="text-sm text-muted-foreground text-center mb-4">
             Visit the Template Library to clone validated protocols or use the Protocol Builder to create your own.
           </p>
+          <Button variant="outline" onClick={fetchMyProtocols}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <>
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button variant="outline" size="sm" onClick={fetchMyProtocols}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {protocols.map((protocol) => (
           <Card key={protocol.id} className="flex flex-col">
@@ -290,6 +300,6 @@ export const MyProtocols = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 };

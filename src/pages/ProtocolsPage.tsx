@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Header } from "@/components/Header";
 import { TreatmentProtocolBuilder } from "@/components/protocols/TreatmentProtocolBuilder";
 import { ProtocolTemplateManager } from "@/components/protocols/ProtocolTemplateManager";
@@ -7,6 +7,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, Wrench, BookOpen } from "lucide-react";
 
 const ProtocolsPage = () => {
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+  const handleProtocolCloned = useCallback(() => {
+    setRefreshTrigger(prev => prev + 1);
+  }, []);
   return (
     <div className="min-h-screen">
       <Header />
@@ -36,7 +41,7 @@ const ProtocolsPage = () => {
             </TabsList>
             
             <TabsContent value="my-protocols" className="space-y-6">
-              <MyProtocols />
+              <MyProtocols refreshTrigger={refreshTrigger} />
             </TabsContent>
             
             <TabsContent value="builder" className="space-y-6">
@@ -44,7 +49,7 @@ const ProtocolsPage = () => {
             </TabsContent>
             
             <TabsContent value="templates" className="space-y-6">
-              <ProtocolTemplateManager />
+              <ProtocolTemplateManager onProtocolCloned={handleProtocolCloned} />
             </TabsContent>
           </Tabs>
         </div>

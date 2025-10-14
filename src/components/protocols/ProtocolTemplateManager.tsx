@@ -36,7 +36,7 @@ interface ProtocolTemplate {
   expected_outcomes: string | null;
 }
 
-export const ProtocolTemplateManager = () => {
+export const ProtocolTemplateManager = ({ onProtocolCloned }: { onProtocolCloned?: () => void }) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { subscribed } = useSubscription();
@@ -99,8 +99,11 @@ export const ProtocolTemplateManager = () => {
 
       toast({
         title: "Cloned",
-        description: "Protocol cloned successfully. You can now customize it.",
+        description: "Protocol cloned successfully. Check the 'My Protocols' tab.",
       });
+      
+      // Notify parent to refresh
+      onProtocolCloned?.();
     } catch (error: any) {
       console.error('Clone error:', error);
       toast({
