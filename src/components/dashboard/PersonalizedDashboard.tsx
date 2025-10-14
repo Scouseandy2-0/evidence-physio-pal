@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -21,7 +25,9 @@ import {
   BarChart3,
   Bell,
   Star,
-  CheckCircle
+  CheckCircle,
+  Edit,
+  Save
 } from "lucide-react";
 
 interface DashboardData {
@@ -58,6 +64,14 @@ export const PersonalizedDashboard = () => {
   const [cpdRecords, setCpdRecords] = useState<CPDRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [editingProtocol, setEditingProtocol] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    description: '',
+    duration_weeks: 0,
+    frequency_per_week: 0,
+    expected_outcomes: ''
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -176,6 +190,51 @@ export const PersonalizedDashboard = () => {
     } catch (error: any) {
       console.error('Error fetching CPD records:', error);
       setCpdRecords([]);
+    }
+  };
+
+  const handleEditProtocol = (protocol: any) => {
+    setEditingProtocol(protocol);
+    setEditForm({
+      name: protocol.name || '',
+      description: protocol.description || '',
+      duration_weeks: protocol.duration_weeks || 0,
+      frequency_per_week: protocol.frequency_per_week || 0,
+      expected_outcomes: protocol.expected_outcomes || ''
+    });
+  };
+
+  const handleSaveProtocol = async () => {
+    if (!editingProtocol) return;
+
+    try {
+      const { error } = await supabase
+        .from('treatment_protocols')
+        .update({
+          name: editForm.name,
+          description: editForm.description,
+          duration_weeks: editForm.duration_weeks,
+          frequency_per_week: editForm.frequency_per_week,
+          expected_outcomes: editForm.expected_outcomes,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editingProtocol.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Protocol updated successfully",
+      });
+
+      setEditingProtocol(null);
+      fetchDashboardData(); // Refresh the data
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update protocol",
+        variant: "destructive",
+      });
     }
   };
 
@@ -471,16 +530,26 @@ export const PersonalizedDashboard = () => {
             {dashboardData.savedProtocols.length > 0 ? (
               <div className="space-y-3">
                 {dashboardData.savedProtocols.map(protocol => (
-                  <div key={protocol.id} className="flex items-center justify-between p-3 border rounded">
-                    <div>
+                  <div key={protocol.id} className="flex items-center justify-between p-3 border rounded hover:bg-accent/50 transition-colors group">
+                    <div className="flex-1">
                       <h4 className="font-medium">{protocol.name}</h4>
                       <p className="text-sm text-muted-foreground">
                         {protocol.duration_weeks} weeks • {protocol.frequency_per_week}x/week
                       </p>
                     </div>
-                    <Badge variant={protocol.is_validated ? "default" : "secondary"}>
-                      {protocol.is_validated ? "Validated" : "Draft"}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={protocol.is_validated ? "default" : "secondary"}>
+                        {protocol.is_validated ? "Validated" : "Draft"}
+                      </Badge>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleEditProtocol(protocol)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
                 <Button variant="outline" className="w-full" asChild>
@@ -535,6 +604,82 @@ export const PersonalizedDashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Protocol Dialog */}
+      <Dialog open={!!editingProtocol} onOpenChange={() => setEditingProtocol(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Protocol</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Protocol Name</Label>
+              <Input
+                id="name"
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                placeholder="Enter protocol name"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                placeholder="Enter protocol description"
+                rows={3}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="duration">Duration (weeks)</Label>
+                <Input
+                  id="duration"
+                  type="number"
+                  value={editForm.duration_weeks}
+                  onChange={(e) => setEditForm({ ...editForm, duration_weeks: parseInt(e.target.value) || 0 })}
+                  placeholder="0"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="frequency">Frequency (per week)</Label>
+                <Input
+                  id="frequency"
+                  type="number"
+                  value={editForm.frequency_per_week}
+                  onChange={(e) => setEditForm({ ...editForm, frequency_per_week: parseInt(e.target.value) || 0 })}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="outcomes">Expected Outcomes</Label>
+              <Textarea
+                id="outcomes"
+                value={editForm.expected_outcomes}
+                onChange={(e) => setEditForm({ ...editForm, expected_outcomes: e.target.value })}
+                placeholder="Enter expected outcomes"
+                rows={3}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => setEditingProtocol(null)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveProtocol}>
+                <Save className="h-4 w-4 mr-2" />
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
