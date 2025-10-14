@@ -13,6 +13,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log('[FIX-URLS] Starting URL fix process');
+    
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     if (!supabaseUrl || !serviceKey) {
@@ -20,122 +22,163 @@ serve(async (req) => {
     }
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Update existing guidelines with correct NICE URLs
-    const updates = [
+    // Mapping of keywords to correct URLs
+    const urlMappings = [
       {
-        searchTerm: 'Low back pain',
+        keywords: ['low back pain', 'sciatica', 'back pain'],
         url: 'https://www.nice.org.uk/guidance/ng59',
+        doi: 'ng59',
         title: 'Low back pain and sciatica in over 16s: assessment and management'
       },
       {
-        searchTerm: 'Stroke',
+        keywords: ['stroke', 'cerebrovascular'],
         url: 'https://www.nice.org.uk/guidance/ng236',
+        doi: 'ng236',
         title: 'Stroke rehabilitation in adults'
       },
       {
-        searchTerm: 'COPD',
+        keywords: ['copd', 'chronic obstructive pulmonary', 'emphysema'],
         url: 'https://www.nice.org.uk/guidance/ng115',
+        doi: 'ng115',
         title: 'Chronic obstructive pulmonary disease in over 16s: diagnosis and management'
       },
       {
-        searchTerm: 'Osteoarthritis',
+        keywords: ['osteoarthritis', 'arthritis'],
         url: 'https://www.nice.org.uk/guidance/ng226',
+        doi: 'ng226',
         title: 'Osteoarthritis in over 16s: diagnosis and management'
       },
       {
-        searchTerm: 'Physical activity',
+        keywords: ['physical activity', 'exercise'],
         url: 'https://www.nice.org.uk/guidance/ph44',
+        doi: 'ph44',
         title: 'Physical activity: brief advice for adults in primary care'
       },
       {
-        searchTerm: 'Rheumatoid arthritis',
+        keywords: ['rheumatoid arthritis', 'rheumatoid'],
         url: 'https://www.nice.org.uk/guidance/ng100',
+        doi: 'ng100',
         title: 'Rheumatoid arthritis in adults: management'
       },
       {
-        searchTerm: 'Falls',
+        keywords: ['falls', 'fall prevention', 'balance'],
         url: 'https://www.nice.org.uk/guidance/cg161',
+        doi: 'cg161',
         title: 'Falls in older people: assessing risk and prevention'
       },
       {
-        searchTerm: 'Multiple sclerosis',
+        keywords: ['multiple sclerosis', 'ms'],
         url: 'https://www.nice.org.uk/guidance/ng220',
+        doi: 'ng220',
         title: 'Multiple sclerosis in adults: management'
       },
       {
-        searchTerm: 'Spinal injury',
+        keywords: ['spinal injury', 'spinal cord'],
         url: 'https://www.nice.org.uk/guidance/ng41',
+        doi: 'ng41',
         title: 'Spinal injury: assessment and initial management'
       },
       {
-        searchTerm: "Parkinson",
+        keywords: ['parkinson', 'parkinsons'],
         url: 'https://www.nice.org.uk/guidance/ng71',
+        doi: 'ng71',
         title: "Parkinson's disease in adults"
       }
     ];
 
-    let updatedCount = 0;
+    // Fetch all clinical guidelines in one query
+    const { data: allGuidelines, error: fetchError } = await supabase
+      .from('evidence')
+      .select('id, title, abstract, tags, grade_assessment, doi')
+      .eq('study_type', 'Clinical Practice Guideline');
 
-    for (const update of updates) {
-      // Try multiple search strategies to find the guideline
-      const searchQueries = [
-        supabase.from('evidence').select('*').eq('study_type', 'Clinical Practice Guideline').ilike('title', `%${update.searchTerm}%`),
-        supabase.from('evidence').select('*').eq('study_type', 'Clinical Practice Guideline').ilike('abstract', `%${update.searchTerm}%`),
-        supabase.from('evidence').select('*').eq('study_type', 'Clinical Practice Guideline').contains('tags', [update.searchTerm])
-      ];
+    if (fetchError) {
+      throw fetchError;
+    }
 
-      const allGuidelines = new Set<string>();
-      
-      for (const query of searchQueries) {
-        const { data: guidelines } = await query;
-        if (guidelines && guidelines.length > 0) {
-          guidelines.forEach(g => allGuidelines.add(g.id));
-        }
-      }
+    console.log(`[FIX-URLS] Found ${allGuidelines?.length || 0} guidelines to process`);
 
-      // Update all found guidelines
-      for (const guidelineId of allGuidelines) {
-        const { data: guideline } = await supabase
-          .from('evidence')
-          .select('*')
-          .eq('id', guidelineId)
-          .single();
+    if (!allGuidelines || allGuidelines.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'No guidelines found to update',
+          updatedCount: 0
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-        if (guideline) {
+    // Match guidelines to URLs and prepare batch updates
+    const updates: Array<{ id: string; grade_assessment: any; doi: string }> = [];
+
+    for (const guideline of allGuidelines) {
+      const titleLower = (guideline.title || '').toLowerCase();
+      const abstractLower = (guideline.abstract || '').toLowerCase();
+      const tags = (guideline.tags || []).map((t: string) => t.toLowerCase());
+      const allText = `${titleLower} ${abstractLower} ${tags.join(' ')}`;
+
+      // Find matching URL mapping
+      for (const mapping of urlMappings) {
+        const hasMatch = mapping.keywords.some(keyword => 
+          allText.includes(keyword.toLowerCase())
+        );
+
+        if (hasMatch) {
           const updatedGradeAssessment = {
             ...(guideline.grade_assessment || {}),
-            url: update.url,
-            title: update.title
+            url: mapping.url,
+            title: mapping.title
           };
 
-          const { error } = await supabase
-            .from('evidence')
-            .update({ 
-              grade_assessment: updatedGradeAssessment,
-              doi: update.url  // Also update DOI field as fallback
-            })
-            .eq('id', guideline.id);
-
-          if (!error) {
-            updatedCount++;
-          }
+          updates.push({
+            id: guideline.id,
+            grade_assessment: updatedGradeAssessment,
+            doi: mapping.doi
+          });
+          break; // Found a match, move to next guideline
         }
       }
     }
 
+    console.log(`[FIX-URLS] Prepared ${updates.length} updates`);
+
+    // Execute all updates in parallel for speed
+    const updatePromises = updates.map(update =>
+      supabase
+        .from('evidence')
+        .update({ 
+          grade_assessment: update.grade_assessment,
+          doi: update.doi
+        })
+        .eq('id', update.id)
+    );
+
+    const results = await Promise.allSettled(updatePromises);
+    
+    const successCount = results.filter(r => r.status === 'fulfilled').length;
+    const failCount = results.filter(r => r.status === 'rejected').length;
+
+    console.log(`[FIX-URLS] Updated ${successCount} guidelines successfully, ${failCount} failed`);
+
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Updated ${updatedCount} guidelines with correct NICE URLs` 
+        message: `Fixed ${successCount} guideline URLs`,
+        updatedCount: successCount,
+        failedCount: failCount,
+        totalProcessed: allGuidelines.length
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+
   } catch (err) {
-    console.error('Error fixing guideline URLs:', err);
+    console.error('[FIX-URLS] Error:', err);
     return new Response(
-      JSON.stringify({ success: false, error: String(err) }),
+      JSON.stringify({ 
+        success: false, 
+        error: err instanceof Error ? err.message : String(err)
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
