@@ -20,3 +20,7 @@ verify_jwt = false
 
 [functions.generate-condition-protocols]
 verify_jwt = false
+
+[functions."generate-condition-protocols".limits]
+cpu_ms = 150000
+memory_mb = 512
