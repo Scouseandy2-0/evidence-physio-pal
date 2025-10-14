@@ -335,20 +335,29 @@ Base all recommendations strictly on the provided evidence. Include evidence lev
             content: prompt
           }
         ],
-        max_tokens: 4000,
-        temperature: 0.3
+        max_completion_tokens: 4000
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error(`OpenAI API error for ${condition.name}:`, response.status, errorText);
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
     const content = data.choices[0].message.content;
     
+    // Clean the content - remove markdown code blocks if present
+    let cleanContent = content.trim();
+    if (cleanContent.startsWith('```json')) {
+      cleanContent = cleanContent.replace(/^```json\n/, '').replace(/\n```$/, '');
+    } else if (cleanContent.startsWith('```')) {
+      cleanContent = cleanContent.replace(/^```\n/, '').replace(/\n```$/, '');
+    }
+    
     // Parse the JSON response
-    const protocolData = JSON.parse(content);
+    const protocolData = JSON.parse(cleanContent);
     
     // Store evidence in database first to get IDs
     const evidenceIds: string[] = [];
