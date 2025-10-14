@@ -65,14 +65,14 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY')!;
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
 
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error('Missing Supabase configuration');
     }
 
-    if (!openaiApiKey) {
-      throw new Error('Missing OpenAI API key');
+    if (!lovableApiKey) {
+      throw new Error('Missing Lovable API key');
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -117,7 +117,7 @@ serve(async (req) => {
         }
 
         // Generate protocol using AI
-        const protocol = await generateProtocolWithAI(condition, evidenceResults, openaiApiKey, supabase);
+        const protocol = await generateProtocolWithAI(condition, evidenceResults, lovableApiKey, supabase);
         
         if (protocol) {
           // Store the protocol in database
@@ -150,9 +150,6 @@ serve(async (req) => {
         }
 
         results.processedConditions++;
-        
-        // Add small delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 2000));
         
       } catch (error) {
         console.error(`Error processing ${condition.name}:`, error);
@@ -271,7 +268,7 @@ async function searchMultipleDatabases(condition: Condition, supabase: any): Pro
   return allEvidence;
 }
 
-async function generateProtocolWithAI(condition: Condition, evidence: Evidence[], openaiApiKey: string, supabase: any): Promise<TreatmentProtocol | null> {
+async function generateProtocolWithAI(condition: Condition, evidence: Evidence[], lovableApiKey: string, supabase: any): Promise<TreatmentProtocol | null> {
   try {
     const evidenceSummary = evidence.slice(0, 10).map(e => 
       `${e.title} (${e.source}, ${e.evidence_level || 'Not specified'}): ${e.abstract || e.key_findings || e.clinical_implications || 'No summary available'}`
@@ -322,14 +319,14 @@ Format your response as a JSON object with this exact structure:
 
 Base all recommendations strictly on the provided evidence. Include evidence levels when possible.`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
+        'Authorization': `Bearer ${lovableApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4.1-2025-04-14',
+        model: 'google/gemini-2.5-flash',
         messages: [
           {
             role: 'system',
@@ -339,8 +336,7 @@ Base all recommendations strictly on the provided evidence. Include evidence lev
             role: 'user',
             content: prompt
           }
-        ],
-        max_completion_tokens: 4000
+        ]
       }),
     });
 
