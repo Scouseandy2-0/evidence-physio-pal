@@ -348,16 +348,40 @@ Base all recommendations strictly on the provided evidence. Include evidence lev
     const data = await response.json();
     const content = data.choices[0].message.content;
     
+    console.log(`Raw AI response for ${condition.name}:`, content.substring(0, 200) + '...');
+    
     // Clean the content - remove markdown code blocks if present
     let cleanContent = content.trim();
     if (cleanContent.startsWith('```json')) {
-      cleanContent = cleanContent.replace(/^```json\n/, '').replace(/\n```$/, '');
+      cleanContent = cleanContent.replace(/^```json\n?/, '').replace(/\n?```$/, '');
     } else if (cleanContent.startsWith('```')) {
-      cleanContent = cleanContent.replace(/^```\n/, '').replace(/\n```$/, '');
+      cleanContent = cleanContent.replace(/^```\n?/, '').replace(/\n?```$/, '');
     }
     
+    // Remove any extra text before or after JSON
+    const jsonStart = cleanContent.indexOf('{');
+    const jsonEnd = cleanContent.lastIndexOf('}');
+    if (jsonStart !== -1 && jsonEnd !== -1) {
+      cleanContent = cleanContent.substring(jsonStart, jsonEnd + 1);
+    }
+    
+    console.log(`Cleaned content for ${condition.name}:`, cleanContent.substring(0, 200) + '...');
+    
     // Parse the JSON response
-    const protocolData = JSON.parse(cleanContent);
+    let protocolData;
+    try {
+      protocolData = JSON.parse(cleanContent);
+    } catch (parseError) {
+      console.error(`Failed to parse AI response for ${condition.name}:`, parseError);
+      console.error('Content that failed to parse:', cleanContent);
+      throw new Error(`Failed to parse AI response for ${condition.name}: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+    }
+    
+    // Validate required fields
+    if (!protocolData.name || !protocolData.phases || !Array.isArray(protocolData.phases)) {
+      console.error(`Invalid protocol data structure for ${condition.name}:`, protocolData);
+      throw new Error(`Invalid protocol data structure for ${condition.name}`);
+    }
     
     // Store evidence in database first to get IDs
     const evidenceIds: string[] = [];
@@ -397,14 +421,14 @@ Base all recommendations strictly on the provided evidence. Include evidence lev
       condition_id: condition.id,
       protocol_steps: {
         phases: protocolData.phases,
-        assessment: protocolData.assessment,
-        outcomesMeasures: protocolData.outcomesMeasures,
-        dischargeCriteria: protocolData.dischargeCriteria
+        assessment: protocolData.assessment || [],
+        outcomesMeasures: protocolData.outcomesMeasures || [],
+        dischargeCriteria: protocolData.dischargeCriteria || []
       },
-      duration_weeks: protocolData.duration_weeks,
-      frequency_per_week: protocolData.frequency_per_week,
-      contraindications: protocolData.contraindications,
-      precautions: protocolData.precautions,
+      duration_weeks: protocolData.duration_weeks || 12,
+      frequency_per_week: protocolData.frequency_per_week || 3,
+      contraindications: protocolData.contraindications || [],
+      precautions: protocolData.precautions || [],
       expected_outcomes: protocolData.expected_outcomes,
       evidence_ids: evidenceIds
     };
