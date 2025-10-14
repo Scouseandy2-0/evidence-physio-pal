@@ -55,7 +55,11 @@ interface ProtocolReview {
   recommendations: string | null;
   status: string;
   created_at: string;
-  reviewer_profile?: any;
+  profiles?: {
+    first_name: string | null;
+    last_name: string | null;
+    professional_title: string | null;
+  };
 }
 
 export const CollaborationHub = () => {
@@ -98,43 +102,77 @@ export const CollaborationHub = () => {
 
   const fetchData = async () => {
     try {
+      setLoading(true);
+      
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
       // Fetch shared protocols
       const { data: shared, error: sharedError } = await supabase
         .from('collaboration_shared_protocols')
         .select(`
           *,
-          protocol:treatment_protocols(name, description, created_by, is_validated)
+          treatment_protocols!inner(name, description, created_by, is_validated)
         `)
-        .or(`shared_with.eq.${user?.id},is_public.eq.true`);
+        .or(`shared_with.eq.${user.id},is_public.eq.true`);
 
-      if (sharedError) throw sharedError;
+      if (sharedError) {
+        console.error('Shared protocols error:', sharedError);
+        throw sharedError;
+      }
+
+      // Transform the data to match the expected format
+      const transformedShared = (shared || []).map(item => ({
+        ...item,
+        protocol: item.treatment_protocols
+      }));
 
       // Fetch my protocols for sharing
       const { data: myProtos, error: myError } = await supabase
         .from('treatment_protocols')
         .select('*')
-        .eq('created_by', user?.id || '');
+        .eq('created_by', user.id);
 
-      if (myError) throw myError;
+      if (myError) {
+        console.error('My protocols error:', myError);
+        throw myError;
+      }
 
-      // Fetch reviews
+      // Fetch reviews - simplified query without join since FK might not be set up
       const { data: reviewData, error: reviewError } = await supabase
         .from('protocol_reviews')
-        .select(`
-          *,
-          reviewer_profile:profiles!reviewer_id(first_name, last_name, professional_title)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (reviewError) throw reviewError;
+      if (reviewError) {
+        console.error('Reviews error:', reviewError);
+      }
 
-      setSharedProtocols(shared || []);
+      // Fetch reviewer profiles separately if we have reviews
+      let enrichedReviews: ProtocolReview[] = [];
+      if (reviewData && reviewData.length > 0) {
+        const reviewerIds = [...new Set(reviewData.map(r => r.reviewer_id))];
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('user_id, first_name, last_name, professional_title')
+          .in('user_id', reviewerIds);
+
+        enrichedReviews = reviewData.map(review => ({
+          ...review,
+          profiles: profilesData?.find(p => p.user_id === review.reviewer_id) || undefined
+        }));
+      }
+
+      setSharedProtocols(transformedShared || []);
       setMyProtocols(myProtos || []);
-      setReviews(reviewData || []);
+      setReviews(enrichedReviews || []);
     } catch (error: any) {
+      console.error('Fetch collaboration data error:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch collaboration data",
+        description: error.message || "Failed to fetch collaboration data",
         variant: "destructive",
       });
     } finally {
@@ -443,9 +481,9 @@ export const CollaborationHub = () => {
                     <div>
                       <h4 className="font-medium">Protocol Review</h4>
                       <p className="text-sm text-muted-foreground">
-                        Reviewed by {review.reviewer_profile?.first_name} {review.reviewer_profile?.last_name}
-                        {review.reviewer_profile?.professional_title && 
-                          `, ${review.reviewer_profile.professional_title}`
+                        Reviewed by {review.profiles?.first_name || 'Unknown'} {review.profiles?.last_name || ''}
+                        {review.profiles?.professional_title && 
+                          `, ${review.profiles.professional_title}`
                         }
                       </p>
                     </div>
