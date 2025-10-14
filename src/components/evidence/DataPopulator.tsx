@@ -243,19 +243,24 @@ export const DataPopulator = () => {
         body: {
           messages: [{
             role: 'user',
-            content: `Generate 20 comprehensive physiotherapy assessment tools in JSON format. Include tools for MSK, neurological, and respiratory conditions. Each tool should have:
-            - name: string (tool name like "Oswestry Disability Index")
-            - description: string (what it measures)
-            - tool_type: string (e.g., "questionnaire", "performance test")
-            - scoring_method: string (how it's scored)
-            - condition_ids: string[] (leave empty for now)
-            - interpretation_guide: object (scoring interpretation)
-            - psychometric_properties: object (reliability, validity data)
-            - reference_values: object (normative data)
-            - instructions: string (how to administer)
-            
-            Include well-known tools like DASH, NDI, Berg Balance Scale, 6MWT, etc.
-            Return ONLY valid JSON array format.`
+            content: `Generate 20 comprehensive physiotherapy assessment tools. Return your response as a valid JSON array ONLY - no explanations, no markdown, just the JSON array.
+
+Each object in the array must have these exact fields:
+{
+  "name": "Tool Name (e.g., Oswestry Disability Index)",
+  "description": "What it measures",
+  "tool_type": "questionnaire or performance test",
+  "scoring_method": "How it's scored",
+  "condition_ids": [],
+  "interpretation_guide": {"low": "0-20", "moderate": "21-40", "high": "41-100"},
+  "psychometric_properties": {"reliability": "High", "validity": "Established"},
+  "reference_values": {"normal": "0-20", "mild": "21-40"},
+  "instructions": "How to administer the test"
+}
+
+Include well-known tools like DASH, NDI, Oswestry, Berg Balance Scale, 6MWT, Timed Up and Go, etc.
+
+CRITICAL: Return ONLY the JSON array starting with [ and ending with ]. No other text.`
           }],
           context: 'Generate physiotherapy assessment tools for clinical database',
           specialty: 'physiotherapy'
@@ -268,8 +273,28 @@ export const DataPopulator = () => {
 
       // Parse and insert assessment tools
       try {
-        const toolsData = JSON.parse(data.response);
+        let responseText = data.response;
         
+        // Extract JSON from markdown code blocks if present
+        const jsonMatch = responseText.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
+        if (jsonMatch) {
+          responseText = jsonMatch[1];
+        } else {
+          // Try to find JSON array in the response
+          const arrayMatch = responseText.match(/\[[\s\S]*\]/);
+          if (arrayMatch) {
+            responseText = arrayMatch[0];
+          }
+        }
+        
+        console.log('Parsing assessment tools response:', responseText.substring(0, 200));
+        const toolsData = JSON.parse(responseText);
+        
+        if (!Array.isArray(toolsData)) {
+          throw new Error('AI response is not a valid array');
+        }
+        
+        let successCount = 0;
         for (const tool of toolsData) {
           const { error: insertError } = await supabase
             .from('assessment_tools')
@@ -277,16 +302,19 @@ export const DataPopulator = () => {
           
           if (insertError) {
             console.error('Error inserting assessment tool:', insertError);
+          } else {
+            successCount++;
           }
         }
 
         updateTaskStatus('generate-assessment-tools', { 
           status: 'completed', 
           progress: 100,
-          results: `Generated ${toolsData.length} assessment tools`
+          results: `Generated ${successCount}/${toolsData.length} assessment tools`
         });
-      } catch (parseError) {
-        throw new Error('Failed to parse AI response for assessment tools');
+      } catch (parseError: any) {
+        console.error('Parse error details:', parseError, 'Response:', data.response?.substring(0, 500));
+        throw new Error(`Failed to parse AI response: ${parseError.message}. Check console for details.`);
       }
 
     } catch (error: any) {
