@@ -567,7 +567,20 @@ export const ConditionModules = () => {
             {evidenceData.map((evidence, index) => (
               <Card key={evidence.id || index}>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">{evidence.title}</CardTitle>
+                  <CardTitle className="text-sm">
+                    {evidence.doi || evidence.pmid ? (
+                      <a 
+                        href={evidence.doi ? `https://doi.org/${evidence.doi}` : `https://pubmed.ncbi.nlm.nih.gov/${evidence.pmid}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-primary hover:underline"
+                      >
+                        {evidence.title}
+                      </a>
+                    ) : (
+                      evidence.title
+                    )}
+                  </CardTitle>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">{evidence.study_type}</Badge>
                     <Badge variant={evidence.evidence_level === 'A' ? 'default' : 'secondary'}>
