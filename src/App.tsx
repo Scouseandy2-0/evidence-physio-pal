@@ -28,6 +28,7 @@ import { SubscriptionSuccessPage } from "./components/subscription/SubscriptionS
 import { AdvancedFeatures } from "./components/advanced/AdvancedFeatures";
 import { HealthcareProviderVerification } from "./components/admin/HealthcareProviderVerification";
 import { OnboardingFlow } from "./components/onboarding/OnboardingFlow";
+import { DataPopulationPage } from "./pages/DataPopulationPage";
 import AuthCallback from "./pages/AuthCallback";
 
 
@@ -65,6 +66,7 @@ const App = () => (
                 <Route path="/subscription-analytics" element={<SubscriptionAnalyticsPage />} />
                 <Route path="/verification" element={<HealthcareProviderVerification />} />
                 <Route path="/security" element={<SecurityPage />} />
+                <Route path="/populate-data" element={<DataPopulationPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
