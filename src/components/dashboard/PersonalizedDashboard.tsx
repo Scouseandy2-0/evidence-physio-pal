@@ -210,10 +210,24 @@ export const PersonalizedDashboard = () => {
         return evidence.grade_assessment.url;
       }
       if (evidence.doi) {
-        // Special handling for Cochrane DOIs
-        if (evidence.doi.includes('14651858') || evidence.journal?.toLowerCase().includes('cochrane')) {
+        const journalLower = evidence.journal?.toLowerCase() || '';
+        
+        // Special handling for Cochrane
+        if (evidence.doi.includes('14651858') || journalLower.includes('cochrane')) {
           return `https://www.cochranelibrary.com/cdsr/doi/${evidence.doi}/full`;
         }
+        
+        // Special handling for BMJ journals
+        if (journalLower.includes('bmj')) {
+          return `https://bmjopenquality.bmj.com/content/${evidence.doi.replace('10.1136/', '')}`;
+        }
+        
+        // Special handling for Physical Therapy journal (Oxford/APTA)
+        if (journalLower.includes('physical therapy')) {
+          return `https://academic.oup.com/ptj/article-lookup/doi/${evidence.doi}`;
+        }
+        
+        // Default DOI link
         return `https://doi.org/${evidence.doi}`;
       }
       if (evidence.pmid) {
