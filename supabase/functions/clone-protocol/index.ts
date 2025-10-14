@@ -4,10 +4,21 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
 serve(async (req) => {
   try {
+    // Handle CORS preflight
+    if (req.method === 'OPTIONS') {
+      return new Response(null, { headers: corsHeaders });
+    }
+
     if (req.method !== 'POST') {
-      return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
+      return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -15,17 +26,25 @@ serve(async (req) => {
     const anonKey = Deno.env.get('SUPABASE_PUBLISHABLE_KEY') || Deno.env.get('SUPABASE_ANON_KEY');
 
     if (!supabaseUrl || !serviceKey || !anonKey) {
-      return new Response(JSON.stringify({ error: 'Server not configured' }), { status: 500 });
+      console.error('[clone-protocol] Missing environment configuration');
+      return new Response(JSON.stringify({ error: 'Server not configured' }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
 
-    const { protocolId } = await req.json();
+    let payload: any = {};
+    try {
+      payload = await req.json();
+    } catch (_) {
+      return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+    }
+
+    const { protocolId } = payload;
     if (!protocolId) {
-      return new Response(JSON.stringify({ error: 'protocolId is required' }), { status: 400 });
+      return new Response(JSON.stringify({ error: 'protocolId is required' }), { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
 
     // Client to read auth user from the incoming JWT
@@ -35,7 +54,8 @@ serve(async (req) => {
 
     const { data: userData, error: userErr } = await userClient.auth.getUser();
     if (userErr || !userData?.user) {
-      return new Response(JSON.stringify({ error: 'Invalid or expired session' }), { status: 401 });
+      console.error('[clone-protocol] Invalid session', userErr);
+      return new Response(JSON.stringify({ error: 'Invalid or expired session' }), { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
 
     const userId = userData.user.id;
@@ -51,12 +71,12 @@ serve(async (req) => {
       .maybeSingle();
 
     if (tplErr) {
-      console.error('Template fetch error:', tplErr);
-      return new Response(JSON.stringify({ error: 'Failed to load template' }), { status: 500 });
+      console.error('[clone-protocol] Template fetch error:', tplErr);
+      return new Response(JSON.stringify({ error: 'Failed to load template' }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
 
     if (!template) {
-      return new Response(JSON.stringify({ error: 'Template not found' }), { status: 404 });
+      return new Response(JSON.stringify({ error: 'Template not found' }), { status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
 
     // Insert clone for this user (bypass RLS with service role but enforce ownership explicitly)
@@ -82,16 +102,16 @@ serve(async (req) => {
       .single();
 
     if (insErr) {
-      console.error('Clone insert error:', insErr);
-      return new Response(JSON.stringify({ error: 'Failed to clone protocol' }), { status: 500 });
+      console.error('[clone-protocol] Clone insert error:', insErr);
+      return new Response(JSON.stringify({ error: 'Failed to clone protocol' }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
 
     return new Response(JSON.stringify({ protocol: inserted }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
   } catch (e) {
-    console.error('Unhandled error in clone-protocol:', e);
-    return new Response(JSON.stringify({ error: 'Unexpected server error' }), { status: 500 });
+    console.error('[clone-protocol] Unhandled error:', e);
+    return new Response(JSON.stringify({ error: 'Unexpected server error' }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
   }
 });
