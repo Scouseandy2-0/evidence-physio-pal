@@ -178,7 +178,7 @@ serve(async (req) => {
 
 async function searchMultipleDatabases(condition: Condition, supabase: any): Promise<Evidence[]> {
   const allEvidence: Evidence[] = [];
-  const searchTerms = [condition.name, ...condition.keywords].slice(0, 3); // Limit search terms
+  const searchTerms = [condition.name, ...(condition.keywords || [])].slice(0, 3); // Limit search terms safely
 
   console.log(`Searching evidence for: ${searchTerms.join(', ')}`);
 
@@ -186,12 +186,8 @@ async function searchMultipleDatabases(condition: Condition, supabase: any): Pro
   try {
     const { data: pubmedData, error: pubmedError } = await supabase.functions.invoke('pubmed-integration', {
       body: {
-        searchTerm: searchTerms[0],
-        maxResults: 10,
-        filters: {
-          studyTypes: ['Systematic Review', 'Meta-Analysis', 'Randomized Controlled Trial'],
-          publicationYears: [2019, 2020, 2021, 2022, 2023, 2024, 2025]
-        }
+        searchTerms: searchTerms[0],
+        maxResults: 10
       }
     });
 
@@ -210,7 +206,7 @@ async function searchMultipleDatabases(condition: Condition, supabase: any): Pro
   try {
     const { data: cochraneData, error: cochraneError } = await supabase.functions.invoke('cochrane-integration', {
       body: {
-        searchTerm: searchTerms[0],
+        searchTerms: searchTerms[0],
         maxResults: 5
       }
     });
@@ -230,7 +226,8 @@ async function searchMultipleDatabases(condition: Condition, supabase: any): Pro
   try {
     const { data: pedroData, error: pedroError } = await supabase.functions.invoke('pedro-integration', {
       body: {
-        searchTerm: searchTerms[0],
+        searchTerms: searchTerms[0],
+        condition: condition.name,
         maxResults: 8
       }
     });
