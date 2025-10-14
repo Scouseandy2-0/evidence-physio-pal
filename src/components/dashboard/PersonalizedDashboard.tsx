@@ -293,7 +293,11 @@ export const PersonalizedDashboard = () => {
       if (evidence.pmid) {
         return `https://pubmed.ncbi.nlm.nih.gov/${evidence.pmid}`;
       }
-      return null;
+      // Fallback: search PubMed by title
+      if (evidence.title) {
+        return `https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(evidence.title)}`;
+      }
+      return '#';
     };
 
     const externalLink = getEvidenceLink();
@@ -304,7 +308,13 @@ export const PersonalizedDashboard = () => {
           <div className="space-y-3">
             <div className="flex justify-between items-start gap-3">
               <div className="flex-1">
-                <h4 className="font-medium text-sm line-clamp-2 mb-1">{evidence.title}</h4>
+                {externalLink ? (
+                  <a href={externalLink} target="_blank" rel="noopener noreferrer" className="hover:underline focus:underline focus:outline-none">
+                    <h4 className="font-medium text-sm line-clamp-2 mb-1 text-primary">{evidence.title}</h4>
+                  </a>
+                ) : (
+                  <h4 className="font-medium text-sm line-clamp-2 mb-1">{evidence.title}</h4>
+                )}
                 <p className="text-xs text-muted-foreground">{evidence.journal}</p>
               </div>
               <Badge variant="outline" className="shrink-0">
