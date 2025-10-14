@@ -200,25 +200,49 @@ export const PersonalizedDashboard = () => {
     </Card>
   );
 
-  const RecentEvidenceCard = ({ evidence }: { evidence: any }) => (
-    <Card className="mb-3 hover:shadow-md transition-shadow">
-      <CardContent className="p-4">
-        <div className="flex justify-between items-start mb-2">
-          <Link to="/evidence" className="hover:underline">
-            <h4 className="font-medium text-sm line-clamp-2 text-primary">{evidence.title}</h4>
-          </Link>
-          <Badge variant="outline" className="ml-2">
-            {evidence.evidence_level}
-          </Badge>
-        </div>
-        <p className="text-xs text-muted-foreground mb-2">{evidence.journal}</p>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Calendar className="h-3 w-3" />
-          <span>{new Date(evidence.publication_date).toLocaleDateString()}</span>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  const RecentEvidenceCard = ({ evidence }: { evidence: any }) => {
+    // Determine the best external link for the evidence
+    const getEvidenceLink = () => {
+      if (evidence.doi) {
+        return `https://doi.org/${evidence.doi}`;
+      }
+      if (evidence.pmid) {
+        return `https://pubmed.ncbi.nlm.nih.gov/${evidence.pmid}`;
+      }
+      return null;
+    };
+
+    const externalLink = getEvidenceLink();
+
+    return (
+      <Card className="mb-3 hover:shadow-md transition-shadow">
+        <CardContent className="p-4">
+          <div className="flex justify-between items-start mb-2">
+            {externalLink ? (
+              <a 
+                href={externalLink} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="hover:underline flex-1"
+              >
+                <h4 className="font-medium text-sm line-clamp-2 text-primary">{evidence.title}</h4>
+              </a>
+            ) : (
+              <h4 className="font-medium text-sm line-clamp-2">{evidence.title}</h4>
+            )}
+            <Badge variant="outline" className="ml-2">
+              {evidence.evidence_level}
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground mb-2">{evidence.journal}</p>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Calendar className="h-3 w-3" />
+            <span>{new Date(evidence.publication_date).toLocaleDateString()}</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   const CPDProgressCard = () => {
     const progress = dashboardData.cpdProgress;
