@@ -6,6 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -43,6 +45,8 @@ export const ClinicalGuidelinesLibrary = () => {
   const [selectedOrganization, setSelectedOrganization] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
+  const [selectedGuideline, setSelectedGuideline] = useState<ClinicalGuideline | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -305,10 +309,8 @@ export const ClinicalGuidelinesLibrary = () => {
             size="sm" 
             className="flex-1"
             onClick={() => {
-              toast({
-                title: "Guideline Details",
-                description: `Viewing details for: ${guideline.title}`,
-              });
+              setSelectedGuideline(guideline);
+              setIsDialogOpen(true);
             }}
           >
             <FileText className="h-4 w-4 mr-2" />
@@ -427,6 +429,118 @@ export const ClinicalGuidelinesLibrary = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="text-xl">{selectedGuideline?.title}</DialogTitle>
+            <DialogDescription>
+              <div className="flex items-center gap-2 mt-2">
+                <Building className="h-4 w-4" />
+                {selectedGuideline?.organization}
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh] pr-4">
+            <div className="space-y-6">
+              <div className="flex gap-2 flex-wrap">
+                <Badge className={`${getEvidenceStrengthColor(selectedGuideline?.evidence_strength || '')} text-white`}>
+                  {selectedGuideline?.evidence_strength || 'Not specified'}
+                </Badge>
+                <Badge variant="outline">{selectedGuideline?.condition_category}</Badge>
+                <Badge variant="secondary">
+                  <Calendar className="h-3 w-3 mr-1" />
+                  {selectedGuideline?.publication_year}
+                </Badge>
+              </div>
+
+              {selectedGuideline?.target_population && (
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Target Population
+                  </h4>
+                  <p className="text-sm text-muted-foreground">{selectedGuideline.target_population}</p>
+                </div>
+              )}
+
+              {selectedGuideline?.summary && (
+                <div>
+                  <h4 className="font-semibold mb-2">Summary</h4>
+                  <p className="text-sm text-muted-foreground">{selectedGuideline.summary}</p>
+                </div>
+              )}
+
+              {selectedGuideline?.key_recommendations && selectedGuideline.key_recommendations.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    Key Recommendations
+                  </h4>
+                  <ul className="space-y-2">
+                    {selectedGuideline.key_recommendations.map((rec, index) => (
+                      <li key={index} className="text-sm text-muted-foreground flex gap-2">
+                        <span className="text-primary font-semibold">{index + 1}.</span>
+                        <span>{rec}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {selectedGuideline?.implementation_notes && (
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    Implementation Notes
+                  </h4>
+                  <p className="text-sm text-muted-foreground">{selectedGuideline.implementation_notes}</p>
+                </div>
+              )}
+
+              {selectedGuideline?.clinical_questions && selectedGuideline.clinical_questions.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2">Clinical Questions Addressed</h4>
+                  <ul className="space-y-2">
+                    {selectedGuideline.clinical_questions.map((question, index) => (
+                      <li key={index} className="text-sm text-muted-foreground">
+                        • {question}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {selectedGuideline?.tags && selectedGuideline.tags.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2">Tags</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedGuideline.tags.map((tag, index) => (
+                      <Badge key={index} variant="secondary">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedGuideline?.guideline_url && selectedGuideline.guideline_url !== '#' && (
+                <div className="pt-4">
+                  <Button 
+                    className="w-full"
+                    onClick={() => {
+                      window.open(selectedGuideline.guideline_url, '_blank', 'noopener,noreferrer');
+                    }}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Open Full Guideline
+                  </Button>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
