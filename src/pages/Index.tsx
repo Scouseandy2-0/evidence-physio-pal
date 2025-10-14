@@ -5,6 +5,7 @@ import { FeaturesSection } from "@/components/FeaturesSection"
 import { EvidenceIntegration } from "@/components/evidence/EvidenceIntegration"
 import { RealDataDashboard } from "@/components/dashboard/RealDataDashboard"
 import { useAuth } from "@/hooks/useAuth"
+import { useDataPopulation } from "@/hooks/useDataPopulation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Link } from "react-router-dom"
@@ -16,11 +17,13 @@ import {
   Users, 
   Award,
   Sparkles,
-  Crown
+  Crown,
+  Loader2
 } from "lucide-react"
 
 const Index = () => {
   const { user } = useAuth();
+  const { isPopulating } = useDataPopulation();
 
   return (
     <div className="min-h-screen">
@@ -135,8 +138,22 @@ const Index = () => {
         <section className="py-20 bg-muted/50">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-foreground mb-4">Live Database Statistics</h2>
-              <p className="text-muted-foreground">Real-time data from our comprehensive evidence database</p>
+              <h2 className="text-3xl font-bold text-foreground mb-4">
+                {isPopulating ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    Setting Up Your Database...
+                  </span>
+                ) : (
+                  'Live Database Statistics'
+                )}
+              </h2>
+              <p className="text-muted-foreground">
+                {isPopulating 
+                  ? 'Populating with real physiotherapy evidence - this will only take a moment'
+                  : 'Real-time data from our comprehensive evidence database'
+                }
+              </p>
             </div>
             <RealDataDashboard />
             {user && (
