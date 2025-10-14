@@ -301,8 +301,19 @@ export const SearchSection = () => {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <CardTitle className="text-lg mb-2 text-foreground hover:text-medical-blue cursor-pointer">
-                        {result.title}
+                      <CardTitle className="text-lg mb-2">
+                        {result.doi || result.pmid ? (
+                          <a 
+                            href={result.doi ? `https://doi.org/${result.doi}` : `https://pubmed.ncbi.nlm.nih.gov/${result.pmid}/`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-foreground hover:text-medical-blue hover:underline"
+                          >
+                            {result.title}
+                          </a>
+                        ) : (
+                          <span className="text-foreground">{result.title}</span>
+                        )}
                       </CardTitle>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                         <span className="flex items-center">
