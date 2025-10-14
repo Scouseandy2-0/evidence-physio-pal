@@ -6,6 +6,7 @@ import { Bell, Check, X, Info, AlertTriangle, CheckCircle, XCircle } from "lucid
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface Notification {
   id: string;
@@ -20,6 +21,7 @@ interface Notification {
 export const NotificationCenter = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -166,6 +168,18 @@ export const NotificationCenter = () => {
     }
   };
 
+  const handleNotificationClick = async (notification: Notification) => {
+    // Mark as read if not already
+    if (!notification.read) {
+      await markAsRead(notification.id);
+    }
+
+    // Navigate if there's a link in the data
+    if (notification.data && notification.data.link) {
+      navigate(notification.data.link);
+    }
+  };
+
   if (!user) {
     return (
       <Card>
@@ -225,9 +239,10 @@ export const NotificationCenter = () => {
             {notifications.map((notification) => (
               <div
                 key={notification.id}
+                onClick={() => handleNotificationClick(notification)}
                 className={`p-4 rounded-lg border-l-4 ${getNotificationBorderColor(notification.type)} ${
                   notification.read ? 'bg-muted/30' : 'bg-background border shadow-sm'
-                } transition-colors`}
+                } transition-colors ${notification.data?.link ? 'cursor-pointer hover:bg-accent/50' : ''}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3 flex-1">
