@@ -108,6 +108,31 @@ export const ClinicalGuidelinesLibrary = () => {
     return 'General';
   };
 
+  const fixGuidelineUrls = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.functions.invoke('fix-guideline-urls');
+
+      if (error) throw error;
+
+      toast({
+        title: "URLs Fixed",
+        description: data.message || "Successfully updated guideline URLs",
+      });
+
+      // Refresh the guidelines list
+      await fetchGuidelines();
+    } catch (error: any) {
+      toast({
+        title: "Error fixing URLs",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchMoreGuidelines = async () => {
     try {
       const { data, error } = await supabase.functions.invoke('guidelines-integration', {
@@ -364,10 +389,15 @@ export const ClinicalGuidelinesLibrary = () => {
             <p className="text-sm text-muted-foreground">
               Showing {filteredGuidelines.length} of {guidelines.length} guidelines
             </p>
-            <Button onClick={fetchMoreGuidelines} variant="outline">
-              <Star className="h-4 w-4 mr-2" />
-              Fetch NICE Guidelines
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={fixGuidelineUrls} variant="outline" size="sm">
+                Fix URLs
+              </Button>
+              <Button onClick={fetchMoreGuidelines} variant="outline">
+                <Star className="h-4 w-4 mr-2" />
+                Fetch NICE Guidelines
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
