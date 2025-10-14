@@ -564,43 +564,95 @@ export const ConditionModules = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {evidenceData.map((evidence, index) => (
-              <Card key={evidence.id || index}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">
-                    {evidence.doi || evidence.pmid ? (
-                      <a 
-                        href={evidence.doi ? `https://doi.org/${evidence.doi}` : `https://pubmed.ncbi.nlm.nih.gov/${evidence.pmid}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:text-primary hover:underline"
-                      >
+            {evidenceData.map((evidence, index) => {
+              // Create external link with multiple fallback options
+              const getEvidenceLink = () => {
+                if (evidence.doi) {
+                  return `https://doi.org/${evidence.doi}`;
+                }
+                if (evidence.pmid) {
+                  return `https://pubmed.ncbi.nlm.nih.gov/${evidence.pmid}`;
+                }
+                // Fallback to PubMed search by title
+                if (evidence.title) {
+                  return `https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(evidence.title)}`;
+                }
+                return null;
+              };
+
+              const externalLink = getEvidenceLink();
+
+              return (
+                <Card key={evidence.id || index}>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <CardTitle className="text-sm flex-1">
                         {evidence.title}
-                      </a>
-                    ) : (
-                      evidence.title
+                      </CardTitle>
+                      {externalLink && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          asChild
+                          className="shrink-0"
+                        >
+                          <a 
+                            href={externalLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1"
+                          >
+                            <BookOpen className="h-4 w-4" />
+                            View Article
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {evidence.study_type && (
+                        <Badge variant="outline">{evidence.study_type}</Badge>
+                      )}
+                      {evidence.evidence_level && (
+                        <Badge variant={evidence.evidence_level === 'A' ? 'default' : 'secondary'}>
+                          Level {evidence.evidence_level}
+                        </Badge>
+                      )}
+                      {evidence.journal && (
+                        <span className="text-xs text-muted-foreground">{evidence.journal}</span>
+                      )}
+                      {evidence.publication_date && (
+                        <span className="text-xs text-muted-foreground">
+                          ({new Date(evidence.publication_date).getFullYear()})
+                        </span>
+                      )}
+                    </div>
+                    {(evidence.doi || evidence.pmid) && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        {evidence.doi && <span>DOI: {evidence.doi}</span>}
+                        {evidence.pmid && <span>PMID: {evidence.pmid}</span>}
+                      </div>
                     )}
-                  </CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">{evidence.study_type}</Badge>
-                    <Badge variant={evidence.evidence_level === 'A' ? 'default' : 'secondary'}>
-                      Level {evidence.evidence_level}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">{evidence.journal}</span>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground line-clamp-3">
-                    {evidence.abstract}
-                  </p>
-                  {evidence.key_findings && (
-                    <p className="text-sm mt-2 font-medium">
-                      Key Findings: {evidence.key_findings}
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                  </CardHeader>
+                  <CardContent>
+                    {evidence.abstract && (
+                      <p className="text-sm text-muted-foreground line-clamp-3 mb-2">
+                        {evidence.abstract}
+                      </p>
+                    )}
+                    {evidence.key_findings && (
+                      <p className="text-sm font-medium">
+                        Key Findings: {evidence.key_findings}
+                      </p>
+                    )}
+                    {evidence.clinical_implications && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Clinical Implications: {evidence.clinical_implications}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </DialogContent>
       </Dialog>
