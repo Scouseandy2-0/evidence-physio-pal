@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/hooks/useAuth";
-import { Crown, Check, Zap, Users, BarChart3, Lock } from "lucide-react";
+import { Crown, Check, Zap, Users, BarChart3, Lock, LogOut, LogIn } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export const SubscriptionPage = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { subscribed, subscriptionTier, subscriptionEnd, loading, createCheckout, openCustomerPortal } = useSubscription();
   const [processing, setProcessing] = useState(false);
 
@@ -34,6 +35,22 @@ export const SubscriptionPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="flex justify-end mb-4">
+        {user ? (
+          <Button variant="outline" size="sm" onClick={signOut}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Sign Out
+          </Button>
+        ) : (
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/auth">
+              <LogIn className="h-4 w-4 mr-2" />
+              Sign In
+            </Link>
+          </Button>
+        )}
+      </div>
+      
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold mb-2">Choose Your Plan</h1>
         <p className="text-muted-foreground max-w-2xl mx-auto">
