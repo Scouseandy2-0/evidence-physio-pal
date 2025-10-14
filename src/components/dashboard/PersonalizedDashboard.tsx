@@ -183,10 +183,12 @@ export const PersonalizedDashboard = () => {
   );
 
   const RecentEvidenceCard = ({ evidence }: { evidence: any }) => (
-    <Card className="mb-3">
+    <Card className="mb-3 hover:shadow-md transition-shadow">
       <CardContent className="p-4">
         <div className="flex justify-between items-start mb-2">
-          <h4 className="font-medium text-sm line-clamp-2">{evidence.title}</h4>
+          <Link to="/evidence" className="hover:underline">
+            <h4 className="font-medium text-sm line-clamp-2 text-primary">{evidence.title}</h4>
+          </Link>
           <Badge variant="outline" className="ml-2">
             {evidence.evidence_level}
           </Badge>
