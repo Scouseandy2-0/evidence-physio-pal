@@ -78,10 +78,24 @@ export const ProtocolTemplateManager = () => {
   };
 
   const handleClone = async (template: ProtocolTemplate) => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to clone protocols",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setCloning(template.id);
     try {
+      // Verify user is authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error("No active session. Please log in again.");
+      }
+
       const { data, error } = await supabase
         .from('treatment_protocols')
         .insert({
@@ -95,7 +109,7 @@ export const ProtocolTemplateManager = () => {
           contraindications: template.contraindications,
           precautions: template.precautions,
           expected_outcomes: template.expected_outcomes,
-          created_by: user.id,
+          created_by: session.user.id,
           is_validated: false
         })
         .select()
@@ -111,7 +125,7 @@ export const ProtocolTemplateManager = () => {
       console.error('Clone error:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to clone protocol",
+        description: error.message || "Failed to clone protocol. Please ensure you are logged in.",
         variant: "destructive",
       });
     } finally {
