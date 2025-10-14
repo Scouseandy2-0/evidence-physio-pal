@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getExternalEvidenceLink } from "@/utils/evidenceLinks";
 import { useSubscription } from "@/hooks/useSubscription";
 import { PremiumFeature, FreeTierBanner } from "@/components/subscription/PremiumFeature";
 import { ChatGPTInterface } from "@/components/ai/ChatGPTInterface";
@@ -565,22 +566,8 @@ export const ConditionModules = () => {
           </DialogHeader>
           <div className="space-y-4">
             {evidenceData.map((evidence, index) => {
-              // Create external link with multiple fallback options
-              const getEvidenceLink = () => {
-                if (evidence.doi) {
-                  return `https://doi.org/${evidence.doi}`;
-                }
-                if (evidence.pmid) {
-                  return `https://pubmed.ncbi.nlm.nih.gov/${evidence.pmid}`;
-                }
-                // Fallback to PubMed search by title
-                if (evidence.title) {
-                  return `https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(evidence.title)}`;
-                }
-                return null;
-              };
-
-              const externalLink = getEvidenceLink();
+              // Create robust external link (handles DOI, Cochrane, PubMed, guideline URLs)
+              const externalLink = getExternalEvidenceLink(evidence);
 
               return (
                 <Card key={evidence.id || index}>

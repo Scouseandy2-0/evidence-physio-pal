@@ -13,6 +13,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { getExternalEvidenceLink } from "@/utils/evidenceLinks";
 import {
   Calendar,
   TrendingUp,
@@ -264,41 +265,7 @@ export const PersonalizedDashboard = () => {
 
   const RecentEvidenceCard = ({ evidence }: { evidence: any }) => {
     // Determine the best external link for the evidence
-    const getEvidenceLink = () => {
-      // Check grade_assessment.url first (for guidelines)
-      if (evidence.grade_assessment?.url && evidence.grade_assessment.url !== '#') {
-        return evidence.grade_assessment.url;
-      }
-      if (evidence.doi) {
-        const journalLower = evidence.journal?.toLowerCase() || '';
-        
-        // Special handling for Cochrane
-        if (evidence.doi.includes('14651858') || journalLower.includes('cochrane')) {
-          return `https://www.cochranelibrary.com/cdsr/doi/${evidence.doi}/full`;
-        }
-        
-        // Special handling for BMJ journals
-        if (journalLower.includes('bmj')) {
-          return `https://bmjopenquality.bmj.com/content/${evidence.doi.replace('10.1136/', '')}`;
-        }
-        
-        // Special handling for Physical Therapy journal (Oxford/APTA)
-        if (journalLower.includes('physical therapy')) {
-          return `https://academic.oup.com/ptj/article-lookup/doi/${evidence.doi}`;
-        }
-        
-        // Default DOI link
-        return `https://doi.org/${evidence.doi}`;
-      }
-      if (evidence.pmid) {
-        return `https://pubmed.ncbi.nlm.nih.gov/${evidence.pmid}`;
-      }
-      // Fallback: search PubMed by title
-      if (evidence.title) {
-        return `https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(evidence.title)}`;
-      }
-      return '#';
-    };
+    const getEvidenceLink = () => getExternalEvidenceLink(evidence) || '#';
 
     const externalLink = getEvidenceLink();
 

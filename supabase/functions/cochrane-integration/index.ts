@@ -126,15 +126,31 @@ serve(async (req) => {
     const reviews: CochraneReview[] = await generateCochraneReviews(searchTerms, maxResults);
 
     // Store reviews in database
+    const normalizeDoi = (d?: string | null) => {
+      if (!d) return null;
+      let s = d.trim();
+      if (s.startsWith('http://') || s.startsWith('https://')) {
+        // Strip resolver prefix if present
+        const idx = s.indexOf('10.');
+        s = idx >= 0 ? s.slice(idx) : s;
+      }
+      // Remove trailing punctuation/spaces
+      s = s.replace(/[\s\.]$/g, '');
+      return s || null;
+    };
+
     for (const review of reviews) {
       try {
-        // Check if review already exists
+        // Normalize DOI for consistency
+        const normalizedDoi = normalizeDoi(review.doi);
+
+        // Check if review already exists (by normalized DOI + journal)
         const { data: existing } = await supabase
           .from('evidence')
           .select('id')
-          .eq('doi', review.doi)
+          .eq('doi', normalizedDoi)
           .eq('journal', 'Cochrane Database of Systematic Reviews')
-          .single();
+          .maybeSingle();
 
         if (!existing) {
           // Insert new review
@@ -145,7 +161,7 @@ serve(async (req) => {
               authors: review.authors,
               journal: 'Cochrane Database of Systematic Reviews',
               publication_date: review.publication_date,
-              doi: review.doi,
+              doi: normalizedDoi,
               abstract: review.abstract,
               study_type: 'Systematic Review',
               evidence_level: 'A', // Cochrane reviews are high quality
