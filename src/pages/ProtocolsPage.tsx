@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Header } from "@/components/Header";
 import { TreatmentProtocolBuilder } from "@/components/protocols/TreatmentProtocolBuilder";
 import { ProtocolTemplateManager } from "@/components/protocols/ProtocolTemplateManager";
+import { MyProtocols } from "@/components/protocols/MyProtocols";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Wrench } from "lucide-react";
+import { FileText, Wrench, BookOpen } from "lucide-react";
 
 const ProtocolsPage = () => {
   return (
@@ -18,8 +19,12 @@ const ProtocolsPage = () => {
             </p>
           </div>
           
-          <Tabs defaultValue="builder" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+          <Tabs defaultValue="my-protocols" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="my-protocols" className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4" />
+                My Protocols
+              </TabsTrigger>
               <TabsTrigger value="builder" className="flex items-center gap-2">
                 <Wrench className="h-4 w-4" />
                 Protocol Builder
@@ -29,6 +34,10 @@ const ProtocolsPage = () => {
                 Template Library
               </TabsTrigger>
             </TabsList>
+            
+            <TabsContent value="my-protocols" className="space-y-6">
+              <MyProtocols />
+            </TabsContent>
             
             <TabsContent value="builder" className="space-y-6">
               <TreatmentProtocolBuilder />
