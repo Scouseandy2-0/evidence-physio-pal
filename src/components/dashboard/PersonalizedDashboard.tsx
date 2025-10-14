@@ -508,11 +508,11 @@ export const PersonalizedDashboard = () => {
                   </div>
                 </div>
               ))}
-              <Button variant="outline" className="w-full" asChild>
-                <Link to="/dashboard">
+              {dashboardData.notifications.length > 0 && (
+                <Button variant="outline" className="w-full" onClick={() => setNotificationsOpen(true)}>
                   View All Notifications
-                </Link>
-              </Button>
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
