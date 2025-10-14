@@ -19,45 +19,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     console.log('useAuth: Setting up authentication context');
-    
-    // Check for existing session first
+
+    // Set up auth state listener FIRST to avoid missing events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log('useAuth: Auth state changed', { event, session: !!session });
+
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        // Clean up auth hash fragments that can cause reload loops in PWAs
+        if (session?.user && window.location.hash) {
+          const url = new URL(window.location.href);
+          url.hash = '';
+          window.history.replaceState({}, document.title, url.toString());
+        }
+
+        // Defer any Supabase calls to avoid deadlocks inside callback
+        if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+          const uid = session.user.id;
+          setTimeout(() => {
+            trackUserLogin(uid);
+          }, 0);
+        }
+
+        setLoading(false);
+      }
+    );
+
+    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       console.log('useAuth: Initial session check', { session: !!session, error });
-      
+
       if (error) {
         console.error('useAuth: Session check error:', error);
       }
-      
+
       setSession(session);
       setUser(session?.user ?? null);
-      
-      // Track login if user exists
-      if (session?.user) {
-        trackUserLogin(session.user.id);
-      }
-      
       setLoading(false);
     }).catch((error) => {
       console.error('useAuth: Session check failed:', error);
       setLoading(false);
     });
-
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('useAuth: Auth state changed', { event, session: !!session });
-        
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        // Track login on auth state change to active session
-        if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-          trackUserLogin(session.user.id);
-        }
-        
-        setLoading(false);
-      }
-    );
 
     return () => {
       console.log('useAuth: Cleaning up auth context listener');
