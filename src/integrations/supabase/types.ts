@@ -1027,7 +1027,11 @@ export type Database = {
     }
     Enums: {
       admin_role: "super_admin" | "admin" | "moderator"
-      condition_category: "msk" | "neurological" | "respiratory"
+      condition_category:
+        | "msk"
+        | "neurological"
+        | "respiratory"
+        | "rheumatology"
       evidence_level: "A" | "B" | "C" | "D"
       healthcare_role:
         | "physiotherapist"
@@ -1164,7 +1168,12 @@ export const Constants = {
   public: {
     Enums: {
       admin_role: ["super_admin", "admin", "moderator"],
-      condition_category: ["msk", "neurological", "respiratory"],
+      condition_category: [
+        "msk",
+        "neurological",
+        "respiratory",
+        "rheumatology",
+      ],
       evidence_level: ["A", "B", "C", "D"],
       healthcare_role: [
         "physiotherapist",

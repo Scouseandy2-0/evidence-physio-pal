@@ -16,6 +16,7 @@ import {
   Bone, 
   Brain, 
   Wind, 
+  Activity,
   FileText, 
   TrendingUp,
   Users,
@@ -33,7 +34,7 @@ import {
 interface Condition {
   id: string;
   name: string;
-  category: 'msk' | 'neurological' | 'respiratory';
+  category: 'msk' | 'neurological' | 'respiratory' | 'rheumatology';
   description: string | null;
   icd_codes: string[] | null;
   keywords: string[] | null;
@@ -56,25 +57,28 @@ interface AssessmentTool {
 const categoryIcons = {
   msk: Bone,
   neurological: Brain,
-  respiratory: Wind
+  respiratory: Wind,
+  rheumatology: Activity
 };
 
 const categoryColors = {
   msk: 'bg-blue-500',
   neurological: 'bg-purple-500', 
-  respiratory: 'bg-green-500'
+  respiratory: 'bg-green-500',
+  rheumatology: 'bg-orange-500'
 };
 
 const categoryNames = {
   msk: 'Musculoskeletal',
   neurological: 'Neurological',
-  respiratory: 'Respiratory'
+  respiratory: 'Respiratory',
+  rheumatology: 'Rheumatology'
 };
 
 export const ConditionModules = () => {
   const [conditions, setConditions] = useState<Condition[]>([]);
   const [assessmentTools, setAssessmentTools] = useState<AssessmentTool[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<'all' | 'msk' | 'neurological' | 'respiratory'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'msk' | 'neurological' | 'respiratory' | 'rheumatology'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedCondition, setSelectedCondition] = useState<Condition | null>(null);
@@ -146,8 +150,9 @@ export const ConditionModules = () => {
   const mskConditions = getAccessibleConditions(filteredConditions.filter(c => c.category === 'msk'));
   const respiratoryConditions = getAccessibleConditions(filteredConditions.filter(c => c.category === 'respiratory'));
   const neuroConditions = getAccessibleConditions(filteredConditions.filter(c => c.category === 'neurological'));
+  const rheumatologyConditions = getAccessibleConditions(filteredConditions.filter(c => c.category === 'rheumatology'));
 
-  const getConditionsByCategory = (category: 'msk' | 'neurological' | 'respiratory') => {
+  const getConditionsByCategory = (category: 'msk' | 'neurological' | 'respiratory' | 'rheumatology') => {
     return conditions.filter(c => c.category === category);
   };
 
@@ -338,7 +343,7 @@ export const ConditionModules = () => {
     );
   };
 
-  const CategoryOverview = ({ category }: { category: 'msk' | 'neurological' | 'respiratory' }) => {
+  const CategoryOverview = ({ category }: { category: 'msk' | 'neurological' | 'respiratory' | 'rheumatology' }) => {
     const conditions = getConditionsByCategory(category);
     const Icon = categoryIcons[category];
     
@@ -398,17 +403,18 @@ export const ConditionModules = () => {
       <div className="text-center">
         <h1 className="text-3xl font-bold mb-2">Condition-Specific Modules</h1>
         <p className="text-muted-foreground max-w-2xl mx-auto">
-          Comprehensive evidence-based information for MSK, neurological, and respiratory conditions 
+          Comprehensive evidence-based information for MSK, neurological, respiratory, and rheumatology conditions 
           with assessment tools and treatment protocols.
         </p>
       </div>
 
       <Tabs value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as any)} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="all">All Conditions</TabsTrigger>
           <TabsTrigger value="msk">Musculoskeletal</TabsTrigger>
           <TabsTrigger value="neurological">Neurological</TabsTrigger>
           <TabsTrigger value="respiratory">Respiratory</TabsTrigger>
+          <TabsTrigger value="rheumatology">Rheumatology</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="space-y-6">
@@ -426,6 +432,7 @@ export const ConditionModules = () => {
             <CategoryOverview category="msk" />
             <CategoryOverview category="neurological" />
             <CategoryOverview category="respiratory" />
+            <CategoryOverview category="rheumatology" />
           </div>
         </TabsContent>
 
@@ -510,6 +517,35 @@ export const ConditionModules = () => {
             ))}
             {!subscribed && conditions.filter(c => c.category === 'respiratory').length > 1 && (
               <PremiumFeature feature="additional respiratory conditions">
+                <div></div>
+              </PremiumFeature>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="rheumatology" className="space-y-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search rheumatology conditions..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          <FreeTierBanner 
+            currentItem={rheumatologyConditions.length} 
+            totalItems={conditions.filter(c => c.category === 'rheumatology').length}
+            category="Rheumatology"
+          />
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {rheumatologyConditions.map(condition => (
+              <ConditionCard key={condition.id} condition={condition} />
+            ))}
+            {!subscribed && conditions.filter(c => c.category === 'rheumatology').length > 1 && (
+              <PremiumFeature feature="additional rheumatology conditions">
                 <div></div>
               </PremiumFeature>
             )}
