@@ -64,31 +64,58 @@ export const EnhancedAnalyticsDashboard = () => {
 
     setLoading(true);
     try {
+      const startDate = new Date(Date.now() - parseInt(dateRange) * 24 * 60 * 60 * 1000).toISOString();
+
       // Fetch session analytics
       const { data: sessions, error: sessionsError } = await supabase
         .from('analytics_sessions')
         .select('*')
         .eq('user_id', user.id)
-        .gte('created_at', new Date(Date.now() - parseInt(dateRange) * 24 * 60 * 60 * 1000).toISOString());
+        .gte('created_at', startDate)
+        .order('created_at', { ascending: true });
 
-      if (sessionsError) throw sessionsError;
+      if (sessionsError) {
+        console.error('Analytics sessions error:', sessionsError);
+      }
 
-      // Fetch patient sessions for progress tracking
+      // Fetch patient sessions for progress tracking - only for assigned patients
       const { data: patientSessions, error: patientSessionsError } = await supabase
         .from('patient_sessions')
-        .select('*')
-        .gte('session_date', new Date(Date.now() - parseInt(dateRange) * 24 * 60 * 60 * 1000).toISOString());
+        .select(`
+          *,
+          patients!inner(
+            therapist_id,
+            primary_condition
+          )
+        `)
+        .gte('session_date', startDate)
+        .order('session_date', { ascending: true });
 
-      if (patientSessionsError) throw patientSessionsError;
+      if (patientSessionsError) {
+        console.error('Patient sessions error:', patientSessionsError);
+      }
+
+      // Filter patient sessions for current user's patients
+      const userPatientSessions = patientSessions?.filter(
+        (ps: any) => ps.patients?.therapist_id === user.id
+      ) || [];
 
       // Process data for charts
-      const processedData = processAnalyticsData(sessions || [], patientSessions || []);
+      const processedData = processAnalyticsData(sessions || [], userPatientSessions);
       setAnalyticsData(processedData);
 
+      if (!sessions?.length && !userPatientSessions.length) {
+        toast({
+          title: "No Data Available",
+          description: "Record patient sessions to see analytics",
+        });
+      }
+
     } catch (error: any) {
+      console.error('Analytics fetch error:', error);
       toast({
         title: "Error",
-        description: "Failed to load analytics data",
+        description: error.message || "Failed to load analytics data",
         variant: "destructive",
       });
     } finally {
@@ -97,61 +124,137 @@ export const EnhancedAnalyticsDashboard = () => {
   };
 
   const processAnalyticsData = (sessions: any[], patientSessions: any[]): AnalyticsData => {
-    // Session statistics by day
-    const sessionStats = sessions.reduce((acc: any[], session) => {
+    // Combine analytics sessions and patient sessions for comprehensive data
+    const allSessionsMap = new Map();
+    
+    // Process analytics sessions by day
+    sessions.forEach(session => {
       const date = new Date(session.created_at).toLocaleDateString();
-      const existing = acc.find(item => item.date === date);
-      if (existing) {
-        existing.sessions += 1;
-        existing.totalDuration += session.duration_minutes || 0;
-        existing.avgSatisfaction = (existing.avgSatisfaction + (session.satisfaction_score || 0)) / 2;
-      } else {
-        acc.push({
+      if (!allSessionsMap.has(date)) {
+        allSessionsMap.set(date, {
           date,
-          sessions: 1,
-          totalDuration: session.duration_minutes || 0,
-          avgSatisfaction: session.satisfaction_score || 0
+          sessions: 0,
+          totalDuration: 0,
+          totalSatisfaction: 0,
+          satisfactionCount: 0
         });
       }
-      return acc;
-    }, []);
+      const dayData = allSessionsMap.get(date);
+      dayData.sessions += 1;
+      dayData.totalDuration += session.duration_minutes || 0;
+      if (session.satisfaction_score) {
+        dayData.totalSatisfaction += session.satisfaction_score;
+        dayData.satisfactionCount += 1;
+      }
+    });
+
+    // Process patient sessions by day
+    patientSessions.forEach(session => {
+      const date = new Date(session.session_date).toLocaleDateString();
+      if (!allSessionsMap.has(date)) {
+        allSessionsMap.set(date, {
+          date,
+          sessions: 0,
+          totalDuration: 0,
+          totalSatisfaction: 0,
+          satisfactionCount: 0
+        });
+      }
+      const dayData = allSessionsMap.get(date);
+      dayData.sessions += 1;
+      dayData.totalDuration += session.duration_minutes || 0;
+      if (session.outcomes?.satisfaction) {
+        dayData.totalSatisfaction += session.outcomes.satisfaction;
+        dayData.satisfactionCount += 1;
+      }
+    });
+
+    // Convert map to array and calculate averages
+    const sessionStats = Array.from(allSessionsMap.values()).map(day => ({
+      date: day.date,
+      sessions: day.sessions,
+      totalDuration: day.totalDuration,
+      avgSatisfaction: day.satisfactionCount > 0 
+        ? day.totalSatisfaction / day.satisfactionCount 
+        : 0
+    })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     // Outcome metrics
-    const outcomeMetrics = sessions.map(session => ({
-      session_id: session.id,
-      satisfaction: session.satisfaction_score || 0,
-      duration: session.duration_minutes || 0,
-      type: session.session_type,
-      outcomes: session.outcomes || {}
-    }));
+    const outcomeMetrics = [
+      ...sessions.map(session => ({
+        session_id: session.id,
+        satisfaction: session.satisfaction_score || 0,
+        duration: session.duration_minutes || 0,
+        type: session.session_type || 'General',
+        outcomes: session.outcomes || {}
+      })),
+      ...patientSessions.map(session => ({
+        session_id: session.id,
+        satisfaction: session.outcomes?.satisfaction || 0,
+        duration: session.duration_minutes || 0,
+        type: session.patients?.primary_condition || 'General',
+        outcomes: session.outcomes || {}
+      }))
+    ];
 
     // Patient progress over time
     const patientProgress = patientSessions.map(session => ({
       date: new Date(session.session_date).toLocaleDateString(),
-      progress: session.outcomes?.progress_score || 0,
+      progress: session.outcomes?.progress_score || session.outcomes?.improvement || 0,
       patient_id: session.patient_id
-    }));
+    })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    // Condition distribution
-    const conditionCounts = sessions.reduce((acc: Record<string, number>, session) => {
+    // Condition distribution from both sources
+    const conditionCounts: Record<string, number> = {};
+    
+    sessions.forEach(session => {
       const condition = session.session_type || 'Unknown';
-      acc[condition] = (acc[condition] || 0) + 1;
-      return acc;
-    }, {});
+      conditionCounts[condition] = (conditionCounts[condition] || 0) + 1;
+    });
+    
+    patientSessions.forEach(session => {
+      const condition = session.patients?.primary_condition || 'Unknown';
+      conditionCounts[condition] = (conditionCounts[condition] || 0) + 1;
+    });
 
-    const conditionDistribution = Object.entries(conditionCounts).map(([name, value]) => ({
-      name,
-      value
-    }));
+    const conditionDistribution = Object.entries(conditionCounts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
 
-    // Treatment effectiveness
-    const treatmentEffectiveness = sessions
-      .filter(s => s.satisfaction_score && s.outcomes)
-      .map(session => ({
-        treatment: session.session_type,
-        effectiveness: session.satisfaction_score,
-        outcomes: Object.keys(session.outcomes || {}).length
-      }));
+    // Treatment effectiveness - aggregate by type
+    const effectivenessMap = new Map();
+    
+    sessions.forEach(session => {
+      if (session.satisfaction_score) {
+        const type = session.session_type || 'General';
+        if (!effectivenessMap.has(type)) {
+          effectivenessMap.set(type, { total: 0, count: 0 });
+        }
+        const data = effectivenessMap.get(type);
+        data.total += session.satisfaction_score;
+        data.count += 1;
+      }
+    });
+
+    patientSessions.forEach(session => {
+      if (session.outcomes?.satisfaction) {
+        const type = session.patients?.primary_condition || 'General';
+        if (!effectivenessMap.has(type)) {
+          effectivenessMap.set(type, { total: 0, count: 0 });
+        }
+        const data = effectivenessMap.get(type);
+        data.total += session.outcomes.satisfaction;
+        data.count += 1;
+      }
+    });
+
+    const treatmentEffectiveness = Array.from(effectivenessMap.entries())
+      .map(([treatment, data]) => ({
+        treatment,
+        effectiveness: Math.round((data.total / data.count) * 10) / 10,
+        outcomes: data.count
+      }))
+      .sort((a, b) => b.effectiveness - a.effectiveness);
 
     return {
       sessionStats,
