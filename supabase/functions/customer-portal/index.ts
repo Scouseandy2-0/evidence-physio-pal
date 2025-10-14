@@ -71,11 +71,21 @@ serve(async (req) => {
     const origin = req.headers.get("origin") || "https://evidence-physio-pal.lovable.app";
     logStep("Creating portal session with origin:", origin);
     
-    const portalSession = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: `${origin}/`,
-    });
-    logStep("Customer portal session created", { sessionId: portalSession.id, url: portalSession.url });
+    let portalSession;
+    try {
+      portalSession = await stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: `${origin}/subscription`,
+      });
+      logStep("Customer portal session created", { sessionId: portalSession.id, url: portalSession.url });
+    } catch (portalError: any) {
+      logStep("Portal creation error", { error: portalError.message });
+      
+      if (portalError.message?.includes("No configuration provided")) {
+        throw new Error("Stripe Customer Portal not configured. Please activate it at: https://dashboard.stripe.com/settings/billing/portal");
+      }
+      throw portalError;
+    }
 
     return new Response(JSON.stringify({ url: portalSession.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

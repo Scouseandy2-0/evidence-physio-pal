@@ -185,14 +185,19 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
       console.error('Error opening customer portal:', error);
       
       let errorMessage = "Failed to open customer portal";
-      if (error.message?.includes("No subscription found")) {
+      let errorTitle = "Portal Error";
+      
+      if (error.message?.includes("Stripe Customer Portal not configured")) {
+        errorTitle = "Setup Required";
+        errorMessage = "Please activate the Stripe Customer Portal in your Stripe Dashboard settings first.";
+      } else if (error.message?.includes("No subscription found")) {
         errorMessage = "No subscription found. Please create a subscription first.";
       } else if (error.message?.includes("Authentication")) {
         errorMessage = "Please sign in again to continue.";
       }
       
       toast({
-        title: "Error",
+        title: errorTitle,
         description: errorMessage,
         variant: "destructive",
       });
