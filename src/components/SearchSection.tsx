@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { Search, Filter, BookOpen, ExternalLink, Star, Loader2, Database, Globe } from "lucide-react"
+import { getExternalEvidenceLink } from "@/utils/evidenceLinks"
 
 interface Evidence {
   id: string;
@@ -302,18 +303,21 @@ export const SearchSection = () => {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <CardTitle className="text-lg mb-2">
-                        {result.doi || result.pmid ? (
-                          <a 
-                            href={result.doi ? `https://doi.org/${result.doi}` : `https://pubmed.ncbi.nlm.nih.gov/${result.pmid}/`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-foreground hover:text-medical-blue hover:underline"
-                          >
-                            {result.title}
-                          </a>
-                        ) : (
-                          <span className="text-foreground">{result.title}</span>
-                        )}
+                        {(() => {
+                          const link = getExternalEvidenceLink(result);
+                          return link ? (
+                            <a 
+                              href={link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-foreground hover:text-medical-blue hover:underline"
+                            >
+                              {result.title}
+                            </a>
+                          ) : (
+                            <span className="text-foreground">{result.title}</span>
+                          );
+                        })()}
                       </CardTitle>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                         <span className="flex items-center">
@@ -350,33 +354,32 @@ export const SearchSection = () => {
                         <Star className="h-4 w-4 mr-1" />
                         Save
                       </Button>
-                      {result.doi || result.pmid ? (
-                        <Button variant="outline" size="sm" asChild>
-                          <a 
-                            href={
-                              result.doi
-                                ? `https://doi.org/${result.doi}`
-                                : `https://pubmed.ncbi.nlm.nih.gov/${result.pmid}/`
-                            }
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <ExternalLink className="h-4 w-4 mr-1" />
-                            View Full Text
-                          </a>
-                        </Button>
-                      ) : (
-                        <Button variant="outline" size="sm" asChild>
-                          <a
-                            href={`https://scholar.google.com/scholar?q=${encodeURIComponent(result.title)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <Search className="h-4 w-4 mr-1" />
-                            Search on Scholar
-                          </a>
-                        </Button>
-                      )}
+                      {(() => {
+                        const link = getExternalEvidenceLink(result);
+                        return link ? (
+                          <Button variant="outline" size="sm" asChild>
+                            <a 
+                              href={link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <ExternalLink className="h-4 w-4 mr-1" />
+                              View Full Text
+                            </a>
+                          </Button>
+                        ) : (
+                          <Button variant="outline" size="sm" asChild>
+                            <a
+                              href={`https://scholar.google.com/scholar?q=${encodeURIComponent(result.title)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <Search className="h-4 w-4 mr-1" />
+                              Search on Scholar
+                            </a>
+                          </Button>
+                        );
+                      })()}
                       {result.journal?.toLowerCase().includes('cochrane') && (
                         <Button variant="ghost" size="sm" asChild>
                           <a
