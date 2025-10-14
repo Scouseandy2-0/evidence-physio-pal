@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -56,6 +57,7 @@ export const PersonalizedDashboard = () => {
   });
   const [cpdRecords, setCpdRecords] = useState<CPDRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -328,10 +330,38 @@ export const PersonalizedDashboard = () => {
           <h1 className="text-3xl font-bold">Welcome back, {user?.user_metadata?.first_name || 'Professional'}</h1>
           <p className="text-muted-foreground">Here's your personalized evidence and progress overview</p>
         </div>
-        <Button>
-          <Bell className="h-4 w-4 mr-2" />
-          Notifications ({dashboardData.notifications.length})
-        </Button>
+        <Sheet open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+          <SheetTrigger asChild>
+            <Button>
+              <Bell className="h-4 w-4 mr-2" />
+              Notifications ({dashboardData.notifications.length})
+            </Button>
+          </SheetTrigger>
+          <SheetContent>
+            <SheetHeader>
+              <SheetTitle>Notifications</SheetTitle>
+            </SheetHeader>
+            <div className="mt-6 space-y-3">
+              {dashboardData.notifications.length > 0 ? (
+                dashboardData.notifications.map(notification => (
+                  <div key={notification.id} className="flex items-start gap-3 p-3 border rounded">
+                    <div className="mt-1">
+                      {notification.type === 'evidence' && <BookOpen className="h-4 w-4 text-blue-500" />}
+                      {notification.type === 'protocol' && <CheckCircle className="h-4 w-4 text-green-500" />}
+                      {notification.type === 'cpd' && <Clock className="h-4 w-4 text-orange-500" />}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm">{notification.message}</p>
+                      <p className="text-xs text-muted-foreground">{notification.time}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-muted-foreground py-8">No notifications</p>
+              )}
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
 
       {/* Quick Stats */}
