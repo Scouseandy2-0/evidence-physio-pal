@@ -288,18 +288,29 @@ CRITICAL: Return ONLY the JSON array starting with [ and ending with ]. No other
           }
         }
         
-        console.log('Parsing assessment tools response:', responseText.substring(0, 200));
-        // Normalize quotes and remove trailing commas
+        // Clean up the response text
         responseText = responseText
+          .trim()
           .replace(/[\u2018\u2019]/g, "'")
           .replace(/[\u201C\u201D]/g, '"')
-          .replace(/,\s*([}\]])/g, '$1');
+          .replace(/,\s*([}\]])/g, '$1')
+          .replace(/\r\n/g, '\n')
+          .replace(/^\s+|\s+$/gm, '');
+        
+        console.log('Parsing assessment tools response:', responseText.substring(0, 300));
         
         let toolsData: any;
         try {
           toolsData = JSON.parse(responseText);
         } catch (e1) {
-          toolsData = JSON5.parse(responseText);
+          console.log('Standard JSON parse failed, trying JSON5:', e1);
+          try {
+            toolsData = JSON5.parse(responseText);
+          } catch (e2: any) {
+            console.error('Both JSON and JSON5 parsing failed:', e2);
+            console.error('Response text:', responseText);
+            throw new Error(`Failed to parse AI response: ${e2.message}`);
+          }
         }
         
         if (!Array.isArray(toolsData)) {
