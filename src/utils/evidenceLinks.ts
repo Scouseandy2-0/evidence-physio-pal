@@ -63,9 +63,9 @@ export function getExternalEvidenceLink(e: EvidenceLike): string | null {
   if (!e) return null;
 
   // 1) Prefer explicit URL stored in grade_assessment (used by guidelines)
-  const gaUrl = e.grade_assessment?.url;
-  if (gaUrl && gaUrl !== '#') return gaUrl;
-
+  const gaUrl = (e.grade_assessment?.url || '').trim();
+  const isCochraneGa = gaUrl && /cochranelibrary\.com/i.test(gaUrl);
+  if (gaUrl && gaUrl !== '#' && !isCochraneGa) return gaUrl;
   const doiRaw = (e.doi || '').trim();
   const doiNorm = normalizeDoi(doiRaw);
   const journalLower = (e.journal || '').toLowerCase();
@@ -76,10 +76,11 @@ export function getExternalEvidenceLink(e: EvidenceLike): string | null {
     if (url) return url;
   }
 
-  // 3) Cochrane special handling - use standard DOI resolver
+  // 3) Cochrane special handling - prefer Cochrane Library search (synthetic DOIs may not resolve)
   // Cochrane DOIs typically include 10.1002/14651858.CDxxxxxx
   if (doiNorm && (doiNorm.includes('14651858') || journalLower.includes('cochrane'))) {
-    return `https://doi.org/${doiNorm}`;
+    const q = encodeURIComponent(e.title || doiNorm);
+    return `https://www.cochranelibrary.com/search?searchText=${q}`;
   }
 
   // 4) Other journal special cases
@@ -100,6 +101,9 @@ export function getExternalEvidenceLink(e: EvidenceLike): string | null {
 
   // 7) Search fallback
   if (e.title) return `https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(e.title)}`;
+
+  // 8) As a last resort, return guideline URL if present (even if Cochrane)
+  if (gaUrl && gaUrl !== '#') return gaUrl;
 
   return null;
 }
