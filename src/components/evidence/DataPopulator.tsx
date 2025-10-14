@@ -16,6 +16,7 @@ import {
   Loader2,
   Sparkles
 } from "lucide-react";
+import JSON5 from "json5";
 
 interface PopulationTask {
   id: string;
@@ -288,7 +289,18 @@ CRITICAL: Return ONLY the JSON array starting with [ and ending with ]. No other
         }
         
         console.log('Parsing assessment tools response:', responseText.substring(0, 200));
-        const toolsData = JSON.parse(responseText);
+        // Normalize quotes and remove trailing commas
+        responseText = responseText
+          .replace(/[\u2018\u2019]/g, "'")
+          .replace(/[\u201C\u201D]/g, '"')
+          .replace(/,\s*([}\]])/g, '$1');
+        
+        let toolsData: any;
+        try {
+          toolsData = JSON.parse(responseText);
+        } catch (e1) {
+          toolsData = JSON5.parse(responseText);
+        }
         
         if (!Array.isArray(toolsData)) {
           throw new Error('AI response is not a valid array');
