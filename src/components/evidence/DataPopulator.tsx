@@ -239,204 +239,28 @@ export const DataPopulator = () => {
 
       updateTaskStatus('generate-assessment-tools', { progress: 30 });
 
-      // Generate assessment tools using AI
-      const { data, error } = await supabase.functions.invoke('ai-chat', {
-        body: {
-          messages: [{
-            role: 'user',
-            content: `Generate 20 comprehensive physiotherapy assessment tools. Return your response as a valid JSON array ONLY - no explanations, no markdown, just the JSON array.
-
-Each object in the array must have these exact fields:
-{
-  "name": "Tool Name (e.g., Oswestry Disability Index)",
-  "description": "What it measures",
-  "tool_type": "questionnaire or performance test",
-  "scoring_method": "How it's scored",
-  "condition_ids": [],
-  "interpretation_guide": {"low": "0-20", "moderate": "21-40", "high": "41-100"},
-  "psychometric_properties": {"reliability": "High", "validity": "Established"},
-  "reference_values": {"normal": "0-20", "mild": "21-40"},
-  "instructions": "How to administer the test"
-}
-
-Include well-known tools like DASH, NDI, Oswestry, Berg Balance Scale, 6MWT, Timed Up and Go, etc.
-
-CRITICAL: Return ONLY the JSON array starting with [ and ending with ]. No other text.`
-          }],
-          context: 'Generate physiotherapy assessment tools for clinical database',
-          specialty: 'physiotherapy'
-        }
+      // Generate assessment tools using robust edge function (structured output)
+      const { data: genData, error } = await supabase.functions.invoke('generate-assessment-tools', {
+        body: { num_tools: 20 }
       });
 
       if (error) throw error;
 
       updateTaskStatus('generate-assessment-tools', { progress: 70 });
 
-      // Parse and insert assessment tools
+      // Insert assessment tools (already validated by edge function)
       try {
-        let responseText = data.response;
-        
-// Robust JSON extraction: remove code fences, normalize quotes, then extract first top-level JSON array
-const stripCodeFences = (txt: string) => txt.replace(/```(?:json)?/gi, '```').replace(/```/g, '');
-const extractFirstJSONArray = (input: string): string | null => {
-  let inString = false;
-  let stringChar = '';
-  let escape = false;
-  let depth = 0;
-  let start = -1;
-  for (let i = 0; i < input.length; i++) {
-    const ch = input[i];
-    if (inString) {
-      if (escape) { escape = false; continue; }
-      if (ch === '\\') { escape = true; continue; }
-      if (ch === stringChar) { inString = false; continue; }
-      continue;
-    }
-    if (ch === '"' || ch === "'") {
-      inString = true;
-      stringChar = ch;
-      continue;
-    }
-    if (ch === '[') {
-      if (depth === 0) start = i;
-      depth++;
-      continue;
-    }
-    if (ch === ']') {
-      if (depth > 0) {
-        depth--;
-        if (depth === 0 && start !== -1) {
-          return input.slice(start, i + 1);
-        }
-      }
-      continue;
-    }
-  }
-  return null;
-};
-
-// Helpers to sanitize JSON-like text (outside strings)
-const sanitizeCommasOutsideStrings = (input: string) => {
-  let out = '';
-  let inString = false;
-  let stringChar = '';
-  let escape = false;
-  const nonWs = (idx: number, dir: -1 | 1) => {
-    for (let i = idx; i >= 0 && i < input.length; i += dir) {
-      const c = input[i];
-      if (!/\s/.test(c)) return c;
-    }
-    return '';
-  };
-  for (let i = 0; i < input.length; i++) {
-    const ch = input[i];
-    if (inString) {
-      out += ch;
-      if (escape) { escape = false; continue; }
-      if (ch === '\\') { escape = true; continue; }
-      if (ch === stringChar) { inString = false; }
-      continue;
-    }
-    if (ch === '"' || ch === "'") { inString = true; stringChar = ch; out += ch; continue; }
-    if (ch === ',') {
-      const prev = nonWs(i - 1, -1);
-      const next = nonWs(i + 1, 1);
-      // Skip leading or trailing commas like [, or ,]
-      if (prev === '[' || prev === '{' || next === ']' || next === '}') {
-        continue;
-      }
-    }
-    out += ch;
-  }
-  return out;
-};
-
-const quoteUnquotedKeys = (input: string) => {
-  // Add quotes around unquoted object keys: { key: -> { "key": and , key: -> , "key":
-  return input.replace(/([\{,]\s*)([A-Za-z_][A-Za-z0-9_\-]*)(\s*:\s*)/g, '$1"$2"$3');
-};
-
-// Pre-clean and extract array
-let preClean = responseText
-  .replace(/\uFEFF/g, '')
-  .replace(/[\u2018\u2019]/g, "'")
-  .replace(/[\u201C\u201D]/g, '"');
-
-let withoutFences = stripCodeFences(preClean);
-const extractedArray = extractFirstJSONArray(withoutFences);
-
-// Fallback to previous regex if needed
-if (extractedArray) {
-  responseText = extractedArray;
-} else {
-  const arrayMatch = withoutFences.match(/\[[\s\S]*\]/);
-  if (arrayMatch) responseText = arrayMatch[0];
-}
-
-// Final cleanup and sanitization
-responseText = responseText
-  .trim()
-  .replace(/,\s*([}\]])/g, '$1') // remove trailing commas
-  .replace(/\r\n/g, '\n')
-  .replace(/^\s+|\s+$/gm, '');
-
-// Extra comma cleanups and quoting keys (best effort, outside strings)
-responseText = sanitizeCommasOutsideStrings(responseText);
-responseText = quoteUnquotedKeys(responseText);
-
-console.log('Parsing assessment tools response (length):', responseText.length);
-console.log('Preview:', responseText.substring(0, 300));
-
-let toolsData: any;
-const attemptParses = (txt: string) => {
-  try { return JSON.parse(txt); } catch {}
-  const sanitized = quoteUnquotedKeys(sanitizeCommasOutsideStrings(txt).replace(/,\s*([}\]])/g, '$1'));
-  try { return JSON.parse(sanitized); } catch {}
-  try { return JSON5.parse(sanitized); } catch (e) { throw e; }
-};
-
-try {
-  toolsData = attemptParses(responseText);
-} catch (e2: any) {
-  console.warn('Parsing failed, attempting strict AI retry...', e2?.message);
-  try {
-    const { data: retryData, error: retryError } = await supabase.functions.invoke('ai-chat', {
-      body: {
-        messages: [{
-          role: 'user',
-          content: `[STRICT JSON OUTPUT REQUIRED]\nReturn ONLY a JSON array. Use double quotes for all keys and strings. No trailing commas. No comments. No markdown. Schema example: [ { \"name\": \"string\", \"description\": \"string\", \"tool_type\": \"questionnaire\"|\"performance test\", \"scoring_method\": \"string\", \"condition_ids\": [], \"interpretation_guide\": {\"low\": \"0-20\", \"moderate\": \"21-40\", \"high\": \"41-100\"}, \"psychometric_properties\": {\"reliability\": \"High\", \"validity\": \"Established\"}, \"reference_values\": {\"normal\": \"0-20\", \"mild\": \"21-40\"}, \"instructions\": \"string\" } ]\nProvide 20 tools (e.g., DASH, NDI, Oswestry, Berg Balance Scale, 6MWT, TUG). Output ONLY the JSON array.`
-        }],
-        context: 'Generate physiotherapy assessment tools for clinical database (strict JSON)',
-        specialty: 'physiotherapy'
-      }
-    });
-    if (retryError) throw retryError;
-    let retryText = retryData.response as string;
-    retryText = stripCodeFences(retryText);
-    const arrRetry = extractFirstJSONArray(retryText) || (retryText.match(/\[[\s\S]*\]/)?.[0] ?? retryText);
-    const cleanedRetry = quoteUnquotedKeys(sanitizeCommasOutsideStrings(arrRetry)
-      .trim()
-      .replace(/,\s*([}\]])/g, '$1')
-      .replace(/\r\n/g, '\n')
-      .replace(/^\s+|\s+$/gm, ''));
-    toolsData = attemptParses(cleanedRetry);
-  } catch (finalErr: any) {
-    console.error('AI retry also failed:', finalErr);
-    console.error('Original text:', responseText);
-    throw new Error(`Failed to parse AI response: ${finalErr?.message ?? 'Unknown error'}`);
-  }
-}
-        
+        const toolsData = genData?.tools;
         if (!Array.isArray(toolsData)) {
-          throw new Error('AI response is not a valid array');
+          throw new Error('Edge function did not return a valid tools array');
         }
-        
+
         let successCount = 0;
         for (const tool of toolsData) {
           const { error: insertError } = await supabase
             .from('assessment_tools')
             .insert(tool);
-          
+
           if (insertError) {
             console.error('Error inserting assessment tool:', insertError);
           } else {
@@ -444,14 +268,14 @@ try {
           }
         }
 
-        updateTaskStatus('generate-assessment-tools', { 
-          status: 'completed', 
+        updateTaskStatus('generate-assessment-tools', {
+          status: 'completed',
           progress: 100,
           results: `Generated ${successCount}/${toolsData.length} assessment tools`
         });
       } catch (parseError: any) {
-        console.error('Parse error details:', parseError, 'Response:', data.response?.substring(0, 500));
-        throw new Error(`Failed to parse AI response: ${parseError.message}. Check console for details.`);
+        console.error('Insertion error:', parseError);
+        throw new Error(`Failed to insert assessment tools: ${parseError.message}`);
       }
 
     } catch (error: any) {

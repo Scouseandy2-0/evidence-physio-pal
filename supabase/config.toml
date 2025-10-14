@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.evidence-sync]
 verify_jwt = false
+
+[functions.generate-assessment-tools]
+verify_jwt = false
