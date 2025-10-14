@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -37,6 +37,9 @@ export const ProtocolTemplateManager = () => {
   const [templates, setTemplates] = useState<ProtocolTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedProtocol, setSelectedProtocol] = useState<ProtocolTemplate | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [cloning, setCloning] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTemplates();
@@ -60,6 +63,46 @@ export const ProtocolTemplateManager = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleView = (template: ProtocolTemplate) => {
+    setSelectedProtocol(template);
+    setViewDialogOpen(true);
+  };
+
+  const handleClone = async (template: ProtocolTemplate) => {
+    if (!user) return;
+    
+    setCloning(template.id);
+    try {
+      const { data, error } = await supabase
+        .from('treatment_protocols')
+        .insert({
+          name: `${template.name} (Copy)`,
+          description: template.description,
+          duration_weeks: template.duration_weeks,
+          frequency_per_week: template.frequency_per_week,
+          created_by: user.id,
+          is_validated: false
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Protocol cloned successfully. You can now customize it.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to clone protocol",
+        variant: "destructive",
+      });
+    } finally {
+      setCloning(null);
     }
   };
 
@@ -137,13 +180,24 @@ export const ProtocolTemplateManager = () => {
                     <span>{template.frequency_per_week}x/week</span>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => handleView(template)}
+                    >
                       <Eye className="h-4 w-4 mr-1" />
                       View
                     </Button>
-                    <Button variant="default" size="sm" className="flex-1">
+                    <Button 
+                      variant="default" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => handleClone(template)}
+                      disabled={cloning === template.id}
+                    >
                       <Copy className="h-4 w-4 mr-1" />
-                      Clone
+                      {cloning === template.id ? "Cloning..." : "Clone"}
                     </Button>
                   </div>
                 </div>
@@ -152,6 +206,53 @@ export const ProtocolTemplateManager = () => {
           ))}
         </div>
       )}
+
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedProtocol?.name}
+              <Badge variant="secondary">
+                <Star className="h-3 w-3 mr-1" />
+                Validated
+              </Badge>
+            </DialogTitle>
+            <DialogDescription>{selectedProtocol?.description}</DialogDescription>
+          </DialogHeader>
+          
+          {selectedProtocol && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Duration
+                  </h4>
+                  <p className="text-muted-foreground">{selectedProtocol.duration_weeks} weeks</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-2">Frequency</h4>
+                  <p className="text-muted-foreground">{selectedProtocol.frequency_per_week}x per week</p>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button 
+                  className="flex-1"
+                  onClick={() => {
+                    handleClone(selectedProtocol);
+                    setViewDialogOpen(false);
+                  }}
+                  disabled={cloning === selectedProtocol.id}
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  {cloning === selectedProtocol.id ? "Cloning..." : "Clone This Protocol"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
