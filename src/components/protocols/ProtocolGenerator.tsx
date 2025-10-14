@@ -43,43 +43,80 @@ export const ProtocolGenerator = () => {
         .select('id, name')
         .order('name');
 
-      if (condErr) throw condErr;
+      if (condErr) {
+        console.error('Failed to fetch conditions:', condErr);
+        throw new Error('Could not load conditions from database');
+      }
 
       const total = conditions?.length || 0;
       let processed = 0;
       let generated = 0;
       const errors: string[] = [];
 
+      console.log(`Starting protocol generation for ${total} conditions`);
+
       for (const condition of conditions || []) {
         setCurrentCondition(condition.name);
+        console.log(`[${processed + 1}/${total}] Processing: ${condition.name}`);
+        
         try {
           const { data, error } = await supabase.functions.invoke('generate-condition-protocols', {
             body: { conditionId: condition.id }
           });
+          
           if (error) {
+            console.error(`Error for ${condition.name}:`, error);
             errors.push(`${condition.name}: ${error.message || 'invoke error'}`);
+          } else if (data?.error) {
+            console.error(`Data error for ${condition.name}:`, data.error);
+            errors.push(`${condition.name}: ${data.error}`);
           } else {
             const genCount = data?.results?.generatedProtocols ?? 0;
             generated += genCount;
+            console.log(`✓ ${condition.name}: Generated ${genCount} protocol(s)`);
           }
         } catch (e: any) {
+          console.error(`Exception for ${condition.name}:`, e);
           errors.push(`${condition.name}: ${e?.message || 'request failed'}`);
         }
+        
         processed++;
-        setProgress(Math.round((processed / total) * 100));
+        const newProgress = Math.round((processed / total) * 100);
+        setProgress(newProgress);
+        console.log(`Progress: ${processed}/${total} (${newProgress}%)`);
+        
+        // Small delay to prevent overwhelming the system
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      const finalResults = { totalConditions: total, processedConditions: processed, generatedProtocols: generated, errors };
+      const finalResults = { 
+        totalConditions: total, 
+        processedConditions: processed, 
+        generatedProtocols: generated, 
+        errors 
+      };
+      
       setResults(finalResults);
       setCurrentCondition("Completed");
+      
+      console.log('Generation complete:', finalResults);
 
-      toast({
-        title: "Protocol Generation Complete",
-        description: `Successfully generated ${generated} evidence-based protocols`,
-      });
+      if (errors.length === 0) {
+        toast({
+          title: "Protocol Generation Complete",
+          description: `Successfully generated ${generated} evidence-based protocols`,
+        });
+      } else {
+        toast({
+          title: "Protocol Generation Finished with Errors",
+          description: `Generated ${generated} protocols. ${errors.length} condition(s) had errors.`,
+          variant: "destructive",
+        });
+      }
 
     } catch (error: any) {
       console.error('Protocol generation error:', error);
+      setCurrentCondition("Failed");
       toast({
         title: "Generation Failed",
         description: error.message || "Failed to generate protocols",
