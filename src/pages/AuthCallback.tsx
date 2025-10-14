@@ -6,15 +6,9 @@ const AuthCallback = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Clean auth hash fragments if present (access_token, etc.)
-    if (window.location.hash) {
-      const url = new URL(window.location.href);
-      url.hash = "";
-      window.history.replaceState({}, document.title, url.toString());
-    }
-
-    // Let supabase-js process tokens (detectSessionInUrl=true) then route home
-    const t = setTimeout(() => navigate("/"), 100);
+    // Let Supabase process the auth tokens first before redirecting
+    // The hash cleanup will be handled by useAuth after session is established
+    const t = setTimeout(() => navigate("/"), 500);
     return () => clearTimeout(t);
   }, [navigate]);
 
