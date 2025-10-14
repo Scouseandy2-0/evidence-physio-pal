@@ -29,6 +29,8 @@ interface DashboardData {
   cpdProgress: any;
   notifications: any[];
   favoriteConditions: string[];
+  evidenceReviewsCount: number;
+  peerReviewsCount: number;
 }
 
 interface CPDRecord {
@@ -48,7 +50,9 @@ export const PersonalizedDashboard = () => {
     savedProtocols: [],
     cpdProgress: null,
     notifications: [],
-    favoriteConditions: []
+    favoriteConditions: [],
+    evidenceReviewsCount: 0,
+    peerReviewsCount: 0
   });
   const [cpdRecords, setCpdRecords] = useState<CPDRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,6 +106,18 @@ export const PersonalizedDashboard = () => {
         .order('created_at', { ascending: false })
         .limit(3);
 
+      // Fetch evidence reviews count
+      const { data: evidenceReviews } = await supabase
+        .from('evidence_access_logs')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user?.id || '');
+
+      // Fetch peer reviews count (reviews I've written)
+      const { data: peerReviews } = await supabase
+        .from('protocol_reviews')
+        .select('id', { count: 'exact', head: true })
+        .eq('reviewer_id', user?.id || '');
+
       setDashboardData({
         recentEvidence: evidence || [],
         savedProtocols: protocols || [],
@@ -116,7 +132,9 @@ export const PersonalizedDashboard = () => {
           message: n.message,
           time: new Date(n.created_at).toLocaleDateString()
         })),
-        favoriteConditions: preferences?.preferred_conditions || []
+        favoriteConditions: preferences?.preferred_conditions || [],
+        evidenceReviewsCount: evidenceReviews?.length || 0,
+        peerReviewsCount: peerReviews?.length || 0
       });
 
     } catch (error: any) {
@@ -293,8 +311,8 @@ export const PersonalizedDashboard = () => {
         <QuickStatsCard
           icon={BookOpen}
           title="Evidence Reviews"
-          value="47"
-          trend={12}
+          value={dashboardData.evidenceReviewsCount}
+          trend={null}
           color="bg-blue-500"
         />
         <QuickStatsCard
@@ -308,14 +326,14 @@ export const PersonalizedDashboard = () => {
           icon={Award}
           title="CPD Hours"
           value={dashboardData.cpdProgress?.completed || 0}
-          trend={8}
+          trend={null}
           color="bg-purple-500"
         />
         <QuickStatsCard
           icon={Star}
           title="Peer Reviews"
-          value="12"
-          trend={25}
+          value={dashboardData.peerReviewsCount}
+          trend={null}
           color="bg-orange-500"
         />
       </div>
