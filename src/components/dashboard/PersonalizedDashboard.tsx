@@ -204,6 +204,10 @@ export const PersonalizedDashboard = () => {
     // Determine the best external link for the evidence
     const getEvidenceLink = () => {
       if (evidence.doi) {
+        // Special handling for Cochrane DOIs
+        if (evidence.doi.includes('14651858') || evidence.journal?.toLowerCase().includes('cochrane')) {
+          return `https://www.cochranelibrary.com/cdsr/doi/${evidence.doi}/full`;
+        }
         return `https://doi.org/${evidence.doi}`;
       }
       if (evidence.pmid) {
