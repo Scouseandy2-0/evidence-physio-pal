@@ -23,17 +23,17 @@ serve(async (req) => {
     // Update existing guidelines with correct NICE URLs
     const updates = [
       {
-        searchTerm: 'Low back pain and sciatica',
+        searchTerm: 'Low back pain',
         url: 'https://www.nice.org.uk/guidance/ng59',
         title: 'Low back pain and sciatica in over 16s: assessment and management'
       },
       {
-        searchTerm: 'Stroke rehabilitation',
+        searchTerm: 'Stroke',
         url: 'https://www.nice.org.uk/guidance/ng236',
         title: 'Stroke rehabilitation in adults'
       },
       {
-        searchTerm: 'Chronic obstructive pulmonary disease',
+        searchTerm: 'COPD',
         url: 'https://www.nice.org.uk/guidance/ng115',
         title: 'Chronic obstructive pulmonary disease in over 16s: diagnosis and management'
       },
@@ -46,6 +46,31 @@ serve(async (req) => {
         searchTerm: 'Physical activity',
         url: 'https://www.nice.org.uk/guidance/ph44',
         title: 'Physical activity: brief advice for adults in primary care'
+      },
+      {
+        searchTerm: 'Rheumatoid arthritis',
+        url: 'https://www.nice.org.uk/guidance/ng100',
+        title: 'Rheumatoid arthritis in adults: management'
+      },
+      {
+        searchTerm: 'Falls',
+        url: 'https://www.nice.org.uk/guidance/cg161',
+        title: 'Falls in older people: assessing risk and prevention'
+      },
+      {
+        searchTerm: 'Multiple sclerosis',
+        url: 'https://www.nice.org.uk/guidance/ng220',
+        title: 'Multiple sclerosis in adults: management'
+      },
+      {
+        searchTerm: 'Spinal injury',
+        url: 'https://www.nice.org.uk/guidance/ng41',
+        title: 'Spinal injury: assessment and initial management'
+      },
+      {
+        searchTerm: "Parkinson",
+        url: 'https://www.nice.org.uk/guidance/ng71',
+        title: "Parkinson's disease in adults"
       }
     ];
 
