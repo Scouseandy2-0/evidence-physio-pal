@@ -31,14 +31,11 @@ export const AuthPage = () => {
         setSession(session);
         setUser(session?.user ?? null);
         
-        if (session?.user) {
-          console.log('AuthPage: User authenticated, redirecting to home');
-          if (window.location.hash) {
-            const url = new URL(window.location.href);
-            url.hash = '';
-            window.history.replaceState({}, document.title, url.toString());
-          }
-          setTimeout(() => navigate("/"), 100);
+        // Clean up auth hash fragments if present
+        if (session?.user && window.location.hash) {
+          const url = new URL(window.location.href);
+          url.hash = '';
+          window.history.replaceState({}, document.title, url.toString());
         }
         
         setAuthLoading(false);
@@ -56,14 +53,10 @@ export const AuthPage = () => {
       setSession(session);
       setUser(session?.user ?? null);
       
-      if (session?.user) {
-        console.log('AuthPage: User authenticated, redirecting to home');
-        if (window.location.hash) {
-          const url = new URL(window.location.href);
-          url.hash = '';
-          window.history.replaceState({}, document.title, url.toString());
-        }
-        setTimeout(() => navigate("/"), 100);
+      if (session?.user && window.location.hash) {
+        const url = new URL(window.location.href);
+        url.hash = '';
+        window.history.replaceState({}, document.title, url.toString());
       }
       
       setAuthLoading(false);
@@ -93,7 +86,7 @@ export const AuthPage = () => {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             first_name: firstName,
             last_name: lastName,
@@ -174,7 +167,7 @@ export const AuthPage = () => {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
@@ -213,7 +206,7 @@ export const AuthPage = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/`,
+          redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 

@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { EvidenceSyncService } from "@/services/evidenceSync";
+import { useNavigate } from "react-router-dom";
 
 interface AuthContextType {
   user: User | null;
@@ -16,6 +17,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     console.log('useAuth: Setting up authentication context');
@@ -68,6 +70,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       subscription.unsubscribe();
     };
   }, []);
+
+  // Redirect authenticated users away from auth routes
+  useEffect(() => {
+    if (!loading && session?.user) {
+      const path = window.location.pathname;
+      if (path === '/auth' || path.startsWith('/auth/')) {
+        if (window.location.hash) {
+          const url = new URL(window.location.href);
+          url.hash = '';
+          window.history.replaceState({}, document.title, url.toString());
+        }
+        // Small delay to ensure session is fully propagated
+        setTimeout(() => navigate('/'), 0);
+      }
+    }
+  }, [loading, session, navigate]);
 
   const trackUserLogin = async (userId: string) => {
     try {

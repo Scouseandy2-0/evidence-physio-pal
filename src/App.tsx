@@ -28,6 +28,7 @@ import { SubscriptionSuccessPage } from "./components/subscription/SubscriptionS
 import { AdvancedFeatures } from "./components/advanced/AdvancedFeatures";
 import { HealthcareProviderVerification } from "./components/admin/HealthcareProviderVerification";
 import { OnboardingFlow } from "./components/onboarding/OnboardingFlow";
+import AuthCallback from "./pages/AuthCallback";
 
 
 
@@ -44,9 +45,10 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
-                <Route path="/onboarding" element={<OnboardingFlow />} />
-                <Route path="/auth" element={<AuthPage />} />
-                <Route path="/dashboard" element={<PersonalizedDashboard />} />
+<Route path="/onboarding" element={<OnboardingFlow />} />
+<Route path="/auth" element={<AuthPage />} />
+<Route path="/auth/callback" element={<AuthCallback />} />
+<Route path="/dashboard" element={<PersonalizedDashboard />} />
                 <Route path="/conditions" element={<ConditionsPage />} />
                 <Route path="/assessments" element={<AssessmentsPage />} />
                 <Route path="/assessment/:toolId" element={<AssessmentPage />} />

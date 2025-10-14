@@ -33,6 +33,13 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   const isNavigation = req.mode === 'navigate';
   const isCoreAsset = ['script', 'style', 'worker'].includes(req.destination);
+  const url = new URL(req.url);
+
+  // Always bypass cache for auth callback to avoid stale app shell during login
+  if (isNavigation && url.pathname.startsWith('/auth/callback')) {
+    event.respondWith(fetch(req));
+    return;
+  }
 
   if (isNavigation || isCoreAsset) {
     event.respondWith(

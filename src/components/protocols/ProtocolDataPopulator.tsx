@@ -8,6 +8,22 @@ import { toast } from "sonner";
 
 export const ProtocolDataPopulator = () => {
   const [isPopulating, setIsPopulating] = useState(false);
+
+  // Basic schema validation for protocol JSON
+  const validateProtocol = (data: any) => {
+    const required = [
+      'name','description','protocol_steps','duration_weeks','frequency_per_week','contraindications','precautions','expected_outcomes'
+    ];
+    for (const key of required) {
+      if (!(key in data)) return { valid: false, reason: `Missing key: ${key}` };
+    }
+    if (!Array.isArray(data.protocol_steps)) return { valid: false, reason: 'protocol_steps must be an array' };
+    if (typeof data.duration_weeks !== 'number') return { valid: false, reason: 'duration_weeks must be a number' };
+    if (typeof data.frequency_per_week !== 'number') return { valid: false, reason: 'frequency_per_week must be a number' };
+    if (!Array.isArray(data.contraindications)) return { valid: false, reason: 'contraindications must be an array' };
+    if (!Array.isArray(data.precautions)) return { valid: false, reason: 'precautions must be an array' };
+    return { valid: true };
+  };
   const [populatedCount, setPopulatedCount] = useState(0);
 
   const generateTreatmentProtocol = async (condition: any) => {
@@ -48,7 +64,9 @@ export const ProtocolDataPopulator = () => {
           cleanedResponse = cleanedResponse.replace(/^```\s*\n/, '').replace(/\n```$/, '');
         }
         
-        const protocolData = JSON.parse(cleanedResponse);
+        let protocolData = JSON.parse(cleanedResponse);
+        const validation = validateProtocol(protocolData);
+        if (!validation.valid) throw new Error(validation.reason || 'Invalid protocol schema');
         
         const { error: insertError } = await supabase
           .from('treatment_protocols')
@@ -70,8 +88,51 @@ export const ProtocolDataPopulator = () => {
         
         return true;
       } catch (parseError) {
-        console.error('Failed to parse AI response for', condition.name, parseError);
-        return false;
+        console.warn('Parse/validation failed for', condition.name, parseError);
+        // Retry once with a strict format-only prompt
+        try {
+          const retry = await supabase.functions.invoke('ai-chat', {
+            body: {
+              messages: [{
+                role: 'user',
+                content: `Return ONLY a valid JSON object with keys: name, description, protocol_steps, duration_weeks, frequency_per_week, contraindications, precautions, expected_outcomes. No markdown, no code fences, no commentary. Ensure protocol_steps is an array, duration_weeks and frequency_per_week are numbers. Condition: ${condition.name}`
+              }],
+              specialty: 'physiotherapy'
+            }
+          });
+          if (retry.error) throw retry.error;
+
+          let cleaned = (retry.data.response || '').trim();
+          if (cleaned.startsWith('```json')) cleaned = cleaned.replace(/^```json\s*\n/, '').replace(/\n```$/, '');
+          else if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```\s*\n/, '').replace(/\n```$/, '');
+
+          const retriedData = JSON.parse(cleaned);
+          const valid2 = validateProtocol(retriedData);
+          if (!valid2.valid) throw new Error(valid2.reason || 'Invalid protocol schema after retry');
+
+          const { error: insertError2 } = await supabase
+            .from('treatment_protocols')
+            .insert({
+              name: retriedData.name,
+              description: retriedData.description,
+              condition_id: condition.id,
+              protocol_steps: retriedData.protocol_steps,
+              duration_weeks: retriedData.duration_weeks,
+              frequency_per_week: retriedData.frequency_per_week,
+              contraindications: retriedData.contraindications,
+              precautions: retriedData.precautions,
+              expected_outcomes: retriedData.expected_outcomes,
+              created_by: null,
+              is_validated: true
+            });
+
+          if (insertError2) throw insertError2;
+          return true;
+        } catch (retryError) {
+          console.error('Retry failed for', condition.name, retryError);
+          toast.error(`Failed to parse AI response for ${condition.name}`);
+          return false;
+        }
       }
     } catch (error) {
       console.error('Error generating protocol for', condition.name, error);
