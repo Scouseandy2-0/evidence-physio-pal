@@ -2,18 +2,24 @@ import { Button } from "@/components/ui/button"
 import { Search, Menu, User, FileText, Brain, LogOut, BarChart3, Users, Share2, Crown } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import { useSubscription } from "@/hooks/useSubscription"
-import { Link } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 
 export const Header = () => {
   const { user, signOut } = useAuth();
   const { subscribed } = useSubscription();
+  const location = useLocation();
+  
+  // Show all tabs when on dashboard or when user is authenticated
+  const showAllTabs = user && (location.pathname === '/dashboard' || location.pathname.startsWith('/dashboard'));
   
   // Debug logging for auth and subscription status
   console.log("📊 Header status:", { 
     hasUser: !!user, 
     userEmail: user?.email, 
     subscribed,
-    showUpgradeButton: !!user && !subscribed
+    showUpgradeButton: !!user && !subscribed,
+    currentPath: location.pathname,
+    showAllTabs
   });
 
   return (
@@ -61,7 +67,7 @@ export const Header = () => {
                 Assessments
               </Link>
             </Button>
-            {user && (
+            {(user || showAllTabs) && (
               <>
                 <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" asChild>
                   <Link to="/guidelines">
