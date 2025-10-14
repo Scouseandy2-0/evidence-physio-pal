@@ -31,13 +31,16 @@ export const AuthPage = () => {
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Clean up auth hash fragments if present
-        if (session?.user && window.location.hash) {
-          const url = new URL(window.location.href);
-          url.hash = '';
-          window.history.replaceState({}, document.title, url.toString());
+        if (session?.user) {
+          console.log('AuthPage: User authenticated, redirecting to home');
+          if (window.location.hash) {
+            const url = new URL(window.location.href);
+            url.hash = '';
+            window.history.replaceState({}, document.title, url.toString());
+          }
+          setTimeout(() => navigate("/"), 100);
         }
-        
+
         setAuthLoading(false);
       }
     );
@@ -53,12 +56,16 @@ export const AuthPage = () => {
       setSession(session);
       setUser(session?.user ?? null);
       
-      if (session?.user && window.location.hash) {
-        const url = new URL(window.location.href);
-        url.hash = '';
-        window.history.replaceState({}, document.title, url.toString());
+      if (session?.user) {
+        console.log('AuthPage: User authenticated, redirecting to home');
+        if (window.location.hash) {
+          const url = new URL(window.location.href);
+          url.hash = '';
+          window.history.replaceState({}, document.title, url.toString());
+        }
+        setTimeout(() => navigate("/"), 100);
       }
-      
+
       setAuthLoading(false);
     }).catch((error) => {
       console.error('AuthPage: Session check failed:', error);
