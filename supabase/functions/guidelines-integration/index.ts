@@ -70,6 +70,15 @@ const REAL_NICE_GUIDELINES: Record<string, Array<{
   ],
   'spinal cord injury': [
     { code: 'NG211', title: 'Rehabilitation after traumatic injury', year: 2022, url: 'https://www.nice.org.uk/guidance/ng211' }
+  ],
+  'rheumatoid arthritis': [
+    { code: 'NG100', title: 'Rheumatoid arthritis in adults: management', year: 2018, url: 'https://www.nice.org.uk/guidance/ng100' }
+  ],
+  'psoriatic arthritis': [
+    { code: 'NG220', title: 'Psoriatic arthritis: assessment and management', year: 2022, url: 'https://www.nice.org.uk/guidance/ng220' }
+  ],
+  'ankylosing spondylitis': [
+    { code: 'NG65', title: 'Spondyloarthritis in over 16s: diagnosis and management', year: 2017, url: 'https://www.nice.org.uk/guidance/ng65' }
   ]
 };
 
@@ -206,6 +215,18 @@ function getDefaultRecommendations(condition: string): string[] {
       'Offer pulmonary rehabilitation to all appropriate patients',
       'Include exercise training as a core component',
       'Provide education and self-management support'
+    ];
+  } else if (conditionLower.includes('rheumatoid') || conditionLower.includes('arthritis')) {
+    return [
+      'Offer a combination of pharmacological and non-pharmacological treatments',
+      'Provide access to physiotherapy and occupational therapy',
+      'Support self-management and provide patient education'
+    ];
+  } else if (conditionLower.includes('spondylitis') || conditionLower.includes('psoriatic')) {
+    return [
+      'Offer structured exercise programmes to maintain flexibility and function',
+      'Provide access to specialist physiotherapy services',
+      'Consider group exercise programmes for ongoing management'
     ];
   } else {
     return [

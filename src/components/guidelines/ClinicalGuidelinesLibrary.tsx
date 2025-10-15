@@ -113,6 +113,10 @@ export const ClinicalGuidelinesLibrary = () => {
     if (tagStr.includes('copd') || tagStr.includes('respiratory') || tagStr.includes('pulmonary')) {
       return 'Respiratory';
     }
+    if (tagStr.includes('rheumatoid') || tagStr.includes('arthritis') || tagStr.includes('lupus') || 
+        tagStr.includes('spondylitis') || tagStr.includes('psoriatic') || tagStr.includes('rheumatology')) {
+      return 'Rheumatology';
+    }
     return 'General';
   };
 
@@ -383,11 +387,12 @@ export const ClinicalGuidelinesLibrary = () => {
       </div>
 
       <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="all">All Guidelines</TabsTrigger>
           <TabsTrigger value="MSK">MSK</TabsTrigger>
           <TabsTrigger value="Neurological">Neurological</TabsTrigger>
           <TabsTrigger value="Respiratory">Respiratory</TabsTrigger>
+          <TabsTrigger value="Rheumatology">Rheumatology</TabsTrigger>
         </TabsList>
 
         <TabsContent value={selectedCategory} className="space-y-6">
