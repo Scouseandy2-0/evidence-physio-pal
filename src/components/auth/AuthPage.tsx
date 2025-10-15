@@ -93,7 +93,7 @@ export const AuthPage = () => {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/`,
           data: {
             first_name: firstName,
             last_name: lastName,
@@ -174,7 +174,7 @@ export const AuthPage = () => {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/`,
         },
       });
 
@@ -213,7 +213,7 @@ export const AuthPage = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/`,
         },
       });
 
