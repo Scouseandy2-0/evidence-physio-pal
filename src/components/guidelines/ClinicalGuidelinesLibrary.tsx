@@ -147,11 +147,30 @@ export const ClinicalGuidelinesLibrary = () => {
 
   const fetchMoreGuidelines = async () => {
     try {
+      setLoading(true);
+      
+      // Determine search terms based on selected category
+      let searchTerms = 'physiotherapy';
+      if (selectedCategory !== 'all') {
+        const categoryTerms: Record<string, string> = {
+          'MSK': 'musculoskeletal low back pain osteoarthritis',
+          'Neurological': 'stroke neurological rehabilitation',
+          'Respiratory': 'copd respiratory pulmonary',
+          'Rheumatology': 'rheumatoid arthritis psoriatic arthritis ankylosing spondylitis'
+        };
+        searchTerms = categoryTerms[selectedCategory] || 'physiotherapy';
+      }
+
+      toast({
+        title: "Fetching Guidelines",
+        description: `Searching for ${selectedCategory === 'all' ? 'general' : selectedCategory} guidelines...`,
+      });
+
       const { data, error } = await supabase.functions.invoke('guidelines-integration', {
         body: {
-          searchTerms: 'physiotherapy',
-          organization: 'all',
-          condition: ''
+          searchTerms,
+          organization: 'NICE',
+          condition: searchTerms
         }
       });
 
@@ -159,17 +178,19 @@ export const ClinicalGuidelinesLibrary = () => {
 
       toast({
         title: "Guidelines Updated",
-        description: `Successfully fetched ${data.guidelines?.length || 0} new guidelines`,
+        description: data.message || `Successfully processed ${data.guidelines?.length || 0} guidelines`,
       });
 
       // Refresh the guidelines list
       await fetchGuidelines();
     } catch (error: any) {
       toast({
-        title: "Error fetching new guidelines",
-        description: error.message,
+        title: "Error fetching guidelines",
+        description: error.message || "Failed to fetch NICE guidelines. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -401,12 +422,12 @@ export const ClinicalGuidelinesLibrary = () => {
               Showing {filteredGuidelines.length} of {guidelines.length} guidelines
             </p>
             <div className="flex gap-2">
-              <Button onClick={fixGuidelineUrls} variant="outline" size="sm">
+              <Button onClick={fixGuidelineUrls} variant="outline" size="sm" disabled={loading}>
                 Fix URLs
               </Button>
-              <Button onClick={fetchMoreGuidelines} variant="outline">
+              <Button onClick={fetchMoreGuidelines} variant="default" disabled={loading}>
                 <Star className="h-4 w-4 mr-2" />
-                Fetch NICE Guidelines
+                {loading ? 'Fetching...' : 'Fetch NICE Guidelines'}
               </Button>
             </div>
           </div>
@@ -425,9 +446,9 @@ export const ClinicalGuidelinesLibrary = () => {
                 <p className="text-muted-foreground mb-4">
                   Try adjusting your search or filter criteria, or fetch the latest guidelines from NICE.
                 </p>
-                <Button onClick={fetchMoreGuidelines}>
+                <Button onClick={fetchMoreGuidelines} disabled={loading}>
                   <Star className="h-4 w-4 mr-2" />
-                  Fetch NICE Guidelines
+                  {loading ? 'Fetching...' : 'Fetch NICE Guidelines'}
                 </Button>
               </CardContent>
             </Card>
