@@ -30,6 +30,8 @@ import { HealthcareProviderVerification } from "./components/admin/HealthcarePro
 import { OnboardingFlow } from "./components/onboarding/OnboardingFlow";
 import { DataPopulationPage } from "./pages/DataPopulationPage";
 import AuthCallback from "./pages/AuthCallback";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import ContactUsPage from "./pages/ContactUsPage";
 
 
 
@@ -67,6 +69,8 @@ const App = () => (
                 <Route path="/verification" element={<HealthcareProviderVerification />} />
                 <Route path="/security" element={<SecurityPage />} />
                 <Route path="/populate-data" element={<DataPopulationPage />} />
+                <Route path="/privacy" element={<PrivacyPolicyPage />} />
+                <Route path="/contact" element={<ContactUsPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
