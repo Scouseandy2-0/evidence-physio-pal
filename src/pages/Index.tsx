@@ -5,6 +5,7 @@ import { FeaturesSection } from "@/components/FeaturesSection"
 import { EvidenceIntegration } from "@/components/evidence/EvidenceIntegration"
 import { RealDataDashboard } from "@/components/dashboard/RealDataDashboard"
 import { useAuth } from "@/hooks/useAuth"
+import { useSubscription } from "@/hooks/useSubscription"
 import { useDataPopulation } from "@/hooks/useDataPopulation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,6 +24,7 @@ import {
 
 const Index = () => {
   const { user } = useAuth();
+  const { subscribed } = useSubscription();
   const { isPopulating } = useDataPopulation();
 
   return (
@@ -31,8 +33,8 @@ const Index = () => {
       <main>
         <HeroSection />
         
-        {/* Quick Start Guide - Only show for non-authenticated users */}
-        {!user && (
+        {/* Quick Start Guide - Only show for non-subscribed users */}
+        {!subscribed && (
           <section className="py-16 bg-gradient-to-br from-medical-blue/5 to-medical-green/5">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
               <div className="text-center mb-12">
