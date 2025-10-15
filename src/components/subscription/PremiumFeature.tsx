@@ -94,9 +94,12 @@ interface FreeTierBannerProps {
 }
 
 export const FreeTierBanner = ({ currentItem, totalItems, category }: FreeTierBannerProps) => {
-  const { hasAccess } = useSubscription();
+  const { hasAccess, subscribed, subscriptionTier, loading } = useSubscription();
   const { user } = useAuth();
 
+  console.log('FreeTierBanner:', { hasAccess: hasAccess('basic'), subscribed, subscriptionTier, loading, user: !!user });
+
+  if (loading) return null;
   if (hasAccess('basic')) return null;
 
   return (
