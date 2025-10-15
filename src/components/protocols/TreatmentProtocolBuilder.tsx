@@ -115,6 +115,7 @@ export const TreatmentProtocolBuilder = () => {
 
   const [editingStep, setEditingStep] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
 
   const [conditions, setConditions] = useState<Array<{ id: string; name: string; category: string }>>([]);
   const [loadingConditions, setLoadingConditions] = useState(true);
@@ -664,15 +665,120 @@ export const TreatmentProtocolBuilder = () => {
                   {saving ? 'Saving...' : 'Save Protocol'}
                 </Button>
                 
-                <Button variant="outline" className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => setPreviewMode(!previewMode)}
+                  disabled={!protocol.name || protocol.protocol_steps.length === 0}
+                >
                   <Eye className="h-4 w-4 mr-2" />
-                  Preview Protocol
+                  {previewMode ? 'Hide Preview' : 'Preview Protocol'}
                 </Button>
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Protocol Preview Modal/Section */}
+      {previewMode && protocol.protocol_steps.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Protocol Preview</CardTitle>
+            <CardDescription>{protocol.description}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="font-medium">Condition:</span> {selectedCondition?.name || 'N/A'}
+              </div>
+              <div>
+                <span className="font-medium">Duration:</span> {protocol.duration_weeks} weeks
+              </div>
+              <div>
+                <span className="font-medium">Frequency:</span> {protocol.frequency_per_week}x per week
+              </div>
+              <div>
+                <span className="font-medium">Total Phases:</span> {protocol.protocol_steps.length}
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <h4 className="font-semibold">Treatment Phases</h4>
+              {protocol.protocol_steps.map((step, idx) => (
+                <Card key={step.id}>
+                  <CardHeader>
+                    <CardTitle className="text-base">Phase {idx + 1}: {step.phase}</CardTitle>
+                    <CardDescription>Duration: {step.duration}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {step.exercises.length > 0 && (
+                      <div>
+                        <p className="text-sm font-medium mb-2">Exercises:</p>
+                        <ul className="list-disc list-inside space-y-1 text-sm">
+                          {step.exercises.map(ex => (
+                            <li key={ex}>{ex}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {step.goals.length > 0 && (
+                      <div>
+                        <p className="text-sm font-medium mb-2">Goals:</p>
+                        <ul className="list-disc list-inside space-y-1 text-sm">
+                          {step.goals.map(g => (
+                            <li key={g}>{g}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {protocol.expected_outcomes && (
+              <>
+                <Separator />
+                <div>
+                  <h4 className="font-semibold mb-2">Expected Outcomes</h4>
+                  <p className="text-sm text-muted-foreground">{protocol.expected_outcomes}</p>
+                </div>
+              </>
+            )}
+
+            {(protocol.contraindications.length > 0 || protocol.precautions.length > 0) && (
+              <>
+                <Separator />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {protocol.contraindications.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-2 text-destructive">Contraindications</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm">
+                        {protocol.contraindications.map((c, i) => (
+                          <li key={i}>{c}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {protocol.precautions.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-2 text-amber-600">Precautions</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm">
+                        {protocol.precautions.map((p, i) => (
+                          <li key={i}>{p}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
         </TabsContent>
       </Tabs>
     </div>
