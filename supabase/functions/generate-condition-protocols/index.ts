@@ -331,35 +331,64 @@ Format your response as a JSON object with this exact structure:
 
 Base all recommendations strictly on the provided evidence. Include evidence levels when possible.`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'openai/gpt-5-mini', // More reliable JSON adherence
-        response_format: { type: 'json_object' },
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert physiotherapist specializing in evidence-based practice. Always return ONLY a valid JSON object matching the requested schema. No markdown, no extra text.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ]
-      }),
-    });
+    let data: any | null = null;
+    let model = 'openai/gpt-5-mini';
+    let lastError = '';
 
-    if (!response.ok) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${lovableApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          response_format: { type: 'json_object' },
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert physiotherapist specializing in evidence-based practice. Always return ONLY a valid JSON object matching the requested schema. No markdown, no extra text.'
+            },
+            { role: 'user', content: prompt }
+          ]
+        }),
+      });
+
+      if (response.ok) {
+        data = await response.json();
+        break;
+      }
+
       const errorText = await response.text();
-      console.error(`OpenAI API error for ${condition.name}:`, response.status, errorText);
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+      lastError = `AI gateway error ${response.status}: ${errorText}`;
+      console.error(`AI gateway error for ${condition.name} (attempt ${attempt}):`, response.status, errorText);
+
+      // Surface special cases immediately
+      if (response.status === 429) {
+        throw new Error('AI rate limits exceeded. Please wait a bit and retry.');
+      }
+      if (response.status === 402) {
+        throw new Error('Payment required for Lovable AI usage. Please add credits to your workspace.');
+      }
+
+      // Try a fallback model on the next attempt
+      if (attempt === 2) {
+        console.warn('Switching to fallback model google/gemini-2.5-flash');
+        model = 'google/gemini-2.5-flash';
+      }
+
+      // Backoff before retrying
+      await new Promise((res) => setTimeout(res, 500 * attempt));
     }
 
-    const data = await response.json();
+    if (!data) {
+      if (/cloudflare|cf-/i.test(lastError) || /(52[0-6]|520)/.test(lastError)) {
+        throw new Error('Temporary Cloudflare edge error while contacting AI. Please retry shortly.');
+      }
+      throw new Error(lastError || 'Unknown AI gateway error');
+    }
+
     let contentRaw = data.choices?.[0]?.message?.content ?? '';
     let content = typeof contentRaw === 'string' ? contentRaw : JSON.stringify(contentRaw);
     
