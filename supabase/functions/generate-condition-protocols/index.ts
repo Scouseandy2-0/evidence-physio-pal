@@ -338,11 +338,12 @@ Base all recommendations strictly on the provided evidence. Include evidence lev
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-lite', // Faster model for quick generation
+        model: 'openai/gpt-5-mini', // More reliable JSON adherence
+        response_format: { type: 'json_object' },
         messages: [
           {
             role: 'system',
-            content: 'You are an expert physiotherapist specializing in evidence-based practice. Create comprehensive, clinically sound treatment protocols based on the latest research evidence. Always format responses as valid JSON.'
+            content: 'You are an expert physiotherapist specializing in evidence-based practice. Always return ONLY a valid JSON object matching the requested schema. No markdown, no extra text.'
           },
           {
             role: 'user',
@@ -359,12 +360,13 @@ Base all recommendations strictly on the provided evidence. Include evidence lev
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
+    let contentRaw = data.choices?.[0]?.message?.content ?? '';
+    let content = typeof contentRaw === 'string' ? contentRaw : JSON.stringify(contentRaw);
     
-    console.log(`Raw AI response for ${condition.name}:`, content.substring(0, 200) + '...');
+    console.log(`Raw AI response for ${condition.name}:`, (content || '').toString().slice(0, 200) + '...');
     
     // Clean the content - remove markdown code blocks if present
-    let cleanContent = content.trim();
+    let cleanContent = (content || '').toString().trim();
     if (cleanContent.startsWith('```json')) {
       cleanContent = cleanContent.replace(/^```json\n?/, '').replace(/\n?```$/, '');
     } else if (cleanContent.startsWith('```')) {
@@ -378,16 +380,31 @@ Base all recommendations strictly on the provided evidence. Include evidence lev
       cleanContent = cleanContent.substring(jsonStart, jsonEnd + 1);
     }
     
+    // Soft fixes for common JSON issues from models
+    cleanContent = cleanContent
+      // remove trailing commas before closing objects/arrays
+      .replace(/,\s*([}\]])/g, '$1')
+      // replace single quotes with double quotes when used as JSON quotes
+      .replace(/\"/g, '"');
+    
     console.log(`Cleaned content for ${condition.name}:`, cleanContent.substring(0, 200) + '...');
     
     // Parse the JSON response
-    let protocolData;
+    let protocolData: any;
     try {
       protocolData = JSON.parse(cleanContent);
     } catch (parseError) {
       console.error(`Failed to parse AI response for ${condition.name}:`, parseError);
       console.error('Content that failed to parse:', cleanContent);
       throw new Error(`Failed to parse AI response for ${condition.name}: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+    }
+    
+    // Handle possible wrapper object variations
+    if (protocolData && protocolData.protocol) {
+      protocolData = protocolData.protocol;
+    }
+    if (!protocolData.phases && protocolData.protocol_steps?.phases) {
+      protocolData.phases = protocolData.protocol_steps.phases;
     }
     
     // Validate required fields
