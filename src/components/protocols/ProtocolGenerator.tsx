@@ -55,38 +55,49 @@ export const ProtocolGenerator = () => {
 
       console.log(`Starting protocol generation for ${total} conditions`);
 
-      for (const condition of conditions || []) {
-        setCurrentCondition(condition.name);
-        console.log(`[${processed + 1}/${total}] Processing: ${condition.name}`);
+      // Process in batches (backend processes 3 at once)
+      const DISPLAY_BATCH_SIZE = 3;
+      for (let i = 0; i < conditions.length; i += DISPLAY_BATCH_SIZE) {
+        const batch = conditions.slice(i, Math.min(i + DISPLAY_BATCH_SIZE, conditions.length));
         
-        try {
-          const { data, error } = await supabase.functions.invoke('generate-condition-protocols', {
-            body: { conditionId: condition.id }
-          });
+        // Process batch
+        const batchPromises = batch.map(async (condition) => {
+          setCurrentCondition(condition.name);
+          console.log(`[${i + batch.indexOf(condition) + 1}/${total}] Processing: ${condition.name}`);
           
-          if (error) {
-            console.error(`Error for ${condition.name}:`, error);
-            errors.push(`${condition.name}: ${error.message || 'invoke error'}`);
-          } else if (data?.error) {
-            console.error(`Data error for ${condition.name}:`, data.error);
-            errors.push(`${condition.name}: ${data.error}`);
-          } else {
-            const genCount = data?.results?.generatedProtocols ?? 0;
-            generated += genCount;
-            console.log(`✓ ${condition.name}: Generated ${genCount} protocol(s)`);
+          try {
+            const { data, error } = await supabase.functions.invoke('generate-condition-protocols', {
+              body: { conditionId: condition.id }
+            });
+            
+            if (error) {
+              console.error(`Error for ${condition.name}:`, error);
+              errors.push(`${condition.name}: ${error.message || 'invoke error'}`);
+              return 0;
+            } else if (data?.error) {
+              console.error(`Data error for ${condition.name}:`, data.error);
+              errors.push(`${condition.name}: ${data.error}`);
+              return 0;
+            } else {
+              const genCount = data?.results?.generatedProtocols ?? 0;
+              console.log(`✓ ${condition.name}: Generated ${genCount} protocol(s)`);
+              return genCount;
+            }
+          } catch (e: any) {
+            console.error(`Exception for ${condition.name}:`, e);
+            errors.push(`${condition.name}: ${e?.message || 'request failed'}`);
+            return 0;
           }
-        } catch (e: any) {
-          console.error(`Exception for ${condition.name}:`, e);
-          errors.push(`${condition.name}: ${e?.message || 'request failed'}`);
-        }
+        });
+
+        // Wait for batch to complete
+        const batchResults = await Promise.all(batchPromises);
+        generated += batchResults.reduce((sum, count) => sum + count, 0);
+        processed += batch.length;
         
-        processed++;
         const newProgress = Math.round((processed / total) * 100);
         setProgress(newProgress);
-        console.log(`Progress: ${processed}/${total} (${newProgress}%)`);
-        
-        // Small delay to prevent overwhelming the system
-        await new Promise(resolve => setTimeout(resolve, 100));
+        console.log(`Batch ${Math.floor(i / DISPLAY_BATCH_SIZE) + 1} complete. Progress: ${processed}/${total} (${newProgress}%)`);
       }
 
       const finalResults = { 

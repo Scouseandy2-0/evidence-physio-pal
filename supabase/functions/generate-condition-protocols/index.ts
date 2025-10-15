@@ -103,59 +103,86 @@ serve(async (req) => {
       errors: [] as string[]
     };
 
-    // Process each condition
-    for (const condition of conditions || []) {
-      try {
-        console.log(`Processing condition: ${condition.name}`);
-        
-        // Search for evidence across multiple databases
-        const evidenceResults = await searchMultipleDatabases(condition, supabase);
-        
-        if (evidenceResults.length === 0) {
-          console.log(`No evidence found for ${condition.name}, skipping...`);
-          continue;
-        }
+    // Process conditions in batches for faster generation
+    const BATCH_SIZE = 3; // Process 3 conditions at once
+    const batches: Condition[][] = [];
+    
+    for (let i = 0; i < (conditions || []).length; i += BATCH_SIZE) {
+      batches.push((conditions || []).slice(i, i + BATCH_SIZE));
+    }
 
-        // Generate protocol using AI
-        const protocol = await generateProtocolWithAI(condition, evidenceResults, lovableApiKey, supabase);
-        
-        if (protocol) {
-          // Store the protocol in database
-          const { data: protocolData, error: protocolError } = await supabase
-            .from('treatment_protocols')
-            .insert({
-              name: protocol.name,
-              description: protocol.description,
-              condition_id: protocol.condition_id,
-              protocol_steps: protocol.protocol_steps,
-              duration_weeks: protocol.duration_weeks,
-              frequency_per_week: protocol.frequency_per_week,
-              contraindications: protocol.contraindications,
-              precautions: protocol.precautions,
-              expected_outcomes: protocol.expected_outcomes,
-              evidence_ids: protocol.evidence_ids,
-              created_by: null, // System generated
-              is_validated: true // Mark as validated since it's evidence-based
-            })
-            .select()
-            .single();
+    console.log(`Processing ${conditions?.length || 0} conditions in ${batches.length} batches of ${BATCH_SIZE}`);
 
-          if (protocolError) {
-            console.error(`Error storing protocol for ${condition.name}:`, protocolError);
-            results.errors.push(`Protocol storage failed for ${condition.name}: ${protocolError.message}`);
-          } else {
-            console.log(`Successfully generated protocol for ${condition.name}`);
-            results.generatedProtocols++;
+    // Process each batch in parallel
+    for (const batch of batches) {
+      const batchPromises = batch.map(async (condition) => {
+        try {
+          console.log(`Processing condition: ${condition.name}`);
+          
+          // Search for evidence across multiple databases (parallel)
+          const evidenceResults = await searchMultipleDatabases(condition, supabase);
+          
+          if (evidenceResults.length === 0) {
+            console.log(`No evidence found for ${condition.name}, skipping...`);
+            return { condition: condition.name, success: false, error: 'No evidence found' };
           }
-        }
 
+          // Generate protocol using AI
+          const protocol = await generateProtocolWithAI(condition, evidenceResults, lovableApiKey, supabase);
+          
+          if (protocol) {
+            // Store the protocol in database
+            const { data: protocolData, error: protocolError } = await supabase
+              .from('treatment_protocols')
+              .insert({
+                name: protocol.name,
+                description: protocol.description,
+                condition_id: protocol.condition_id,
+                protocol_steps: protocol.protocol_steps,
+                duration_weeks: protocol.duration_weeks,
+                frequency_per_week: protocol.frequency_per_week,
+                contraindications: protocol.contraindications,
+                precautions: protocol.precautions,
+                expected_outcomes: protocol.expected_outcomes,
+                evidence_ids: protocol.evidence_ids,
+                created_by: null, // System generated
+                is_validated: true // Mark as validated since it's evidence-based
+              })
+              .select()
+              .single();
+
+            if (protocolError) {
+              console.error(`Error storing protocol for ${condition.name}:`, protocolError);
+              return { condition: condition.name, success: false, error: `Storage failed: ${protocolError.message}` };
+            } else {
+              console.log(`Successfully generated protocol for ${condition.name}`);
+              return { condition: condition.name, success: true };
+            }
+          }
+
+          return { condition: condition.name, success: false, error: 'Protocol generation failed' };
+          
+        } catch (error) {
+          console.error(`Error processing ${condition.name}:`, error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          return { condition: condition.name, success: false, error: errorMessage };
+        }
+      });
+
+      // Wait for batch to complete
+      const batchResults = await Promise.all(batchPromises);
+      
+      // Update results
+      batchResults.forEach(result => {
         results.processedConditions++;
-        
-      } catch (error) {
-        console.error(`Error processing ${condition.name}:`, error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        results.errors.push(`Failed to process ${condition.name}: ${errorMessage}`);
-      }
+        if (result.success) {
+          results.generatedProtocols++;
+        } else {
+          results.errors.push(`${result.condition}: ${result.error}`);
+        }
+      });
+
+      console.log(`Batch completed. Progress: ${results.processedConditions}/${results.totalConditions}`);
     }
 
     console.log('Protocol generation completed:', results);
@@ -182,83 +209,68 @@ serve(async (req) => {
 });
 
 async function searchMultipleDatabases(condition: Condition, supabase: any): Promise<Evidence[]> {
-  const allEvidence: Evidence[] = [];
-  const searchTerms = [condition.name, ...(condition.keywords || [])].slice(0, 3); // Limit search terms safely
-
+  const searchTerms = [condition.name, ...(condition.keywords || [])].slice(0, 3);
   console.log(`Searching evidence for: ${searchTerms.join(', ')}`);
 
-  // Search PubMed
-  try {
-    const { data: pubmedData, error: pubmedError } = await supabase.functions.invoke('pubmed-integration', {
-      body: {
-        searchTerms: searchTerms[0],
-        maxResults: 10
-      }
-    });
+  // Run all searches in parallel for speed
+  const [pubmedResult, cochraneResult, pedroResult, existingEvidence] = await Promise.allSettled([
+    // Search PubMed
+    supabase.functions.invoke('pubmed-integration', {
+      body: { searchTerms: searchTerms[0], maxResults: 10 }
+    }),
+    // Search Cochrane
+    supabase.functions.invoke('cochrane-integration', {
+      body: { searchTerms: searchTerms[0], maxResults: 5 }
+    }),
+    // Search PEDro
+    supabase.functions.invoke('pedro-integration', {
+      body: { searchTerms: searchTerms[0], condition: condition.name, maxResults: 8 }
+    }),
+    // Get existing evidence from database
+    supabase
+      .from('evidence')
+      .select('*')
+      .contains('condition_ids', [condition.id])
+      .eq('is_active', true)
+      .order('publication_date', { ascending: false })
+      .limit(10)
+  ]);
 
-    if (!pubmedError && pubmedData?.studies) {
-      allEvidence.push(...pubmedData.studies.map((study: any) => ({
-        ...study,
-        source: 'PubMed'
-      })));
-    }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.log(`PubMed search failed for ${condition.name}:`, errorMessage);
+  const allEvidence: Evidence[] = [];
+
+  // Process PubMed results
+  if (pubmedResult.status === 'fulfilled' && !pubmedResult.value.error && pubmedResult.value.data?.studies) {
+    allEvidence.push(...pubmedResult.value.data.studies.map((study: any) => ({
+      ...study,
+      source: 'PubMed'
+    })));
+  } else if (pubmedResult.status === 'rejected') {
+    console.log(`PubMed search failed for ${condition.name}:`, pubmedResult.reason);
   }
 
-  // Search Cochrane
-  try {
-    const { data: cochraneData, error: cochraneError } = await supabase.functions.invoke('cochrane-integration', {
-      body: {
-        searchTerms: searchTerms[0],
-        maxResults: 5
-      }
-    });
-
-    if (!cochraneError && cochraneData?.reviews) {
-      allEvidence.push(...cochraneData.reviews.map((review: any) => ({
-        ...review,
-        source: 'Cochrane'
-      })));
-    }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.log(`Cochrane search failed for ${condition.name}:`, errorMessage);
+  // Process Cochrane results
+  if (cochraneResult.status === 'fulfilled' && !cochraneResult.value.error && cochraneResult.value.data?.reviews) {
+    allEvidence.push(...cochraneResult.value.data.reviews.map((review: any) => ({
+      ...review,
+      source: 'Cochrane'
+    })));
+  } else if (cochraneResult.status === 'rejected') {
+    console.log(`Cochrane search failed for ${condition.name}:`, cochraneResult.reason);
   }
 
-  // Search PEDro
-  try {
-    const { data: pedroData, error: pedroError } = await supabase.functions.invoke('pedro-integration', {
-      body: {
-        searchTerms: searchTerms[0],
-        condition: condition.name,
-        maxResults: 8
-      }
-    });
-
-    if (!pedroError && pedroData?.studies) {
-      allEvidence.push(...pedroData.studies.map((study: any) => ({
-        ...study,
-        source: 'PEDro'
-      })));
-    }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.log(`PEDro search failed for ${condition.name}:`, errorMessage);
+  // Process PEDro results
+  if (pedroResult.status === 'fulfilled' && !pedroResult.value.error && pedroResult.value.data?.studies) {
+    allEvidence.push(...pedroResult.value.data.studies.map((study: any) => ({
+      ...study,
+      source: 'PEDro'
+    })));
+  } else if (pedroResult.status === 'rejected') {
+    console.log(`PEDro search failed for ${condition.name}:`, pedroResult.reason);
   }
 
-  // Get existing evidence from database
-  const { data: existingEvidence } = await supabase
-    .from('evidence')
-    .select('*')
-    .contains('condition_ids', [condition.id])
-    .eq('is_active', true)
-    .order('publication_date', { ascending: false })
-    .limit(10);
-
-  if (existingEvidence) {
-    allEvidence.push(...existingEvidence.map((evidence: any) => ({
+  // Process existing evidence
+  if (existingEvidence.status === 'fulfilled' && existingEvidence.value.data) {
+    allEvidence.push(...existingEvidence.value.data.map((evidence: any) => ({
       ...evidence,
       source: 'Database'
     })));
@@ -326,7 +338,7 @@ Base all recommendations strictly on the provided evidence. Include evidence lev
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'google/gemini-2.5-flash-lite', // Faster model for quick generation
         messages: [
           {
             role: 'system',
