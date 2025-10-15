@@ -1,36 +1,55 @@
-{
-  "name": "evidence-physio-pal",
-  "version": "0.0.0",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview",
-    "lint": "eslint ."
-  },
-  "dependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "clsx": "^2.1.1",
-    "class-variance-authority": "^0.7.0",
-    "tailwind-merge": "^2.5.2",
-    "zustand": "^4.5.2"
-  },
-  "devDependencies": {
-    "@types/react": "^18.3.11",
-    "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.3.1",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.13",
-    "typescript": "^5.6.3",
-    "vite": "^5.4.10",
-    "eslint": "^9.11.1",
-    "@eslint/js": "^9.11.1",
-    "typescript-eslint": "^8.8.1"
-  },
-  "engines": {
-    "node": ">=18.18.0"
-  }
-}
+From 3a7f2c9d4e5b6a7c8d90123456789abcdef012345 Mon Sep 17 00:00:00 2001
+From: Andrew’s helper <dev@local>
+Date: Wed, 15 Oct 2025 22:00:05 +0100
+Subject: [PATCH 2/2] chore(package): fix invalid JSON and align deps with Vite
+ 5 / React 18
+
+---
+ package.json | 56 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 56 insertions(+)
+ create mode 100644 package.json
+
+diff --git a/package.json b/package.json
+new file mode 100644
+index 0000000..2222222
+--- /dev/null
++++ b/package.json
+@@ -0,0 +1,56 @@
++{
++  "name": "evidence-physio-pal",
++  "version": "0.0.0",
++  "private": true,
++  "type": "module",
++  "scripts": {
++    "dev": "vite",
++    "build": "tsc -b && vite build",
++    "preview": "vite preview",
++    "lint": "eslint ."
++  },
++  "dependencies": {
++    "react": "^18.3.1",
++    "react-dom": "^18.3.1",
++    "clsx": "^2.1.1",
++    "class-variance-authority": "^0.7.0",
++    "tailwind-merge": "^2.5.2",
++    "zustand": "^4.5.2"
++  },
++  "devDependencies": {
++    "@types/react": "^18.3.11",
++    "@types/react-dom": "^18.3.1",
++    "@vitejs/plugin-react": "^4.3.1",
++    "autoprefixer": "^10.4.20",
++    "postcss": "^8.4.49",
++    "tailwindcss": "^3.4.13",
++    "typescript": "^5.6.3",
++    "vite": "^5.4.10",
++    "eslint": "^9.11.1",
++    "@eslint/js": "^9.11.1",
++    "typescript-eslint": "^8.8.1"
++  },
++  "engines": {
++    "node": ">=18.18.0"
++  }
++}
+--
+2.46.0
