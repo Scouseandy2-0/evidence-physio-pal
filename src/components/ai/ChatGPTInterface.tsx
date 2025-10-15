@@ -164,6 +164,7 @@ How can I assist you today?`,
       }
 
       let buffer = '';
+      const assistantMessageId = assistantMessage.id;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -176,22 +177,28 @@ How can I assist you today?`,
         buffer = lines.pop() || '';
 
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.content) {
-                setMessages(prev => {
-                  const updated = [...prev];
-                  const lastMessage = updated[updated.length - 1];
-                  if (lastMessage && lastMessage.role === 'assistant') {
-                    lastMessage.content += data.content;
-                  }
-                  return updated;
-                });
-              }
-            } catch (e) {
-              console.error('Error parsing streaming data:', e);
+          const trimmedLine = line.trim();
+          if (!trimmedLine || trimmedLine.startsWith(':')) continue;
+          if (!trimmedLine.startsWith('data: ')) continue;
+          
+          const jsonStr = trimmedLine.slice(6);
+          if (jsonStr === '[DONE]') continue;
+
+          try {
+            const data = JSON.parse(jsonStr);
+            const content = data.choices?.[0]?.delta?.content;
+            
+            if (content) {
+              setMessages(prev => 
+                prev.map(msg => 
+                  msg.id === assistantMessageId
+                    ? { ...msg, content: msg.content + content }
+                    : msg
+                )
+              );
             }
+          } catch (e) {
+            console.error('Error parsing streaming data:', e, 'Line:', trimmedLine);
           }
         }
       }
