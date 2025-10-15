@@ -1,10 +1,39 @@
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Search, BookOpen, Users, Award } from "lucide-react"
 import { Link } from "react-router-dom"
+import { supabase } from "@/integrations/supabase/client"
 import heroImage from "@/assets/physio-hero.jpg"
 
 export const HeroSection = () => {
+  const [stats, setStats] = useState({
+    evidence: 0,
+    conditions: 0,
+    assessmentTools: 0
+  })
+
+  useEffect(() => {
+    fetchStats()
+  }, [])
+
+  const fetchStats = async () => {
+    try {
+      const [evidenceResult, conditionsResult, toolsResult] = await Promise.all([
+        supabase.from('evidence').select('*', { count: 'exact', head: true }),
+        supabase.from('conditions').select('*', { count: 'exact', head: true }),
+        supabase.from('assessment_tools').select('*', { count: 'exact', head: true })
+      ])
+
+      setStats({
+        evidence: evidenceResult.count || 0,
+        conditions: conditionsResult.count || 0,
+        assessmentTools: toolsResult.count || 0
+      })
+    } catch (error) {
+      console.error('Error fetching stats:', error)
+    }
+  }
   return (
     <section className="relative bg-gradient-to-br from-background to-neutral-50 py-20">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -44,15 +73,15 @@ export const HeroSection = () => {
             {/* Stats */}
             <div className="grid grid-cols-3 gap-6 pt-8 border-t border-border">
               <div className="text-center">
-                <div className="text-2xl font-bold text-medical-blue">137+</div>
+                <div className="text-2xl font-bold text-medical-blue">{stats.evidence}+</div>
                 <div className="text-sm text-muted-foreground">Evidence Papers</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-medical-green">39+</div>
+                <div className="text-2xl font-bold text-medical-green">{stats.conditions}+</div>
                 <div className="text-sm text-muted-foreground">Conditions</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-medical-blue">8+</div>
+                <div className="text-2xl font-bold text-medical-blue">{stats.assessmentTools}+</div>
                 <div className="text-sm text-muted-foreground">Assessment Tools</div>
               </div>
             </div>
