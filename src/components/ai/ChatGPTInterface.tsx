@@ -136,12 +136,11 @@ How can I assist you today?`,
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`,
+        `https://xbonrxqrzkuwxovyqrxx.functions.supabase.co/functions/v1/ai-chat`,
         {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({
             messages: messagesForAPI,
