@@ -21,7 +21,9 @@ interface CochraneReview {
 }
 
 async function generateCochraneReviews(searchTerms: string, maxResults: number): Promise<CochraneReview[]> {
-  const prompt = `Generate ${maxResults} realistic Cochrane systematic review entries for physiotherapy research on "${searchTerms}". Each review should be scientifically accurate and follow Cochrane standards.
+  // Limit max results to prevent timeouts
+  const safeMaxResults = Math.min(maxResults, 2);
+  const prompt = `Generate ${safeMaxResults} realistic Cochrane systematic review entries for physiotherapy research on "${searchTerms}". Each review should be scientifically accurate and follow Cochrane standards.
 
 For each review, provide:
 1. Title (should sound like a real Cochrane review)
@@ -62,9 +64,10 @@ Return as JSON array with this structure:
           },
           { role: 'user', content: prompt }
         ],
-        max_tokens: 3000,
+        max_tokens: 2000, // Reduced from 3000
         temperature: 0.7
       }),
+      signal: AbortSignal.timeout(25000) // 25 second timeout
     });
 
     if (!response.ok) {
@@ -110,7 +113,7 @@ serve(async (req) => {
   }
 
   try {
-    const { searchTerms, maxResults = 10 } = await req.json();
+    const { searchTerms, maxResults = 2 } = await req.json(); // Reduced from 10 to 2
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;

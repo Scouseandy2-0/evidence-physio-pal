@@ -175,7 +175,7 @@ export const DataPopulator = () => {
               result = await supabase.functions.invoke('cochrane-integration', {
                 body: { 
                   searchTerms: condition.name,
-                  maxResults: 3
+                  maxResults: 2  // Reduced from 3 to prevent timeouts
                 }
               });
               break;
