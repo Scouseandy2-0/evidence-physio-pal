@@ -32,7 +32,7 @@ import { DataPopulationPage } from "./pages/DataPopulationPage";
 import AuthCallback from "./pages/AuthCallback";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import ContactUsPage from "./pages/ContactUsPage";
-
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 
 
 const queryClient = new QueryClient();
@@ -51,23 +51,23 @@ const App = () => (
 <Route path="/onboarding" element={<OnboardingFlow />} />
 <Route path="/auth" element={<AuthPage />} />
 <Route path="/auth/callback" element={<AuthCallback />} />
-<Route path="/dashboard" element={<PersonalizedDashboard />} />
+                <Route path="/dashboard" element={<ProtectedRoute><PersonalizedDashboard /></ProtectedRoute>} />
                 <Route path="/conditions" element={<ConditionsPage />} />
                 <Route path="/assessments" element={<AssessmentsPage />} />
                 <Route path="/assessment/:toolId" element={<AssessmentPage />} />
-                <Route path="/protocols" element={<ProtocolsPage />} />
+                <Route path="/protocols" element={<ProtectedRoute><ProtocolsPage /></ProtectedRoute>} />
                 <Route path="/guidelines" element={<GuidelinesPage />} />
                 <Route path="/evidence" element={<EvidencePage />} />
-                <Route path="/cpd" element={<CPDPage />} />
-                <Route path="/patients" element={<PatientsPage />} />
-                <Route path="/collaboration" element={<CollaborationPage />} />
-                <Route path="/analytics" element={<AnalyticsDashboard />} />
-                <Route path="/advanced" element={<AdvancedFeatures />} />
-                <Route path="/subscription" element={<SubscriptionPage />} />
-                <Route path="/subscription-success" element={<SubscriptionSuccessPage />} />
-                <Route path="/subscription-analytics" element={<SubscriptionAnalyticsPage />} />
-                <Route path="/verification" element={<HealthcareProviderVerification />} />
-                <Route path="/security" element={<SecurityPage />} />
+                <Route path="/cpd" element={<ProtectedRoute><CPDPage /></ProtectedRoute>} />
+                <Route path="/patients" element={<ProtectedRoute><PatientsPage /></ProtectedRoute>} />
+                <Route path="/collaboration" element={<ProtectedRoute><CollaborationPage /></ProtectedRoute>} />
+                <Route path="/analytics" element={<ProtectedRoute><AnalyticsDashboard /></ProtectedRoute>} />
+                <Route path="/advanced" element={<ProtectedRoute><AdvancedFeatures /></ProtectedRoute>} />
+                <Route path="/subscription" element={<ProtectedRoute><SubscriptionPage /></ProtectedRoute>} />
+                <Route path="/subscription-success" element={<ProtectedRoute><SubscriptionSuccessPage /></ProtectedRoute>} />
+                <Route path="/subscription-analytics" element={<ProtectedRoute><SubscriptionAnalyticsPage /></ProtectedRoute>} />
+                <Route path="/verification" element={<ProtectedRoute><HealthcareProviderVerification /></ProtectedRoute>} />
+                <Route path="/security" element={<ProtectedRoute><SecurityPage /></ProtectedRoute>} />
                 <Route path="/populate-data" element={<DataPopulationPage />} />
                 <Route path="/privacy" element={<PrivacyPolicyPage />} />
                 <Route path="/contact" element={<ContactUsPage />} />
