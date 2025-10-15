@@ -6,10 +6,26 @@ const AuthCallback = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Let Supabase process the auth tokens first before redirecting
-    // The hash cleanup will be handled by useAuth after session is established
-    const t = setTimeout(() => navigate("/"), 500);
-    return () => clearTimeout(t);
+    const handleAuthCallback = async () => {
+      try {
+        // Give Supabase more time to process the auth tokens, especially in Safari
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Clean up hash to prevent reload loops in Safari
+        if (window.location.hash) {
+          const url = new URL(window.location.href);
+          url.hash = '';
+          window.history.replaceState({}, document.title, url.toString());
+        }
+        
+        navigate("/", { replace: true });
+      } catch (error) {
+        console.error('Auth callback error:', error);
+        navigate("/", { replace: true });
+      }
+    };
+
+    handleAuthCallback();
   }, [navigate]);
 
   return (
