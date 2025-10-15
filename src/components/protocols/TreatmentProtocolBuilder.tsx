@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PremiumFeature } from "@/components/subscription/PremiumFeature";
 import { useSubscription } from "@/hooks/useSubscription";
 import { ProtocolGenerator } from "./ProtocolGenerator";
@@ -116,14 +116,31 @@ export const TreatmentProtocolBuilder = () => {
   const [editingStep, setEditingStep] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const conditions = [
-    { id: '1', name: 'Low Back Pain', category: 'MSK' },
-    { id: '2', name: 'Neck Pain', category: 'MSK' },
-    { id: '3', name: 'Shoulder Impingement', category: 'MSK' },
-    { id: '4', name: 'Knee Osteoarthritis', category: 'MSK' },
-    { id: '5', name: 'Stroke Rehabilitation', category: 'Neurological' },
-    { id: '6', name: 'COPD Management', category: 'Respiratory' }
-  ];
+  const [conditions, setConditions] = useState<Array<{ id: string; name: string; category: string }>>([]);
+  const [loadingConditions, setLoadingConditions] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('conditions')
+          .select('id, name, category')
+          .order('name');
+        if (error) throw error;
+        if (isMounted) setConditions(data || []);
+      } catch (e: any) {
+        toast({
+          title: 'Failed to load conditions',
+          description: e.message || 'Please try again later.',
+          variant: 'destructive',
+        });
+      } finally {
+        if (isMounted) setLoadingConditions(false);
+      }
+    })();
+    return () => { isMounted = false; };
+  }, [toast]);
 
   const predefinedExercises = {
     'Low Back Pain': [
@@ -253,6 +270,15 @@ export const TreatmentProtocolBuilder = () => {
     }
 
     setSaving(true);
+    if (!user?.id) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to save a protocol.",
+        variant: "destructive",
+      });
+      setSaving(false);
+      return;
+    }
     try {
       const { error } = await supabase
         .from('treatment_protocols')

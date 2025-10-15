@@ -158,8 +158,33 @@ Return as JSON array with this structure:
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
-    const guidelines = JSON.parse(content);
+    let contentRaw = data.choices?.[0]?.message?.content ?? '';
+    let cleanContent = (typeof contentRaw === 'string' ? contentRaw : JSON.stringify(contentRaw)).trim();
+
+    // Strip markdown code fences if present
+    if (cleanContent.startsWith('```json')) {
+      cleanContent = cleanContent.replace(/^```json\n?/, '').replace(/\n?```$/, '');
+    } else if (cleanContent.startsWith('```')) {
+      cleanContent = cleanContent.replace(/^```\n?/, '').replace(/\n?```$/, '');
+    }
+
+    // Extract JSON array portion if extra text exists
+    const arrStart = cleanContent.indexOf('[');
+    const arrEnd = cleanContent.lastIndexOf(']');
+    if (arrStart !== -1 && arrEnd !== -1) {
+      cleanContent = cleanContent.slice(arrStart, arrEnd + 1);
+    }
+
+    // Remove trailing commas before closing braces/brackets
+    cleanContent = cleanContent.replace(/,\s*([}\]])/g, '$1');
+
+    let guidelines: any[];
+    try {
+      guidelines = JSON.parse(cleanContent);
+    } catch (e) {
+      console.error('Error generating NICE guidelines: JSON parse failed', e);
+      return [getDefaultGuideline(searchTerm)];
+    }
     
     return guidelines.map((guideline: any, index: number) => ({
       ...guideline,
