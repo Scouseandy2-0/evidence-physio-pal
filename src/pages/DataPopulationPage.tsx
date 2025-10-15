@@ -10,6 +10,7 @@ import { Header } from "@/components/Header";
 
 export const DataPopulationPage = () => {
   const [isPopulating, setIsPopulating] = useState(false);
+  const [isPopulatingRheum, setIsPopulatingRheum] = useState(false);
   const [completed, setCompleted] = useState<string[]>([]);
   const [currentTask, setCurrentTask] = useState<string>("");
   const { toast } = useToast();
@@ -52,6 +53,39 @@ export const DataPopulationPage = () => {
       });
     } finally {
       setIsPopulating(false);
+      setCurrentTask("");
+    }
+  };
+
+  const populateRheumatologyEvidence = async () => {
+    setIsPopulatingRheum(true);
+    
+    try {
+      setCurrentTask("Adding rheumatology evidence articles...");
+      const { data, error } = await supabase.functions.invoke('populate-rheumatology-evidence');
+
+      if (error) {
+        console.error('Rheumatology evidence error:', error);
+        toast({
+          title: "Error",
+          description: "Failed to add rheumatology evidence. Check console for details.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success!",
+          description: `Added evidence articles for ${data.conditions?.join(', ')}`,
+        });
+      }
+    } catch (error) {
+      console.error('Population exception:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPopulatingRheum(false);
       setCurrentTask("");
     }
   };
@@ -119,6 +153,31 @@ export const DataPopulationPage = () => {
                 </>
               )}
             </Button>
+
+            <div className="pt-4 border-t">
+              <h3 className="font-medium mb-2">Add Rheumatology Evidence</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Add evidence articles for Gout, Psoriatic Arthritis, PMR, and Lupus
+              </p>
+              <Button
+                onClick={populateRheumatologyEvidence}
+                disabled={isPopulatingRheum}
+                variant="outline"
+                className="w-full"
+              >
+                {isPopulatingRheum ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Adding Evidence...
+                  </>
+                ) : (
+                  <>
+                    <Database className="mr-2 h-4 w-4" />
+                    Add Rheumatology Evidence
+                  </>
+                )}
+              </Button>
+            </div>
 
             <p className="text-xs text-muted-foreground text-center">
               This process may take a minute. Please don't close this page.
