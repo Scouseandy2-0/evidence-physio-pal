@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Database, CheckCircle, Loader2, AlertCircle } from "lucide-react";
@@ -13,44 +14,48 @@ export const DataPopulationPage = () => {
   const [isPopulatingRheum, setIsPopulatingRheum] = useState(false);
   const [completed, setCompleted] = useState<string[]>([]);
   const [currentTask, setCurrentTask] = useState<string>("");
+  const [progress, setProgress] = useState(0);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const populateDatabase = async () => {
     setIsPopulating(true);
     setCompleted([]);
+    setProgress(0);
 
     try {
-      // Populate conditions
-      setCurrentTask("Populating conditions...");
-      const { error: conditionsError } = await supabase.functions.invoke('admin-populate', {
+      setCurrentTask("Populating conditions and core data...");
+      setProgress(25);
+      
+      const { data, error: conditionsError } = await supabase.functions.invoke('admin-populate', {
         body: { task: 'populate_all' }
       });
 
       if (conditionsError) {
-        console.error('Population error:', conditionsError);
-        toast({
-          title: "Error",
-          description: "Failed to populate database. Check console for details.",
-          variant: "destructive",
-        });
-      } else {
-        setCompleted(['conditions', 'evidence', 'assessment_tools']);
-        toast({
-          title: "Success!",
-          description: "Database populated with real data. Check the home page!",
-        });
-        
-        // Redirect to home after 2 seconds
-        setTimeout(() => navigate('/'), 2000);
+        throw conditionsError;
       }
-    } catch (error) {
-      console.error('Population exception:', error);
+
+      setCompleted(['conditions', 'evidence', 'assessment_tools']);
+      setProgress(50);
+      
+      toast({
+        title: "Core data populated!",
+        description: "Database initialized successfully",
+      });
+
+      setCurrentTask("Complete! Redirecting...");
+      setProgress(100);
+      
+      setTimeout(() => navigate('/'), 1500);
+      
+    } catch (error: any) {
+      console.error('Population error:', error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred.",
+        description: error.message || "Failed to populate database. Please try again.",
         variant: "destructive",
       });
+      setProgress(0);
     } finally {
       setIsPopulating(false);
       setCurrentTask("");
@@ -59,29 +64,27 @@ export const DataPopulationPage = () => {
 
   const populateRheumatologyEvidence = async () => {
     setIsPopulatingRheum(true);
+    setCurrentTask("Adding rheumatology evidence...");
     
     try {
-      setCurrentTask("Adding rheumatology evidence articles...");
       const { data, error } = await supabase.functions.invoke('populate-rheumatology-evidence');
 
       if (error) {
-        console.error('Rheumatology evidence error:', error);
-        toast({
-          title: "Error",
-          description: "Failed to add rheumatology evidence. Check console for details.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Success!",
-          description: `Added evidence articles for ${data.conditions?.join(', ')}`,
-        });
+        throw error;
       }
-    } catch (error) {
-      console.error('Population exception:', error);
+
+      const conditions = data?.conditions || [];
+      
+      toast({
+        title: "Success!",
+        description: `Added evidence for ${conditions.join(', ')}`,
+      });
+      
+    } catch (error: any) {
+      console.error('Rheumatology evidence error:', error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred.",
+        description: error.message || "Failed to add rheumatology evidence",
         variant: "destructive",
       });
     } finally {
@@ -117,11 +120,11 @@ export const DataPopulationPage = () => {
               </AlertDescription>
             </Alert>
 
-            {currentTask && (
-              <Alert>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <AlertDescription>{currentTask}</AlertDescription>
-              </Alert>
+            {progress > 0 && (
+              <div className="space-y-2">
+                <Progress value={progress} className="w-full" />
+                <p className="text-sm text-muted-foreground text-center">{progress}% complete</p>
+              </div>
             )}
 
             {completed.length > 0 && (
