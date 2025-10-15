@@ -134,48 +134,71 @@ How can I assist you today?`,
     };
     setMessages(prev => [...prev, assistantMessage]);
 
-    const { data, error } = await supabase.functions.invoke('ai-chat', {
-      body: {
-        messages: messagesForAPI,
-        context,
-        specialty: selectedSpecialty,
-        useStream: true
-      }
-    });
-
-    if (error) throw error;
-
-    // Handle streaming response
-    const eventSource = new EventSource(data);
-    eventSourceRef.current = eventSource;
-
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.content) {
-          setStreamingResponse(prev => prev + data.content);
-          setMessages(prev => {
-            const updated = [...prev];
-            const lastMessage = updated[updated.length - 1];
-            if (lastMessage && lastMessage.role === 'assistant') {
-              lastMessage.content += data.content;
-            }
-            return updated;
-          });
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            messages: messagesForAPI,
+            context,
+            specialty: selectedSpecialty,
+            useStream: true
+          })
         }
-      } catch (e) {
-        console.error('Error parsing streaming data:', e);
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    };
 
-    eventSource.onerror = () => {
-      eventSource.close();
-      setStreamingResponse("");
-    };
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
 
-    eventSource.onopen = () => {
-      console.log('Streaming connection opened');
-    };
+      if (!reader) {
+        throw new Error('No reader available');
+      }
+
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.content) {
+                setMessages(prev => {
+                  const updated = [...prev];
+                  const lastMessage = updated[updated.length - 1];
+                  if (lastMessage && lastMessage.role === 'assistant') {
+                    lastMessage.content += data.content;
+                  }
+                  return updated;
+                });
+              }
+            } catch (e) {
+              console.error('Error parsing streaming data:', e);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Streaming error:', error);
+      throw error;
+    }
   };
 
   const handleNormalResponse = async (userMessage: ChatMessage) => {
