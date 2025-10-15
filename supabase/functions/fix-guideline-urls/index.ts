@@ -25,7 +25,7 @@ serve(async (req) => {
     // Mapping of keywords to correct URLs
     const urlMappings = [
       {
-        keywords: ['low back pain', 'sciatica', 'back pain'],
+        keywords: ['low back pain', 'sciatica', 'back pain', 'lumbar'],
         url: 'https://www.nice.org.uk/guidance/ng59',
         doi: 'ng59',
         title: 'Low back pain and sciatica in over 16s: assessment and management'
@@ -43,7 +43,7 @@ serve(async (req) => {
         title: 'Chronic obstructive pulmonary disease in over 16s: diagnosis and management'
       },
       {
-        keywords: ['osteoarthritis', 'arthritis'],
+        keywords: ['osteoarthritis', 'oa'],
         url: 'https://www.nice.org.uk/guidance/ng226',
         doi: 'ng226',
         title: 'Osteoarthritis in over 16s: diagnosis and management'
@@ -55,16 +55,82 @@ serve(async (req) => {
         title: 'Physical activity: brief advice for adults in primary care'
       },
       {
-        keywords: ['rheumatoid arthritis', 'rheumatoid'],
+        keywords: ['rheumatoid arthritis', 'rheumatoid', 'ra'],
         url: 'https://www.nice.org.uk/guidance/ng100',
         doi: 'ng100',
         title: 'Rheumatoid arthritis in adults: management'
+      },
+      {
+        keywords: ['psoriatic arthritis', 'psoriatic', 'psa'],
+        url: 'https://www.nice.org.uk/guidance/ng220',
+        doi: 'ng220',
+        title: 'Psoriatic arthritis'
+      },
+      {
+        keywords: ['ankylosing spondylitis', 'axial spondyloarthritis', 'as'],
+        url: 'https://www.nice.org.uk/guidance/ng65',
+        doi: 'ng65',
+        title: 'Spondyloarthritis in over 16s: diagnosis and management'
+      },
+      {
+        keywords: ['juvenile idiopathic arthritis', 'jia'],
+        url: 'https://www.nice.org.uk/guidance/ng18',
+        doi: 'ng18',
+        title: 'Juvenile idiopathic arthritis'
+      },
+      {
+        keywords: ['gout'],
+        url: 'https://www.nice.org.uk/guidance/ng219',
+        doi: 'ng219',
+        title: 'Gout: diagnosis and management'
+      },
+      {
+        keywords: ['shoulder pain'],
+        url: 'https://www.nice.org.uk/guidance/cg59',
+        doi: 'cg59',
+        title: 'Shoulder problems: management'
+      },
+      {
+        keywords: ['neck pain', 'cervical'],
+        url: 'https://www.nice.org.uk/guidance/ng59',
+        doi: 'ng59',
+        title: 'Low back pain and sciatica in over 16s: assessment and management'
+      },
+      {
+        keywords: ['hip fracture'],
+        url: 'https://www.nice.org.uk/guidance/cg124',
+        doi: 'cg124',
+        title: 'Hip fracture: management'
+      },
+      {
+        keywords: ['knee replacement', 'joint replacement'],
+        url: 'https://www.nice.org.uk/guidance/cg157',
+        doi: 'cg157',
+        title: 'Osteoarthritis: care and management'
+      },
+      {
+        keywords: ['fractures', 'non-complex fractures'],
+        url: 'https://www.nice.org.uk/guidance/ng38',
+        doi: 'ng38',
+        title: 'Fractures (non-complex): assessment and management'
       },
       {
         keywords: ['falls', 'fall prevention', 'balance'],
         url: 'https://www.nice.org.uk/guidance/cg161',
         doi: 'cg161',
         title: 'Falls in older people: assessing risk and prevention'
+      },
+      {
+        keywords: ['fibromyalgia'],
+        url: 'https://www.nice.org.uk/guidance/cg193',
+        doi: 'cg193',
+        title: 'Chronic pain (primary): assessment and management'
+      },
+      {
+        keywords: ['chronic pain', 'pain management'],
+        url: 'https://www.nice.org.uk/guidance/ng193',
+        doi: 'ng193',
+        title: 'Chronic pain (primary): assessment and management'
       },
       {
         keywords: ['multiple sclerosis', 'ms'],
@@ -83,6 +149,24 @@ serve(async (req) => {
         url: 'https://www.nice.org.uk/guidance/ng71',
         doi: 'ng71',
         title: "Parkinson's disease in adults"
+      },
+      {
+        keywords: ['systemic lupus erythematosus', 'lupus', 'sle'],
+        url: 'https://www.nice.org.uk/guidance/ng95',
+        doi: 'ng95',
+        title: 'Lupus'
+      },
+      {
+        keywords: ['polymyalgia rheumatica', 'giant cell arteritis', 'pmr'],
+        url: 'https://www.nice.org.uk/guidance/ng108',
+        doi: 'ng108',
+        title: 'Polymyalgia rheumatica and giant cell arteritis: diagnosis and management'
+      },
+      {
+        keywords: ['vasculitis'],
+        url: 'https://www.nice.org.uk/guidance/ng77',
+        doi: 'ng77',
+        title: 'Vasculitis'
       }
     ];
 
