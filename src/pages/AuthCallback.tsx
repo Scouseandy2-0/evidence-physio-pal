@@ -8,6 +8,8 @@ const AuthCallback = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
+        console.log('AuthCallback: Starting auth callback handling');
+        
         // Give Supabase more time to process the auth tokens, especially in Safari
         await new Promise(resolve => setTimeout(resolve, 1500));
         
@@ -18,6 +20,7 @@ const AuthCallback = () => {
           window.history.replaceState({}, document.title, url.toString());
         }
         
+        console.log('AuthCallback: Redirecting to home');
         navigate("/", { replace: true });
       } catch (error) {
         console.error('Auth callback error:', error);
