@@ -55,8 +55,8 @@ export const ProtocolGenerator = () => {
 
       console.log(`Starting protocol generation for ${total} conditions`);
 
-      // Process in batches (backend processes 3 at once)
-      const DISPLAY_BATCH_SIZE = 3;
+      // Process sequentially to avoid AI rate limits; backend already batches evidence
+      const DISPLAY_BATCH_SIZE = 1;
       for (let i = 0; i < conditions.length; i += DISPLAY_BATCH_SIZE) {
         const batch = conditions.slice(i, Math.min(i + DISPLAY_BATCH_SIZE, conditions.length));
         
@@ -80,6 +80,13 @@ export const ProtocolGenerator = () => {
               return 0;
             } else {
               const genCount = data?.results?.generatedProtocols ?? 0;
+              const funcErrors = data?.results?.errors ?? [];
+              if (funcErrors.length) {
+                funcErrors.forEach((err: string) => errors.push(`${condition.name}: ${err}`));
+              }
+              if (genCount === 0 && funcErrors.length === 0) {
+                errors.push(`${condition.name}: No protocol generated`);
+              }
               console.log(`✓ ${condition.name}: Generated ${genCount} protocol(s)`);
               return genCount;
             }
@@ -98,6 +105,8 @@ export const ProtocolGenerator = () => {
         const newProgress = Math.round((processed / total) * 100);
         setProgress(newProgress);
         console.log(`Batch ${Math.floor(i / DISPLAY_BATCH_SIZE) + 1} complete. Progress: ${processed}/${total} (${newProgress}%)`);
+        // Gentle pacing to avoid AI rate limits
+        await new Promise((res) => setTimeout(res, 400));
       }
 
       const finalResults = { 
