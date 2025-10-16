@@ -140,7 +140,8 @@ How can I assist you today?`,
         {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream'
           },
           body: JSON.stringify({
             messages: messagesForAPI,
@@ -159,7 +160,9 @@ How can I assist you today?`,
       const decoder = new TextDecoder();
 
       if (!reader) {
-        throw new Error('No reader available');
+        // Fallback to non-streaming if stream is unavailable
+        await handleNormalResponse(userMessage);
+        return;
       }
 
       let textBuffer = '';
@@ -179,9 +182,15 @@ How can I assist you today?`,
 
           if (line.endsWith('\r')) line = line.slice(0, -1); // handle CRLF
           if (line.startsWith(':') || line.trim() === '') continue; // SSE comments/keepalive
-          if (!line.startsWith('data: ')) continue;
 
-          const jsonStr = line.slice(6).trim();
+          // Support both SSE (data: {...}) and raw JSON/text
+          let jsonStr = '';
+          if (line.startsWith('data: ')) {
+            jsonStr = line.slice(6).trim();
+          } else {
+            jsonStr = line.trim();
+          }
+
           if (jsonStr === '[DONE]') {
             streamDone = true;
             break;
@@ -189,7 +198,11 @@ How can I assist you today?`,
 
           try {
             const data = JSON.parse(jsonStr);
-            const content: string | undefined = data.choices?.[0]?.delta?.content;
+            const content: string | undefined =
+              data.choices?.[0]?.delta?.content ?? // OpenAI chat stream
+              data.delta ?? // Realtime transcript delta or generic delta
+              data.content; // Fallback
+
             if (content) {
               setMessages(prev =>
                 prev.map(msg =>
@@ -200,9 +213,20 @@ How can I assist you today?`,
               );
             }
           } catch (e) {
-            // Incomplete JSON split across chunks: put it back and wait for more data
-            textBuffer = line + '\n' + textBuffer;
-            break;
+            // If it's not JSON, treat it as raw text chunk
+            if (jsonStr) {
+              setMessages(prev =>
+                prev.map(msg =>
+                  msg.id === assistantMessageId
+                    ? { ...msg, content: msg.content + jsonStr }
+                    : msg
+                )
+              );
+            } else {
+              // Incomplete JSON split across chunks: put it back and wait for more data
+              textBuffer = line + '\n' + textBuffer;
+              break;
+            }
           }
         }
       }
@@ -213,12 +237,20 @@ How can I assist you today?`,
           if (!raw) continue;
           if (raw.endsWith('\r')) raw = raw.slice(0, -1);
           if (raw.startsWith(':') || raw.trim() === '') continue;
-          if (!raw.startsWith('data: ')) continue;
-          const jsonStr = raw.slice(6).trim();
+
+          let jsonStr = '';
+          if (raw.startsWith('data: ')) {
+            jsonStr = raw.slice(6).trim();
+          } else {
+            jsonStr = raw.trim();
+          }
           if (jsonStr === '[DONE]') continue;
           try {
             const parsed = JSON.parse(jsonStr);
-            const content: string | undefined = parsed.choices?.[0]?.delta?.content;
+            const content: string | undefined =
+              parsed.choices?.[0]?.delta?.content ??
+              parsed.delta ??
+              parsed.content;
             if (content) {
               setMessages(prev =>
                 prev.map(msg =>
@@ -229,7 +261,16 @@ How can I assist you today?`,
               );
             }
           } catch {
-            // ignore partial leftovers
+            // Treat leftover as plain text
+            if (jsonStr) {
+              setMessages(prev =>
+                prev.map(msg =>
+                  msg.id === assistantMessageId
+                    ? { ...msg, content: msg.content + jsonStr }
+                    : msg
+                )
+              );
+            }
           }
         }
       }
