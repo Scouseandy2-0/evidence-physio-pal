@@ -444,7 +444,7 @@ How can I assist you today?`,
       <Card className="h-[600px] flex flex-col">
         <CardContent className="flex-1 flex flex-col p-6 space-y-4">
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto space-y-4 border rounded-lg p-4 bg-gradient-to-b from-background to-muted/20">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-4 border rounded-lg p-4 bg-gradient-to-b from-background to-muted/20 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
             {messages.map((message) => (
               <div
                 key={message.id}
