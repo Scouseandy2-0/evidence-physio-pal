@@ -294,25 +294,43 @@ updateTaskStatus('generate-assessment-tools', {
   };
 
   const runSingleTask = async (taskId: string) => {
-    switch (taskId) {
-      case 'generate-additional-conditions':
-        await generateAdditionalConditions();
-        break;
-      case 'populate-pubmed':
-        await populateDatabase('pubmed', taskId);
-        break;
-      case 'populate-cochrane':
-        await populateDatabase('cochrane', taskId);
-        break;
-      case 'populate-pedro':
-        await populateDatabase('pedro', taskId);
-        break;
-      case 'populate-nice':
-        await populateDatabase('nice', taskId);
-        break;
-      case 'generate-assessment-tools':
-        await generateAssessmentTools();
-        break;
+    try {
+      toast({
+        title: "Task Started",
+        description: `Starting ${tasks.find(t => t.id === taskId)?.name}...`,
+      });
+
+      switch (taskId) {
+        case 'generate-additional-conditions':
+          await generateAdditionalConditions();
+          break;
+        case 'populate-pubmed':
+          await populateDatabase('pubmed', taskId);
+          break;
+        case 'populate-cochrane':
+          await populateDatabase('cochrane', taskId);
+          break;
+        case 'populate-pedro':
+          await populateDatabase('pedro', taskId);
+          break;
+        case 'populate-nice':
+          await populateDatabase('nice', taskId);
+          break;
+        case 'generate-assessment-tools':
+          await generateAssessmentTools();
+          break;
+      }
+
+      toast({
+        title: "Task Completed",
+        description: `Successfully completed ${tasks.find(t => t.id === taskId)?.name}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Task Failed",
+        description: error.message || "An error occurred",
+        variant: "destructive",
+      });
     }
   };
 
