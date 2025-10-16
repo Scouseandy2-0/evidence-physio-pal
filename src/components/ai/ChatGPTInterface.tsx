@@ -162,34 +162,37 @@ How can I assist you today?`,
         throw new Error('No reader available');
       }
 
-      let buffer = '';
+      let textBuffer = '';
       const assistantMessageId = assistantMessage.id;
+      let streamDone = false;
 
-      while (true) {
+      while (!streamDone) {
         const { done, value } = await reader.read();
-        
         if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        
-        buffer = lines.pop() || '';
+        textBuffer += decoder.decode(value, { stream: true });
 
-        for (const line of lines) {
-          const trimmedLine = line.trim();
-          if (!trimmedLine || trimmedLine.startsWith(':')) continue;
-          if (!trimmedLine.startsWith('data: ')) continue;
-          
-          const jsonStr = trimmedLine.slice(6);
-          if (jsonStr === '[DONE]') continue;
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith('\r')) line = line.slice(0, -1); // handle CRLF
+          if (line.startsWith(':') || line.trim() === '') continue; // SSE comments/keepalive
+          if (!line.startsWith('data: ')) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') {
+            streamDone = true;
+            break;
+          }
 
           try {
             const data = JSON.parse(jsonStr);
-            const content = data.choices?.[0]?.delta?.content;
-            
+            const content: string | undefined = data.choices?.[0]?.delta?.content;
             if (content) {
-              setMessages(prev => 
-                prev.map(msg => 
+              setMessages(prev =>
+                prev.map(msg =>
                   msg.id === assistantMessageId
                     ? { ...msg, content: msg.content + content }
                     : msg
@@ -197,7 +200,36 @@ How can I assist you today?`,
               );
             }
           } catch (e) {
-            console.error('Error parsing streaming data:', e, 'Line:', trimmedLine);
+            // Incomplete JSON split across chunks: put it back and wait for more data
+            textBuffer = line + '\n' + textBuffer;
+            break;
+          }
+        }
+      }
+
+      // Final flush in case remaining buffered lines arrived without trailing newline
+      if (textBuffer.trim()) {
+        for (let raw of textBuffer.split('\n')) {
+          if (!raw) continue;
+          if (raw.endsWith('\r')) raw = raw.slice(0, -1);
+          if (raw.startsWith(':') || raw.trim() === '') continue;
+          if (!raw.startsWith('data: ')) continue;
+          const jsonStr = raw.slice(6).trim();
+          if (jsonStr === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content: string | undefined = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              setMessages(prev =>
+                prev.map(msg =>
+                  msg.id === assistantMessageId
+                    ? { ...msg, content: msg.content + content }
+                    : msg
+                )
+              );
+            }
+          } catch {
+            // ignore partial leftovers
           }
         }
       }
