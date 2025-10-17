@@ -474,12 +474,13 @@ const AnatomyPartMesh = ({ part, isSelected, onClick, animationSpeed, showLabels
 
   const materialProps = {
     color: isSelected ? '#FF6B6B' : hovered ? '#4ECDC4' : part.color,
-    opacity: part.opacity * (hovered ? 1.2 : 1),
-    transparent: true,
-    roughness: 0.4,
-    metalness: 0.1,
+    opacity: Math.min(part.opacity * (hovered ? 1 : 1), 1),
+    transparent: part.opacity < 1,
+    roughness: 0.3,
+    metalness: 0.2,
     emissive: isSelected ? '#FF2222' : hovered ? '#1A4444' : '#000000',
-    emissiveIntensity: isSelected ? 0.2 : hovered ? 0.1 : 0
+    emissiveIntensity: isSelected ? 0.3 : hovered ? 0.15 : 0,
+    side: THREE.DoubleSide
   };
 
   return (
@@ -552,16 +553,22 @@ const AnatomyScene = ({ anatomy, selectedPart, onPartSelect, animationSpeed, sho
 
   return (
     <>
-      <Environment preset={environmentPreset as any} />
-      <ambientLight intensity={0.4} />
+      <Environment preset={environmentPreset as any} background={false} />
+      <ambientLight intensity={0.6} />
       <directionalLight 
-        position={[10, 10, 5]} 
-        intensity={1.2} 
+        position={[5, 5, 5]} 
+        intensity={1} 
         castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+        shadow-camera-far={50}
+        shadow-camera-left={-10}
+        shadow-camera-right={10}
+        shadow-camera-top={10}
+        shadow-camera-bottom={-10}
       />
-      <pointLight position={[-10, -10, -5]} intensity={0.5} color="#4A90E2" />
+      <directionalLight position={[-5, -5, -5]} intensity={0.3} />
+      <pointLight position={[-10, -10, -5]} intensity={0.4} color="#4A90E2" />
       
       <ContactShadows
         opacity={0.4}
@@ -784,7 +791,7 @@ export const AnatomyViewer3D = () => {
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 {/* 3D Viewer */}
                 <div className="lg:col-span-3">
-                  <div className="h-[600px] w-full border rounded-lg bg-gradient-to-b from-slate-50 to-white overflow-hidden">
+                  <div className="h-[600px] w-full border rounded-lg bg-gradient-to-b from-background to-muted/20 overflow-hidden">
                     <Suspense fallback={
                       <div className="flex items-center justify-center h-full">
                         <div className="text-center space-y-4">
@@ -794,10 +801,19 @@ export const AnatomyViewer3D = () => {
                       </div>
                     }>
                       <Canvas 
-                        camera={{ position: [0, 0, 8], fov: 45 }}
+                        camera={{ position: [0, 0, 8], fov: 50 }}
                         shadows
-                        gl={{ antialias: true, alpha: true }}
+                        dpr={[1, 2]}
+                        gl={{ 
+                          antialias: true, 
+                          alpha: false,
+                          preserveDrawingBuffer: true,
+                          powerPreference: "high-performance"
+                        }}
+                        style={{ background: 'transparent' }}
                       >
+                        <color attach="background" args={['#f0f4f8']} />
+                        <fog attach="fog" args={['#f0f4f8', 5, 20]} />
                         <AnatomyScene
                           anatomy={anatomy}
                           selectedPart={selectedPart}
