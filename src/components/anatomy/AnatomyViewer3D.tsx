@@ -11,6 +11,7 @@ import {
   Float,
   Html,
   useTexture,
+  useGLTF,
   Torus,
   Cone
 } from "@react-three/drei";
@@ -37,6 +38,7 @@ import {
   Search
 } from "lucide-react";
 import * as THREE from "three";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AnatomyPart {
   id: string;
@@ -640,6 +642,16 @@ const AnatomyPartMesh = ({ part, isSelected, onClick, animationSpeed, showLabels
   );
 };
 
+// External GLTF model renderer from Supabase Storage URL
+const ExternalModel = ({ url }: { url: string }) => {
+  const gltf = useGLTF(url) as any;
+  return (
+    <group position={[0, 0, 0]}>
+      <primitive object={gltf.scene} />
+    </group>
+  );
+};
+
 interface AnatomySceneProps {
   anatomy: AnatomyPart[];
   selectedPart: string | null;
@@ -647,9 +659,10 @@ interface AnatomySceneProps {
   animationSpeed: number;
   showLabels: boolean;
   environmentPreset: string;
+  modelUrl?: string | null;
 }
 
-const AnatomyScene = ({ anatomy, selectedPart, onPartSelect, animationSpeed, showLabels, environmentPreset }: AnatomySceneProps) => {
+const AnatomyScene = ({ anatomy, selectedPart, onPartSelect, animationSpeed, showLabels, environmentPreset, modelUrl }: AnatomySceneProps) => {
   const { camera } = useThree();
   
   useEffect(() => {
@@ -700,16 +713,26 @@ const AnatomyScene = ({ anatomy, selectedPart, onPartSelect, animationSpeed, sho
         maxDistance={15}
       />
       
-      {anatomy.map((part) => (
-        <AnatomyPartMesh
-          key={part.id}
-          part={part}
-          isSelected={selectedPart === part.id}
-          onClick={() => onPartSelect(part.id)}
-          animationSpeed={animationSpeed}
-          showLabels={showLabels}
-        />
-      ))}
+      {modelUrl ? (
+        <Suspense fallback={
+          <Html center>
+            <div className="text-xs px-3 py-2 rounded bg-muted text-foreground">Loading external 3D model...</div>
+          </Html>
+        }>
+          <ExternalModel url={modelUrl} />
+        </Suspense>
+      ) : (
+        anatomy.map((part) => (
+          <AnatomyPartMesh
+            key={part.id}
+            part={part}
+            isSelected={selectedPart === part.id}
+            onClick={() => onPartSelect(part.id)}
+            animationSpeed={animationSpeed}
+            showLabels={showLabels}
+          />
+        ))
+      )}
     </>
   );
 };
@@ -774,6 +797,7 @@ export const AnatomyViewer3D = () => {
   const [animationSpeed, setAnimationSpeed] = useState(1);
   const [showLabels, setShowLabels] = useState(true);
   const [environmentPreset, setEnvironmentPreset] = useState('city');
+  const [modelUrl, setModelUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -811,6 +835,27 @@ export const AnatomyViewer3D = () => {
         break;
     }
     setSelectedPart(null);
+    setModelUrl(null);
+
+    // Try to load external GLTF/GLB model from Supabase Storage
+    const fetchModel = async () => {
+      try {
+        const bucket = supabase.storage.from('anatomy-models');
+        const base = selectedRegion;
+        const tryFile = async (path: string) => {
+          const { data, error } = await bucket.createSignedUrl(path, 3600);
+          if (!error && data?.signedUrl) return data.signedUrl;
+          return null;
+        };
+        let url = await tryFile(`${base}.glb`);
+        if (!url) url = await tryFile(`${base}.gltf`);
+        if (!url) url = await tryFile(`${base}/${base}.glb`);
+        setModelUrl(url);
+      } catch (e) {
+        setModelUrl(null);
+      }
+    };
+    fetchModel();
   }, [selectedRegion]);
 
   const selectedPartData = selectedPart 
@@ -958,6 +1003,7 @@ export const AnatomyViewer3D = () => {
                           animationSpeed={animationSpeed}
                           showLabels={showLabels}
                           environmentPreset={environmentPreset}
+                          modelUrl={modelUrl}
                         />
                       </Canvas>
                     </Suspense>
