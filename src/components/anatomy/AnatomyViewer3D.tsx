@@ -435,6 +435,116 @@ const shoulderAnatomy: AnatomyPart[] = [
   }
 ];
 
+// Head/Skull Anatomy
+const headAnatomy: AnatomyPart[] = [
+  { id: 'skull', name: 'Skull', position: [0, 0.5, 0], color: '#E8E8E8', type: 'bone', 
+    info: 'Cranium protecting the brain', visible: true, opacity: 0.9, size: [0.8, 1, 0.7] },
+  { id: 'mandible', name: 'Mandible (Jaw)', position: [0, -0.5, 0.1], color: '#D0D0D0', type: 'bone',
+    info: 'Lower jaw bone for chewing', visible: true, opacity: 0.9, size: [0.6, 0.3, 0.4] },
+  { id: 'temporal', name: 'Temporal Bone', position: [0.6, 0.2, 0], color: '#C8C8C8', type: 'bone',
+    info: 'Skull bone housing ear structures', visible: true, opacity: 0.9, size: [0.3, 0.4, 0.3] },
+  { id: 'masseter', name: 'Masseter Muscle', position: [0.4, -0.3, 0], color: '#E74C3C', type: 'muscle',
+    info: 'Primary chewing muscle', visible: true, opacity: 0.7, size: [0.2, 0.3, 0.2] },
+  { id: 'temporalis', name: 'Temporalis', position: [0.5, 0.3, -0.1], color: '#C0392B', type: 'muscle',
+    info: 'Powerful jaw elevator muscle', visible: true, opacity: 0.7, size: [0.25, 0.4, 0.15] }
+];
+
+// Pelvis Anatomy
+const pelvisAnatomy: AnatomyPart[] = [
+  { id: 'ilium', name: 'Ilium', position: [0.6, 0.5, 0], color: '#3498DB', type: 'bone',
+    info: 'Upper part of hip bone', visible: true, opacity: 0.9, size: [0.5, 0.6, 0.3] },
+  { id: 'sacrum_pelvis', name: 'Sacrum', position: [0, 0, -0.2], color: '#2980B9', type: 'bone',
+    info: 'Fused vertebrae connecting spine to pelvis', visible: true, opacity: 0.9, size: [0.7, 0.8, 0.4] },
+  { id: 'pubis', name: 'Pubis', position: [0.3, -0.5, 0.2], color: '#5DADE2', type: 'bone',
+    info: 'Front portion of hip bone', visible: true, opacity: 0.9, size: [0.4, 0.3, 0.2] },
+  { id: 'ischium', name: 'Ischium', position: [0.4, -0.6, -0.1], color: '#85C1E9', type: 'bone',
+    info: 'Lower and back part of hip bone', visible: true, opacity: 0.9, size: [0.35, 0.4, 0.25] },
+  { id: 'gluteus_maximus', name: 'Gluteus Maximus', position: [-0.5, 0, -0.5], color: '#E74C3C', type: 'muscle',
+    info: 'Largest buttock muscle for hip extension', visible: true, opacity: 0.7, size: [0.6, 0.7, 0.4] },
+  { id: 'iliopsoas', name: 'Iliopsoas', position: [0.3, 0.2, 0.1], color: '#C0392B', type: 'muscle',
+    info: 'Hip flexor muscle group', visible: true, opacity: 0.7, size: [0.3, 0.5, 0.2] }
+];
+
+// Hand/Wrist Anatomy
+const handAnatomy: AnatomyPart[] = [
+  { id: 'radius', name: 'Radius', position: [-0.3, 0.8, 0], color: '#3498DB', type: 'bone',
+    info: 'Lateral forearm bone', visible: true, opacity: 0.9, size: [0.15, 1.2, 0.15] },
+  { id: 'ulna', name: 'Ulna', position: [0.3, 0.8, 0], color: '#2980B9', type: 'bone',
+    info: 'Medial forearm bone', visible: true, opacity: 0.9, size: [0.15, 1.3, 0.15] },
+  { id: 'carpals', name: 'Carpal Bones', position: [0, 0, 0], color: '#5DADE2', type: 'bone',
+    info: 'Eight small wrist bones', visible: true, opacity: 0.9, size: [0.5, 0.3, 0.3] },
+  { id: 'metacarpals', name: 'Metacarpals', position: [0, -0.5, 0], color: '#85C1E9', type: 'bone',
+    info: 'Five bones in palm of hand', visible: true, opacity: 0.9, size: [0.6, 0.4, 0.15] },
+  { id: 'phalanges_hand', name: 'Phalanges (Fingers)', position: [0, -1.2, 0], color: '#AED6F1', type: 'bone',
+    info: 'Finger bones - 14 total', visible: true, opacity: 0.9, size: [0.5, 0.8, 0.1] },
+  { id: 'flexor_digitorum', name: 'Flexor Digitorum', position: [0, 0.5, 0.2], color: '#E67E22', type: 'muscle',
+    info: 'Finger flexor muscles', visible: true, opacity: 0.7, size: [0.3, 0.8, 0.2] }
+];
+
+// Foot/Ankle Anatomy  
+const footAnatomy: AnatomyPart[] = [
+  { id: 'talus', name: 'Talus', position: [0, 0.3, 0], color: '#3498DB', type: 'bone',
+    info: 'Ankle bone connecting leg to foot', visible: true, opacity: 0.9, size: [0.3, 0.2, 0.4] },
+  { id: 'calcaneus', name: 'Calcaneus (Heel)', position: [0, -0.2, -0.3], color: '#2980B9', type: 'bone',
+    info: 'Largest foot bone, forms heel', visible: true, opacity: 0.9, size: [0.35, 0.4, 0.5] },
+  { id: 'navicular', name: 'Navicular', position: [0, 0, 0.3], color: '#5DADE2', type: 'bone',
+    info: 'Boat-shaped midfoot bone', visible: true, opacity: 0.9, size: [0.25, 0.15, 0.2] },
+  { id: 'metatarsals', name: 'Metatarsals', position: [0, -0.1, 0.8], color: '#85C1E9', type: 'bone',
+    info: 'Five long bones of the foot', visible: true, opacity: 0.9, size: [0.5, 0.15, 0.7] },
+  { id: 'phalanges_foot', name: 'Phalanges (Toes)', position: [0, -0.15, 1.4], color: '#AED6F1', type: 'bone',
+    info: 'Toe bones - 14 total', visible: true, opacity: 0.9, size: [0.45, 0.1, 0.5] },
+  { id: 'achilles', name: 'Achilles Tendon', position: [0, 0.5, -0.4], color: '#F1C40F', type: 'ligament',
+    info: 'Strongest tendon in the body', visible: true, opacity: 0.8, size: [0.15, 0.6, 0.1] },
+  { id: 'gastrocnemius', name: 'Gastrocnemius', position: [0, 1.2, -0.2], color: '#E74C3C', type: 'muscle',
+    info: 'Calf muscle for plantar flexion', visible: true, opacity: 0.7, size: [0.4, 0.8, 0.3] }
+];
+
+// Thorax/Chest Anatomy
+const thoraxAnatomy: AnatomyPart[] = [
+  { id: 'sternum', name: 'Sternum', position: [0, 0, 0.4], color: '#E8E8E8', type: 'bone',
+    info: 'Breastbone in center of chest', visible: true, opacity: 0.9, size: [0.15, 0.8, 0.1] },
+  { id: 'ribs', name: 'Ribs', position: [0.6, 0, 0], color: '#D0D0D0', type: 'bone',
+    info: 'Twelve pairs protecting organs', visible: true, opacity: 0.9, size: [0.8, 1, 0.6] },
+  { id: 'pectoralis_major', name: 'Pectoralis Major', position: [0.4, 0.2, 0.5], color: '#E74C3C', type: 'muscle',
+    info: 'Large chest muscle', visible: true, opacity: 0.7, size: [0.5, 0.6, 0.3] },
+  { id: 'intercostals', name: 'Intercostal Muscles', position: [0.5, 0, 0.2], color: '#C0392B', type: 'muscle',
+    info: 'Muscles between ribs for breathing', visible: true, opacity: 0.6, size: [0.6, 0.8, 0.15] },
+  { id: 'diaphragm', name: 'Diaphragm', position: [0, -0.6, 0], color: '#A93226', type: 'muscle',
+    info: 'Primary breathing muscle', visible: true, opacity: 0.7, size: [0.9, 0.15, 0.7] }
+];
+
+// Elbow Anatomy
+const elbowAnatomy: AnatomyPart[] = [
+  { id: 'humerus_elbow', name: 'Humerus (Upper)', position: [0, 0.8, 0], color: '#3498DB', type: 'bone',
+    info: 'Upper arm bone', visible: true, opacity: 0.9, size: [0.2, 1, 0.2] },
+  { id: 'radius_elbow', name: 'Radius', position: [-0.15, -0.8, 0], color: '#2980B9', type: 'bone',
+    info: 'Lateral forearm bone', visible: true, opacity: 0.9, size: [0.15, 1, 0.15] },
+  { id: 'ulna_elbow', name: 'Ulna', position: [0.15, -0.8, -0.1], color: '#5DADE2', type: 'bone',
+    info: 'Medial forearm bone with olecranon', visible: true, opacity: 0.9, size: [0.15, 1.1, 0.15] },
+  { id: 'biceps', name: 'Biceps Brachii', position: [0, 0.6, 0.2], color: '#E74C3C', type: 'muscle',
+    info: 'Arm flexor muscle', visible: true, opacity: 0.7, size: [0.25, 0.8, 0.25] },
+  { id: 'triceps', name: 'Triceps', position: [0, 0.5, -0.25], color: '#C0392B', type: 'muscle',
+    info: 'Arm extensor muscle', visible: true, opacity: 0.7, size: [0.25, 0.9, 0.25] },
+  { id: 'ucl', name: 'UCL (Ulnar Collateral)', position: [0.15, 0, -0.05], color: '#F1C40F', type: 'ligament',
+    info: 'Medial elbow ligament', visible: true, opacity: 0.8, size: [0.05, 0.25, 0.05] }
+];
+
+// Hip Anatomy
+const hipAnatomy: AnatomyPart[] = [
+  { id: 'femur_hip', name: 'Femur (Proximal)', position: [0, -0.8, 0], color: '#3498DB', type: 'bone',
+    info: 'Thigh bone with ball joint', visible: true, opacity: 0.9, size: [0.25, 1.5, 0.25] },
+  { id: 'acetabulum', name: 'Acetabulum', position: [0, 0.3, 0], color: '#2980B9', type: 'bone',
+    info: 'Hip socket in pelvis', visible: true, opacity: 0.9, size: [0.5, 0.5, 0.4] },
+  { id: 'femoral_head', name: 'Femoral Head', position: [0, 0.2, 0], color: '#5DADE2', type: 'bone',
+    info: 'Ball of hip joint', visible: true, opacity: 0.9, size: [0.35, 0.35, 0.35] },
+  { id: 'hip_labrum', name: 'Labrum', position: [0, 0.3, 0], color: '#27AE60', type: 'cartilage',
+    info: 'Cartilage rim of hip socket', visible: true, opacity: 0.7, size: [0.55, 0.55, 0.45] },
+  { id: 'gluteus_medius', name: 'Gluteus Medius', position: [-0.4, 0.4, -0.3], color: '#E74C3C', type: 'muscle',
+    info: 'Hip abductor muscle', visible: true, opacity: 0.7, size: [0.4, 0.5, 0.3] },
+  { id: 'hip_flexors', name: 'Hip Flexors', position: [0, 0.3, 0.3], color: '#C0392B', type: 'muscle',
+    info: 'Muscles that flex the hip', visible: true, opacity: 0.7, size: [0.3, 0.6, 0.25] }
+];
+
 interface AnatomyPartMeshProps {
   part: AnatomyPart;
   isSelected: boolean;
@@ -658,7 +768,7 @@ const LayerControl = ({ anatomy, onToggleVisibility, onOpacityChange }: {
 };
 
 export const AnatomyViewer3D = () => {
-  const [selectedRegion, setSelectedRegion] = useState<'spine' | 'knee' | 'shoulder'>('spine');
+  const [selectedRegion, setSelectedRegion] = useState<'spine' | 'knee' | 'shoulder' | 'head' | 'pelvis' | 'hand' | 'foot' | 'thorax' | 'elbow' | 'hip'>('spine');
   const [selectedPart, setSelectedPart] = useState<string | null>(null);
   const [anatomy, setAnatomy] = useState<AnatomyPart[]>(spineAnatomy);
   const [animationSpeed, setAnimationSpeed] = useState(1);
@@ -677,6 +787,27 @@ export const AnatomyViewer3D = () => {
         break;
       case 'shoulder':
         setAnatomy([...shoulderAnatomy]);
+        break;
+      case 'head':
+        setAnatomy([...headAnatomy]);
+        break;
+      case 'pelvis':
+        setAnatomy([...pelvisAnatomy]);
+        break;
+      case 'hand':
+        setAnatomy([...handAnatomy]);
+        break;
+      case 'foot':
+        setAnatomy([...footAnatomy]);
+        break;
+      case 'thorax':
+        setAnatomy([...thoraxAnatomy]);
+        break;
+      case 'elbow':
+        setAnatomy([...elbowAnatomy]);
+        break;
+      case 'hip':
+        setAnatomy([...hipAnatomy]);
         break;
     }
     setSelectedPart(null);
@@ -734,6 +865,13 @@ export const AnatomyViewer3D = () => {
                   <SelectItem value="spine">Spine & Back</SelectItem>
                   <SelectItem value="knee">Knee Joint</SelectItem>
                   <SelectItem value="shoulder">Shoulder Complex</SelectItem>
+                  <SelectItem value="head">Head & Skull</SelectItem>
+                  <SelectItem value="pelvis">Pelvis & Hip Bone</SelectItem>
+                  <SelectItem value="hand">Hand & Wrist</SelectItem>
+                  <SelectItem value="foot">Foot & Ankle</SelectItem>
+                  <SelectItem value="thorax">Thorax & Chest</SelectItem>
+                  <SelectItem value="elbow">Elbow Joint</SelectItem>
+                  <SelectItem value="hip">Hip Joint</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -810,10 +948,9 @@ export const AnatomyViewer3D = () => {
                           preserveDrawingBuffer: true,
                           powerPreference: "high-performance"
                         }}
-                        style={{ background: 'transparent' }}
                       >
-                        <color attach="background" args={['#f0f4f8']} />
-                        <fog attach="fog" args={['#f0f4f8', 5, 20]} />
+                        <color attach="background" args={['#1a1a2e']} />
+                        <fog attach="fog" args={['#1a1a2e', 10, 25]} />
                         <AnatomyScene
                           anatomy={anatomy}
                           selectedPart={selectedPart}
