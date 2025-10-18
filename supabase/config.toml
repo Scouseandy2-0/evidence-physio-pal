@@ -36,3 +36,6 @@ verify_jwt = false
 
 [functions.ai-chat]
 verify_jwt = false
+
+[functions.seed-anatomy-models]
+verify_jwt = false

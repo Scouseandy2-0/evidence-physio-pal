@@ -912,6 +912,32 @@ export const AnatomyViewer3D = () => {
       setUploading(false);
     }
   };
+
+  const seedDemo = async () => {
+    try {
+      setUploading(true);
+      setUploadError(null);
+      const { error } = await supabase.functions.invoke('seed-anatomy-models', {
+        body: { regions: [selectedRegion] },
+      });
+      if (error) throw error as any;
+      const exts = ['glb', 'gltf'] as const;
+      for (const ext of exts) {
+        const { data: signed } = await supabase.storage
+          .from('anatomy-models')
+          .createSignedUrl(`${selectedRegion}.${ext}`, 3600);
+        if (signed?.signedUrl) {
+          setModelUrl(signed.signedUrl);
+          break;
+        }
+      }
+    } catch (e: any) {
+      setUploadError(e?.message || 'Seeding failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const filteredAnatomy = anatomy.filter(part =>
     part.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     part.type.toLowerCase().includes(searchTerm.toLowerCase())
