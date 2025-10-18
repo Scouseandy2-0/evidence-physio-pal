@@ -1070,7 +1070,7 @@ export const AnatomyViewer3D = () => {
                   </div>
                   {!modelUrl && (
                     <div className="mt-4 p-4 border rounded-lg bg-muted/30">
-                      <p className="text-sm mb-2">No external 3D model found for “{selectedRegion}”. Upload a .glb or .gltf file to display it.</p>
+                      <p className="text-sm mb-2">No external 3D model found for “{selectedRegion}”. Upload a .glb or .gltf file or load a demo model.</p>
                       <div className="flex items-center gap-3">
                         <input
                           type="file"
@@ -1078,7 +1078,16 @@ export const AnatomyViewer3D = () => {
                           onChange={(e) => e.target.files && handleUpload(e.target.files[0])}
                           disabled={uploading}
                         />
-                        {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
+                        <Button type="button" variant="outline" size="sm" onClick={seedDemo} disabled={uploading}>
+                          {uploading ? (
+                            <span className="inline-flex items-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Seeding...
+                            </span>
+                          ) : (
+                            'Load Demo Model'
+                          )}
+                        </Button>
                       </div>
                       {uploadError && <p className="text-xs text-destructive mt-2">{uploadError}</p>}
                     </div>
