@@ -798,6 +798,8 @@ export const AnatomyViewer3D = () => {
   const [showLabels, setShowLabels] = useState(true);
   const [environmentPreset, setEnvironmentPreset] = useState('city');
   const [modelUrl, setModelUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -858,6 +860,16 @@ export const AnatomyViewer3D = () => {
     fetchModel();
   }, [selectedRegion]);
 
+  // Preload model for smoother display when available
+  useEffect(() => {
+    if (modelUrl) {
+      try {
+        // @ts-ignore - drei attaches preload
+        useGLTF.preload(modelUrl);
+      } catch {}
+    }
+  }, [modelUrl]);
+
   const selectedPartData = selectedPart 
     ? anatomy.find(part => part.id === selectedPart)
     : null;
@@ -878,6 +890,28 @@ export const AnatomyViewer3D = () => {
     ));
   };
 
+  const handleUpload = async (file: File) => {
+    try {
+      setUploading(true);
+      setUploadError(null);
+      const fileName = file.name.toLowerCase();
+      const ext = fileName.endsWith('.gltf') ? 'gltf' : 'glb';
+      const path = `${selectedRegion}.${ext}`;
+      const contentType = ext === 'glb' ? 'model/gltf-binary' : 'model/gltf+json';
+      const { error: upErr } = await supabase.storage
+        .from('anatomy-models')
+        .upload(path, file, { upsert: true, contentType });
+      if (upErr) throw upErr;
+      const { data: signed } = await supabase.storage
+        .from('anatomy-models')
+        .createSignedUrl(path, 3600);
+      setModelUrl(signed?.signedUrl || null);
+    } catch (e: any) {
+      setUploadError(e?.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
   const filteredAnatomy = anatomy.filter(part =>
     part.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     part.type.toLowerCase().includes(searchTerm.toLowerCase())
@@ -1008,6 +1042,21 @@ export const AnatomyViewer3D = () => {
                       </Canvas>
                     </Suspense>
                   </div>
+                  {!modelUrl && (
+                    <div className="mt-4 p-4 border rounded-lg bg-muted/30">
+                      <p className="text-sm mb-2">No external 3D model found for “{selectedRegion}”. Upload a .glb or .gltf file to display it.</p>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="file"
+                          accept=".glb,.gltf"
+                          onChange={(e) => e.target.files && handleUpload(e.target.files[0])}
+                          disabled={uploading}
+                        />
+                        {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
+                      </div>
+                      {uploadError && <p className="text-xs text-destructive mt-2">{uploadError}</p>}
+                    </div>
+                  )}
                   <div className="mt-4 text-center space-y-2">
                     <p className="text-xs text-muted-foreground">
                       🖱️ Click & drag to rotate • 🖱️ Scroll to zoom • 👆 Click structures for details
