@@ -17,7 +17,6 @@ import { ConditionModules } from "./components/conditions/ConditionModules";
 import AssessmentsPage from "./pages/AssessmentsPage";
 import { PersonalizedDashboard } from "./components/dashboard/PersonalizedDashboard";
 import CPDPage from "./pages/CPDPage";
-import PatientsPage from "./pages/PatientsPage";
 import CollaborationPage from "./pages/CollaborationPage";
 import ProtocolsPage from "./pages/ProtocolsPage";
 import SecurityPage from "./pages/SecurityPage";
@@ -59,7 +58,6 @@ const App = () => (
                 <Route path="/guidelines" element={<GuidelinesPage />} />
                 <Route path="/evidence" element={<EvidencePage />} />
                 <Route path="/cpd" element={<ProtectedRoute><CPDPage /></ProtectedRoute>} />
-                <Route path="/patients" element={<ProtectedRoute><PatientsPage /></ProtectedRoute>} />
                 <Route path="/collaboration" element={<ProtectedRoute><CollaborationPage /></ProtectedRoute>} />
                 <Route path="/analytics" element={<ProtectedRoute><AnalyticsDashboard /></ProtectedRoute>} />
                 <Route path="/advanced" element={<ProtectedRoute><AdvancedFeatures /></ProtectedRoute>} />

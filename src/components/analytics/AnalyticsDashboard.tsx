@@ -81,7 +81,6 @@ export const AnalyticsDashboard = () => {
       // Fetch basic counts with proper error handling
       const fetchQueries = async () => {
         const queries = [
-          supabase.from('patients').select('id', { count: 'exact' }).eq('therapist_id', user?.id || ''),
           supabase.from('treatment_protocols').select('id', { count: 'exact' }).eq('created_by', user?.id || ''),
           supabase.from('analytics_sessions').select('id', { count: 'exact' }).eq('user_id', user?.id || ''),
           supabase.from('cpd_activities').select('hours_claimed').eq('user_id', user?.id || ''),
@@ -103,7 +102,6 @@ export const AnalyticsDashboard = () => {
       };
 
       const [
-        patientsResult,
         protocolsResult,
         sessionsResult,
         cpdResult,
@@ -145,7 +143,7 @@ export const AnalyticsDashboard = () => {
       }, {} as { [key: string]: number }) || {};
 
       const analyticsData = {
-        totalPatients: patientsResult.count || 0,
+        totalPatients: 0, // Patient management removed
         activeProtocols: protocolsResult.count || 0,
         completedSessions: sessionsResult.count || 0,
         cpdHours: totalCpdHours,
