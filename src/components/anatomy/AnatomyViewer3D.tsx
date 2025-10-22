@@ -1024,8 +1024,9 @@ export const AnatomyViewer3D = () => {
           </div>
 
           <Tabs defaultValue="viewer" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="viewer">3D Viewer</TabsTrigger>
+              <TabsTrigger value="zygote">Zygote Body</TabsTrigger>
               <TabsTrigger value="layers">Layer Control</TabsTrigger>
               <TabsTrigger value="info">Information</TabsTrigger>
             </TabsList>
@@ -1156,6 +1157,33 @@ export const AnatomyViewer3D = () => {
                   </div>
                 </div>
               </div>
+            </TabsContent>
+
+            <TabsContent value="zygote" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Zygote Body 3D Human Anatomy</CardTitle>
+                  <CardDescription>
+                    Interactive full-body anatomy viewer powered by Zygote Body
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="w-full h-[600px] border rounded-lg overflow-hidden bg-background">
+                    <iframe
+                      src="https://www.zygotebody.com"
+                      className="w-full h-full"
+                      title="Zygote Body 3D Anatomy Viewer"
+                      allowFullScreen
+                    />
+                  </div>
+                  <div className="mt-4 p-4 bg-muted/30 rounded-lg">
+                    <p className="text-sm text-muted-foreground">
+                      💡 Use the controls within the Zygote Body viewer to explore detailed 3D human anatomy.
+                      You can rotate, zoom, and toggle different anatomical systems.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="layers" className="space-y-4">
