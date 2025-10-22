@@ -13,7 +13,13 @@ const AuthCallback = () => {
 
         const url = new URL(window.location.href);
         const code = url.searchParams.get('code');
-        const hasHash = window.location.hash && window.location.hash.length > 0;
+        const hasHash = !!window.location.hash;
+        const rawHash = window.location.hash?.startsWith('#')
+          ? window.location.hash.substring(1)
+          : window.location.hash || '';
+        const hashParams = new URLSearchParams(rawHash);
+        const access_token = hashParams.get('access_token');
+        const refresh_token = hashParams.get('refresh_token');
 
         if (code) {
           console.log('AuthCallback: Exchanging code for session');
@@ -22,6 +28,17 @@ const AuthCallback = () => {
             console.error('AuthCallback: exchangeCodeForSession error:', error);
           } else {
             console.log('AuthCallback: Session established via code exchange');
+          }
+        } else if (access_token && refresh_token) {
+          console.log('AuthCallback: Found tokens in hash, setting session');
+          const { data, error } = await supabase.auth.setSession({
+            access_token,
+            refresh_token,
+          });
+          if (error) {
+            console.error('AuthCallback: setSession error:', error);
+          } else {
+            console.log('AuthCallback: Session established via hash tokens', { hasUser: !!data.session?.user });
           }
         } else if (hasHash) {
           console.log('AuthCallback: Found hash parameters, allowing Supabase to process');
