@@ -48,17 +48,36 @@ const AuthCallback = () => {
           console.log('AuthCallback: No auth params found');
         }
 
+        // Retry loop: wait up to 3 seconds for session to be ready
+        console.log('AuthCallback: Waiting for session to be ready...');
+        let session = null;
+        const maxRetries = 6; // 6 retries x 500ms = 3 seconds
+        for (let i = 0; i < maxRetries; i++) {
+          const { data } = await supabase.auth.getSession();
+          if (data.session) {
+            session = data.session;
+            console.log('AuthCallback: Session confirmed', { user: session.user.id });
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+
         // Clean up URL (remove code and hash)
         const clean = new URL(window.location.href);
         clean.search = '';
         clean.hash = '';
         window.history.replaceState({}, document.title, clean.toString());
 
-        console.log('AuthCallback: Redirecting to home');
-        navigate("/", { replace: true });
+        if (session) {
+          console.log('AuthCallback: Redirecting to home with valid session');
+          navigate("/", { replace: true });
+        } else {
+          console.error('AuthCallback: No session found after retry, redirecting to debug');
+          navigate("/auth/debug", { replace: true });
+        }
       } catch (error) {
         console.error('Auth callback error:', error);
-        navigate("/", { replace: true });
+        navigate("/auth/debug", { replace: true });
       }
     };
 

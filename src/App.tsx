@@ -29,6 +29,7 @@ import { HealthcareProviderVerification } from "./components/admin/HealthcarePro
 import { OnboardingFlow } from "./components/onboarding/OnboardingFlow";
 import { DataPopulationPage } from "./pages/DataPopulationPage";
 import AuthCallback from "./pages/AuthCallback";
+import AuthDebug from "./pages/AuthDebug";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import ContactUsPage from "./pages/ContactUsPage";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
@@ -50,6 +51,7 @@ const App = () => (
 <Route path="/onboarding" element={<OnboardingFlow />} />
 <Route path="/auth" element={<AuthPage />} />
 <Route path="/auth/callback" element={<AuthCallback />} />
+<Route path="/auth/debug" element={<AuthDebug />} />
                 <Route path="/dashboard" element={<ProtectedRoute><PersonalizedDashboard /></ProtectedRoute>} />
                 <Route path="/conditions" element={<ConditionsPage />} />
                 <Route path="/assessments" element={<AssessmentsPage />} />

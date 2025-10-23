@@ -35,8 +35,8 @@ self.addEventListener('fetch', (event) => {
   const isCoreAsset = ['script', 'style', 'worker'].includes(req.destination);
   const url = new URL(req.url);
 
-  // Always bypass cache for auth callback to avoid stale app shell during login
-  if (isNavigation && url.pathname.startsWith('/auth/callback')) {
+  // Always bypass cache for auth routes to avoid stale app shell during login
+  if (isNavigation && url.pathname.startsWith('/auth')) {
     event.respondWith(fetch(req));
     return;
   }
