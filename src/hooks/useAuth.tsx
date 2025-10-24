@@ -47,27 +47,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     );
 
-    // Fallback: process magic link code on ANY route (not just /auth/callback)
-    (async () => {
-      try {
-        const url = new URL(window.location.href);
-        const code = url.searchParams.get('code');
-        if (code) {
-          console.log('useAuth: Found code in URL on current route, exchanging for session');
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) {
-            console.warn('useAuth: exchangeCodeForSession error (fallback):', error);
-          }
-          // Clean query params to avoid repeated exchanges on reload
-          const clean = new URL(window.location.href);
-          clean.search = '';
-          window.history.replaceState({}, document.title, clean.toString());
-        }
-      } catch (e) {
-        console.warn('useAuth: Fallback code processing failed:', e);
-      }
-    })();
-
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       console.log('useAuth: Initial session check', { session: !!session, userId: session?.user?.id, error });
