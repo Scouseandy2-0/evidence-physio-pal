@@ -170,13 +170,14 @@ export const AuthPage = () => {
 
     console.log('AuthPage: Sending magic link', { email });
 
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
+      try {
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            shouldCreateUser: false,
+          },
+        });
 
       if (error) {
         console.error('AuthPage: Magic link error:', error);
