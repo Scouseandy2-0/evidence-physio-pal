@@ -14,6 +14,6 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    flowType: 'pkce', // Use PKCE flow for better Safari compatibility
+    flowType: 'implicit', // Use implicit flow to avoid PKCE verifier issues across domains
   }
 });
