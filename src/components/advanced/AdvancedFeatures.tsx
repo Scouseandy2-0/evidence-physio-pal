@@ -7,7 +7,7 @@ import { Brain, MessageSquare, Mic, Volume2, Heart, BarChart3, Bell, Users, Spar
 import { AISummarizer } from "@/components/ai/AISummarizer";
 import { ChatGPTInterface } from "@/components/ai/ChatGPTInterface";
 import { RealtimeChat } from "@/components/collaboration/RealtimeChat";
-import { AnatomyViewer3D } from "@/components/anatomy/AnatomyViewer3D";
+import { ZygoteBodyViewer } from "@/components/anatomy/ZygoteBodyViewer";
 import { EnhancedAnalytics } from "@/components/analytics/EnhancedAnalytics";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { StudyGroups } from "@/components/collaboration/StudyGroups";
@@ -25,9 +25,9 @@ export const AdvancedFeatures = () => {
     },
     {
       id: "chatgpt",
-      label: "ChatGPT Assistant",
+      label: "AI Assistant",
       icon: <MessageSquare className="h-4 w-4" />,
-      description: "Advanced AI conversation with GPT-4"
+      description: "Advanced AI clinical guidance"
     },
     {
       id: "realtime-chat",
@@ -129,6 +129,12 @@ export const AdvancedFeatures = () => {
           </div>
         )}
 
+        {activeFeature === "chatgpt" && (
+          <div className="space-y-6">
+            <ChatGPTInterface />
+          </div>
+        )}
+
         {activeFeature === "realtime-chat" && (
           <div className="space-y-6">
             <Card>
@@ -148,18 +154,7 @@ export const AdvancedFeatures = () => {
 
         {activeFeature === "anatomy-3d" && (
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Heart className="h-5 w-5 text-primary" />
-                  Interactive 3D Anatomy
-                </CardTitle>
-                <CardDescription>
-                  Explore anatomical structures in 3D for enhanced treatment planning and patient education
-                </CardDescription>
-              </CardHeader>
-            </Card>
-            <AnatomyViewer3D />
+            <ZygoteBodyViewer />
           </div>
         )}
 
