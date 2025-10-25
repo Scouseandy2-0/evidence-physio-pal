@@ -135,13 +135,14 @@ How can I assist you today?`,
     setMessages(prev => [...prev, assistantMessage]);
 
     try {
+      // Use supabase.functions.invoke for streaming
       const response = await fetch(
-        `https://xbonrxqrzkuwxovyqrxx.functions.supabase.co/functions/v1/ai-chat`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Accept': 'text/event-stream'
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
           body: JSON.stringify({
             messages: messagesForAPI,
@@ -153,7 +154,8 @@ How can I assist you today?`,
       );
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
       const reader = response.body?.getReader();
