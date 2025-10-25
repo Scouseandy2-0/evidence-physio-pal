@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Brain, Sparkles, FileText, HelpCircle, Volume2, Loader2 } from "lucide-react";
 import { playTextToSpeech } from "@/utils/audioUtils";
+import { useActivityTracking } from "@/hooks/useActivityTracking";
 
 interface AISummarizerProps {
   condition?: string;
@@ -29,6 +30,7 @@ export const AISummarizer = ({ condition }: AISummarizerProps) => {
     clinical_questions: boolean;
   }>({ summary: false, recommendations: false, clinical_questions: false });
   const { toast } = useToast();
+  const { trackAISummarizer, trackEvidenceView } = useActivityTracking();
 
   const handleAnalyze = async (requestType: 'summary' | 'recommendations' | 'clinical_questions') => {
     if (!evidenceText.trim()) {
@@ -55,6 +57,10 @@ export const AISummarizer = ({ condition }: AISummarizerProps) => {
 
       setResults(prev => ({ ...prev, [requestType]: data.response }));
       setActiveTab(requestType);
+
+      // Track AI summarizer usage
+      await trackAISummarizer(1);
+      await trackEvidenceView();
 
       toast({
         title: "Analysis complete",

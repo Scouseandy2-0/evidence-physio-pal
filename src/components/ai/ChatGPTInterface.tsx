@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ import {
   Activity
 } from "lucide-react";
 import { playTextToSpeech } from "@/utils/audioUtils";
+import { useActivityTracking } from "@/hooks/useActivityTracking";
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -50,8 +51,10 @@ export const ChatGPTInterface = ({
   const [selectedSpecialty, setSelectedSpecialty] = useState(specialty);
   const [streamingResponse, setStreamingResponse] = useState("");
   const { toast } = useToast();
+  const { trackAIChatSession, trackCollaboration } = useActivityTracking();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const sessionStartRef = useRef<Date>(new Date());
 
   useEffect(() => {
     scrollToBottom();
@@ -102,6 +105,11 @@ How can I assist you today?`,
       } else {
         await handleNormalResponse(userMessage);
       }
+
+      // Track chat session after successful response
+      const durationMinutes = Math.round((new Date().getTime() - sessionStartRef.current.getTime()) / 60000);
+      await trackAIChatSession(messages.length + 1, durationMinutes);
+      await trackCollaboration();
     } catch (error: any) {
       console.error('Chat error:', error);
       toast({

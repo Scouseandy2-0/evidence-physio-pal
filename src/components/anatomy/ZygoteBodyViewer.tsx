@@ -1,10 +1,24 @@
+import { useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useActivityTracking } from "@/hooks/useActivityTracking";
 
 export const ZygoteBodyViewer = () => {
   const { hasAccess } = useSubscription();
   const hasPremiumAccess = hasAccess('basic');
+  const { trackAnatomyViewer } = useActivityTracking();
+  const sessionStartRef = useRef<Date>(new Date());
+
+  // Track anatomy viewer usage when component unmounts
+  useEffect(() => {
+    return () => {
+      const durationMinutes = Math.round((new Date().getTime() - sessionStartRef.current.getTime()) / 60000);
+      if (durationMinutes > 0) {
+        trackAnatomyViewer('Full Body - Zygote', durationMinutes);
+      }
+    };
+  }, [trackAnatomyViewer]);
 
   return (
     <Card>
