@@ -8,6 +8,7 @@ import { AISummarizer } from "@/components/ai/AISummarizer";
 import { ChatGPTInterface } from "@/components/ai/ChatGPTInterface";
 import { RealtimeChat } from "@/components/collaboration/RealtimeChat";
 import { ZygoteBodyViewer } from "@/components/anatomy/ZygoteBodyViewer";
+import VoiceChat from "@/components/ai/VoiceChat";
 import { EnhancedAnalytics } from "@/components/analytics/EnhancedAnalytics";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { StudyGroups } from "@/components/collaboration/StudyGroups";
@@ -137,18 +138,7 @@ export const AdvancedFeatures = () => {
 
         {activeFeature === "realtime-chat" && (
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-primary" />
-                  AI Clinical Assistant
-                </CardTitle>
-                <CardDescription>
-                  Real-time voice and text conversations with an AI physiotherapy expert
-                </CardDescription>
-              </CardHeader>
-            </Card>
-            <RealtimeChat />
+            <VoiceChat />
           </div>
         )}
 
