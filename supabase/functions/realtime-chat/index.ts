@@ -56,6 +56,16 @@ serve(async (req) => {
           const data = JSON.parse(event.data);
           logStep("Received from OpenAI", { type: data.type });
 
+          // Log full error details if it's an error event
+          if (data.type === 'error') {
+            logStep("OpenAI Error Details", { 
+              error: data.error,
+              code: data.error?.code,
+              message: data.error?.message,
+              fullEvent: data
+            });
+          }
+
           // Handle session.created event
           if (data.type === 'session.created' && !sessionInitialized) {
             logStep("Session created, sending session update");
