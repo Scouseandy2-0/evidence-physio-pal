@@ -23,7 +23,7 @@ const VoiceChat = () => {
       await navigator.mediaDevices.getUserMedia({ audio: true });
 
       // Connect to the edge function
-      const wsUrl = `wss://xbonrxqrzkuwxovyqrxx.supabase.co/functions/v1/realtime-chat`;
+      const wsUrl = `wss://xbonrxqrzkuwxovyqrxx.functions.supabase.co/functions/v1/realtime-chat`;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
@@ -42,7 +42,8 @@ const VoiceChat = () => {
           const data = JSON.parse(event.data);
           console.log('[VoiceChat] Received:', data.type);
 
-          if (data.type === 'response.audio.delta') {
+          // Handle both old and new event names
+          if (data.type === 'response.audio.delta' || data.type === 'response.output_audio.delta') {
             // Play audio chunk
             if (!audioContextRef.current) {
               audioContextRef.current = new AudioContext({ sampleRate: 24000 });
@@ -56,17 +57,18 @@ const VoiceChat = () => {
             
             await playAudioData(audioContextRef.current, bytes);
             setIsSpeaking(true);
-          } else if (data.type === 'response.audio.done') {
+          } else if (data.type === 'response.audio.done' || data.type === 'response.output_audio.done') {
             setIsSpeaking(false);
-          } else if (data.type === 'response.audio_transcript.delta') {
+          } else if (data.type === 'response.audio_transcript.delta' || data.type === 'response.output_audio_transcript.delta') {
             setTranscript(prev => prev + data.delta);
           } else if (data.type === 'conversation.item.input_audio_transcription.completed') {
             setTranscript(prev => `You: ${data.transcript}\n\n${prev}`);
           } else if (data.type === 'error') {
             console.error('[VoiceChat] Error:', data);
+            const message = data.error?.message || data.message || "An error occurred";
             toast({
               title: "Error",
-              description: data.message || "An error occurred",
+              description: message,
               variant: "destructive",
             });
           }
