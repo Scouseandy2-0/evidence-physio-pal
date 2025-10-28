@@ -75,8 +75,6 @@ serve(async (req) => {
               type: "session.update",
               session: {
                 type: "realtime",
-                instructions: "You are an expert physiotherapist assistant helping with clinical discussions. Provide evidence-based insights, treatment recommendations, and answer questions about physiotherapy practice. Be concise but thorough.",
-                voice: "alloy",
                 input_audio_format: "pcm16",
                 output_audio_format: "pcm16",
                 input_audio_transcription: {
@@ -87,25 +85,7 @@ serve(async (req) => {
                   threshold: 0.5,
                   prefix_padding_ms: 300,
                   silence_duration_ms: 1000
-                },
-                tools: [
-                  {
-                    type: "function",
-                    name: "search_evidence",
-                    description: "Search for physiotherapy evidence and research",
-                    parameters: {
-                      type: "object",
-                      properties: {
-                        condition: { type: "string" },
-                        intervention: { type: "string" }
-                      },
-                      required: ["condition"]
-                    }
-                  }
-                ],
-                tool_choice: "auto",
-                temperature: 0.7,
-                max_response_output_tokens: 1000
+                }
               }
             };
             
