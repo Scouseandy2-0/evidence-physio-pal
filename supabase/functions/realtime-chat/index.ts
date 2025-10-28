@@ -74,7 +74,6 @@ serve(async (req) => {
             const sessionUpdate = {
               type: "session.update",
               session: {
-                type: "realtime",
                 modalities: ["text", "audio"],
                 instructions: "You are an expert physiotherapist assistant helping with clinical discussions. Provide evidence-based insights, treatment recommendations, and answer questions about physiotherapy practice. Be concise but thorough.",
                 voice: "alloy",
