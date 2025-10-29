@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useActivityTracking } from "@/hooks/useActivityTracking";
 import {
   Plus,
   Target,
@@ -53,6 +54,7 @@ export const TreatmentProtocolBuilder = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { subscribed } = useSubscription();
+  const { trackProtocolCreated } = useActivityTracking();
   
   if (!subscribed) {
     return (
@@ -298,6 +300,9 @@ export const TreatmentProtocolBuilder = () => {
         });
 
       if (error) throw error;
+
+      // Track protocol creation
+      await trackProtocolCreated();
 
       toast({
         title: "Protocol Saved",

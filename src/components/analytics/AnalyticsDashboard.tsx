@@ -276,8 +276,11 @@ export const AnalyticsDashboard = () => {
 
       <Tabs defaultValue="overview" className="space-y-4">
         <div className="flex justify-between items-center">
-          <TabsList>
+        <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="clinical">Clinical</TabsTrigger>
+            <TabsTrigger value="engagement">Engagement</TabsTrigger>
+            <TabsTrigger value="professional">Professional</TabsTrigger>
           </TabsList>
           
           <div className="flex gap-2">

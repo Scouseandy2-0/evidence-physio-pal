@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useActivityTracking } from "@/hooks/useActivityTracking";
 import { 
   Brain, 
   Database, 
@@ -29,6 +30,7 @@ export const ProtocolGenerator = () => {
   const [results, setResults] = useState<GenerationResults | null>(null);
   const [currentCondition, setCurrentCondition] = useState<string>("");
   const { toast } = useToast();
+  const { trackProtocolCreated } = useActivityTracking();
 
   const generateAllProtocols = async () => {
     setIsGenerating(true);
@@ -120,6 +122,11 @@ export const ProtocolGenerator = () => {
       setCurrentCondition("Completed");
       
       console.log('Generation complete:', finalResults);
+
+      // Track protocol creation
+      for (let i = 0; i < generated; i++) {
+        await trackProtocolCreated();
+      }
 
       if (errors.length === 0) {
         toast({
