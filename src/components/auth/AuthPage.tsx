@@ -175,7 +175,7 @@ export const AuthPage = () => {
           email,
           options: {
             emailRedirectTo: `${window.location.origin}/auth/callback`,
-            shouldCreateUser: false,
+            shouldCreateUser: true,
           },
         });
 
