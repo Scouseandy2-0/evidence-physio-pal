@@ -30,6 +30,7 @@ interface PopulationTask {
 }
 
 export const DataPopulator = () => {
+  const { user } = useAuth();
   const [tasks, setTasks] = useState<PopulationTask[]>([
     {
       id: 'generate-additional-conditions',
@@ -144,13 +145,23 @@ export const DataPopulator = () => {
   };
 
   const populateDatabase = async (database: string, taskId: string) => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to populate database",
+        variant: "destructive",
+      });
+      return;
+    }
+
     updateTaskStatus(taskId, { status: 'running', progress: 0 });
 
     try {
       // Get all conditions
       const { data: conditions, error: conditionsError } = await supabase
         .from('conditions')
-        .select('*');
+        .select('*')
+        .limit(5); // Limit to 5 conditions to prevent timeout
 
       if (conditionsError) throw conditionsError;
 
@@ -161,55 +172,61 @@ export const DataPopulator = () => {
         try {
           let result;
           
-          switch (database) {
-            case 'pubmed':
-              result = await supabase.functions.invoke('pubmed-integration', {
-                body: { 
-                  searchTerms: condition.name,
-                  maxResults: 5,
-                  dateRange: 'recent'
-                }
-              });
-              break;
-              
-            case 'cochrane':
-              result = await supabase.functions.invoke('cochrane-integration', {
-                body: { 
-                  searchTerms: condition.name,
-                  maxResults: 2  // Reduced from 3 to prevent timeouts
-                }
-              });
-              break;
-              
-            case 'pedro':
-              result = await supabase.functions.invoke('pedro-integration', {
-                body: { 
-                  searchTerms: condition.name,
-                  condition: condition.name,
-                  maxResults: 3
-                }
-              });
-              break;
-              
-            case 'nice':
-              result = await supabase.functions.invoke('guidelines-integration', {
-                body: { 
-                  searchTerms: condition.name,
-                  organization: 'nice'
-                }
-              });
-              break;
-          }
+          // Add timeout wrapper for each API call
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Request timeout')), 45000)
+          );
+
+          const apiCall = async () => {
+            switch (database) {
+              case 'pubmed':
+                return await supabase.functions.invoke('pubmed-integration', {
+                  body: { 
+                    searchTerms: condition.name,
+                    maxResults: 3,
+                    dateRange: 'recent'
+                  }
+                });
+                
+              case 'cochrane':
+                return await supabase.functions.invoke('cochrane-integration', {
+                  body: { 
+                    searchTerms: condition.name,
+                    maxResults: 2
+                  }
+                });
+                
+              case 'pedro':
+                return await supabase.functions.invoke('pedro-integration', {
+                  body: { 
+                    searchTerms: condition.name,
+                    condition: condition.name,
+                    maxResults: 2
+                  }
+                });
+                
+              case 'nice':
+                return await supabase.functions.invoke('guidelines-integration', {
+                  body: { 
+                    searchTerms: condition.name,
+                    organization: 'nice'
+                  }
+                });
+            }
+          };
+
+          result = await Promise.race([apiCall(), timeoutPromise]);
 
           processedConditions++;
           const progress = Math.round((processedConditions / totalConditions) * 100);
           updateTaskStatus(taskId, { progress });
 
-          // Small delay to prevent overwhelming the APIs
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Delay to prevent overwhelming the APIs
+          await new Promise(resolve => setTimeout(resolve, 2000));
           
         } catch (error) {
           console.error(`Error processing ${condition.name} for ${database}:`, error);
+          // Continue with next condition even if one fails
         }
       }
 
@@ -268,25 +285,45 @@ updateTaskStatus('generate-assessment-tools', {
   };
 
   const runAllTasks = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to run population tasks",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsRunning(true);
     
     try {
-      // Run tasks sequentially to avoid overwhelming the system
+      // Run tasks sequentially with better error handling
       await generateAdditionalConditions();
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Delay between tasks
+      
       await populateDatabase('pubmed', 'populate-pubmed');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       await populateDatabase('cochrane', 'populate-cochrane');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       await populateDatabase('pedro', 'populate-pedro');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       await populateDatabase('nice', 'populate-nice');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       await generateAssessmentTools();
       
       toast({
         title: "Population Complete!",
-        description: "Successfully populated all condition modules with comprehensive data",
+        description: "Successfully populated condition modules with data",
       });
     } catch (error: any) {
+      console.error('Population error:', error);
       toast({
         title: "Population Error",
-        description: error.message,
+        description: error.message || "Some tasks may have failed. Check individual task status.",
         variant: "destructive",
       });
     } finally {
@@ -295,6 +332,15 @@ updateTaskStatus('generate-assessment-tools', {
   };
 
   const runSingleTask = async (taskId: string) => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to run tasks",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       toast({
         title: "Task Started",
@@ -369,10 +415,18 @@ updateTaskStatus('generate-assessment-tools', {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {!user ? (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
+              <p className="text-sm text-yellow-800">
+                ⚠️ Please sign in to use data population features
+              </p>
+            </div>
+          ) : null}
+          
           <div className="flex gap-4">
             <Button 
               onClick={runAllTasks} 
-              disabled={isRunning}
+              disabled={isRunning || !user}
               className="flex items-center gap-2"
             >
               {isRunning ? (
@@ -414,7 +468,7 @@ updateTaskStatus('generate-assessment-tools', {
                 </span>
                 <Button
                   onClick={() => runSingleTask(task.id)}
-                  disabled={task.status === 'running' || isRunning}
+                  disabled={task.status === 'running' || isRunning || !user}
                   size="sm"
                   variant="outline"
                 >
