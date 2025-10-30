@@ -17,6 +17,7 @@ import {
   Sparkles
 } from "lucide-react";
 import JSON5 from "json5";
+import { useAuth } from "@/hooks/useAuth";
 
 interface PopulationTask {
   id: string;
