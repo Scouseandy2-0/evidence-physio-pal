@@ -102,7 +102,7 @@ export const DataPopulator = () => {
             - prevalence_data: object (with prevalence statistics)
             
             Focus on conditions like COPD, Asthma, Pneumonia, Pulmonary Fibrosis, etc.
-            Return ONLY valid JSON array format.`
+            Return ONLY valid JSON array format, no markdown code blocks.`
           }],
           context: 'Generate respiratory physiotherapy conditions for clinical database',
           specialty: 'respiratory'
@@ -115,8 +115,18 @@ export const DataPopulator = () => {
 
       // Parse and insert conditions
       try {
-        const conditionsData = JSON.parse(data.response);
+        // Clean response - remove markdown code blocks if present
+        let cleanResponse = data.response.trim();
+        cleanResponse = cleanResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
         
+        // Use JSON5 for more robust parsing
+        const conditionsData = JSON5.parse(cleanResponse);
+        
+        if (!Array.isArray(conditionsData)) {
+          throw new Error('Response is not an array');
+        }
+        
+        let insertedCount = 0;
         for (const condition of conditionsData) {
           const { error: insertError } = await supabase
             .from('conditions')
@@ -124,16 +134,19 @@ export const DataPopulator = () => {
           
           if (insertError) {
             console.error('Error inserting condition:', insertError);
+          } else {
+            insertedCount++;
           }
         }
 
         updateTaskStatus('generate-additional-conditions', { 
           status: 'completed', 
           progress: 100,
-          results: `Generated ${conditionsData.length} respiratory conditions`
+          results: `Generated ${insertedCount} respiratory conditions`
         });
-      } catch (parseError) {
-        throw new Error('Failed to parse AI response');
+      } catch (parseError: any) {
+        console.error('Parse error:', parseError, 'Response:', data.response);
+        throw new Error(`Failed to parse AI response: ${parseError.message}`);
       }
 
     } catch (error: any) {
