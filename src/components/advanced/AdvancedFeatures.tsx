@@ -12,6 +12,7 @@ import VoiceChat from "@/components/ai/VoiceChat";
 import { EnhancedAnalytics } from "@/components/analytics/EnhancedAnalytics";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { StudyGroups } from "@/components/collaboration/StudyGroups";
+import { Header } from "@/components/Header";
 
 export const AdvancedFeatures = () => {
   const [activeFeature, setActiveFeature] = useState("ai-tools");
@@ -65,8 +66,11 @@ export const AdvancedFeatures = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="min-h-screen">
+      <Header />
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="space-y-6">
+          {/* Header */}
       <Card className="bg-gradient-to-r from-primary/5 to-accent/5 border-primary/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-2xl">
@@ -199,6 +203,8 @@ export const AdvancedFeatures = () => {
           </div>
         )}
       </div>
+        </div>
+      </main>
     </div>
   );
 };

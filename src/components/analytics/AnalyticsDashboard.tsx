@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { Header } from "@/components/Header";
 import {
   TrendingUp,
   Users,
@@ -213,8 +214,11 @@ export const AnalyticsDashboard = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="text-center">
+    <div className="min-h-screen">
+      <Header />
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="space-y-6">
+          <div className="text-center">
         <h1 className="text-3xl font-bold mb-2">Analytics Dashboard</h1>
         <p className="text-muted-foreground max-w-2xl mx-auto">
           Track your clinical practice, monitor engagement, and measure your contribution to evidence-based care.
@@ -580,6 +584,8 @@ export const AnalyticsDashboard = () => {
           </div>
         </TabsContent>
       </Tabs>
+        </div>
+      </main>
     </div>
   );
 };
