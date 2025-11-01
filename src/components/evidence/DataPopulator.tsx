@@ -167,92 +167,65 @@ export const DataPopulator = () => {
       return;
     }
 
-    updateTaskStatus(taskId, { status: 'running', progress: 0 });
+    updateTaskStatus(taskId, { status: 'running', progress: 5 });
 
     try {
-      // Get all conditions
+      // Gather a small set of conditions to build a combined query
       const { data: conditions, error: conditionsError } = await supabase
         .from('conditions')
-        .select('*')
-        .limit(5); // Limit to 5 conditions to prevent timeout
+        .select('name')
+        .limit(5);
 
       if (conditionsError) throw conditionsError;
 
-      const totalConditions = conditions.length;
-      let processedConditions = 0;
+      const names = (conditions ?? []).map((c: any) => c.name).filter(Boolean);
+      const searchTerms = names.join(', ');
 
-      for (const condition of conditions) {
-        try {
-          let result;
-          
-          // Add timeout wrapper for each API call
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Request timeout')), 45000)
-          );
+      // Map task to evidence-sync source
+      const sourceMap: Record<string, string> = {
+        pubmed: 'pubmed',
+        cochrane: 'cochrane',
+        pedro: 'pedro',
+        nice: 'guidelines',
+      };
 
-          const apiCall = async () => {
-            switch (database) {
-              case 'pubmed':
-                return await supabase.functions.invoke('pubmed-integration', {
-                  body: { 
-                    searchTerms: condition.name,
-                    maxResults: 3,
-                    dateRange: 'recent'
-                  }
-                });
-                
-              case 'cochrane':
-                return await supabase.functions.invoke('cochrane-integration', {
-                  body: { 
-                    searchTerms: condition.name,
-                    maxResults: 2
-                  }
-                });
-                
-              case 'pedro':
-                return await supabase.functions.invoke('pedro-integration', {
-                  body: { 
-                    searchTerms: condition.name,
-                    condition: condition.name,
-                    maxResults: 2
-                  }
-                });
-                
-              case 'nice':
-                return await supabase.functions.invoke('guidelines-integration', {
-                  body: { 
-                    searchTerms: condition.name,
-                    organization: 'nice'
-                  }
-                });
-            }
-          };
+      const src = sourceMap[database];
+      if (!src) throw new Error('Unknown evidence source');
 
-          result = await Promise.race([apiCall(), timeoutPromise]);
+      // Use the orchestrator function to avoid CF timeouts and heavy client work
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+      try {
+        updateTaskStatus(taskId, { progress: 20 });
+        const { data, error } = await supabase.functions.invoke('evidence-sync', {
+          body: {
+            searchTerms: searchTerms || 'physiotherapy physical therapy',
+            sources: [src],
+            maxResults: 12,
+          },
+          signal: controller.signal as any,
+        } as any);
 
-          processedConditions++;
-          const progress = Math.round((processedConditions / totalConditions) * 100);
-          updateTaskStatus(taskId, { progress });
+        if (error) throw error;
+        updateTaskStatus(taskId, { progress: 90 });
 
-          // Delay to prevent overwhelming the APIs
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          
-        } catch (error) {
-          console.error(`Error processing ${condition.name} for ${database}:`, error);
-          // Continue with next condition even if one fails
-        }
+        const count = Number(
+          data?.sources_processed?.[0]?.count ?? data?.total_articles ?? 0
+        );
+
+        updateTaskStatus(taskId, {
+          status: 'completed',
+          progress: 100,
+          results: `Fetched ${count} items from ${database}`,
+        });
+      } finally {
+        clearTimeout(timeout);
       }
-
-      updateTaskStatus(taskId, { 
-        status: 'completed', 
-        progress: 100,
-        results: `Processed ${processedConditions} conditions`
-      });
-
     } catch (error: any) {
-      updateTaskStatus(taskId, { 
-        status: 'error', 
-        error: error.message 
+      console.error(`[DataPopulator] ${database} failed`, error);
+      updateTaskStatus(taskId, {
+        status: 'error',
+        error: error?.message || 'Task failed',
       });
     }
   };

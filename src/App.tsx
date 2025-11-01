@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import GuidelinesPage from "./pages/GuidelinesPage";
@@ -45,34 +46,37 @@ const App = () => (
           <TooltipProvider>
             <Toaster />
             <Sonner />
+            {/* Global error boundary to prevent blank screen on unexpected errors */}
             <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-<Route path="/onboarding" element={<OnboardingFlow />} />
-<Route path="/auth" element={<AuthPage />} />
-<Route path="/auth/callback" element={<AuthCallback />} />
-<Route path="/auth/debug" element={<AuthDebug />} />
-                <Route path="/dashboard" element={<ProtectedRoute><PersonalizedDashboard /></ProtectedRoute>} />
-                <Route path="/conditions" element={<ConditionsPage />} />
-                <Route path="/assessments" element={<AssessmentsPage />} />
-                <Route path="/assessment/:toolId" element={<AssessmentPage />} />
-                <Route path="/protocols" element={<ProtectedRoute><ProtocolsPage /></ProtectedRoute>} />
-                <Route path="/guidelines" element={<GuidelinesPage />} />
-                <Route path="/evidence" element={<EvidencePage />} />
-                <Route path="/cpd" element={<ProtectedRoute><CPDPage /></ProtectedRoute>} />
-                <Route path="/collaboration" element={<ProtectedRoute><CollaborationPage /></ProtectedRoute>} />
-                <Route path="/analytics" element={<ProtectedRoute><AnalyticsDashboard /></ProtectedRoute>} />
-                <Route path="/advanced" element={<ProtectedRoute><AdvancedFeatures /></ProtectedRoute>} />
-                <Route path="/subscription" element={<ProtectedRoute><SubscriptionPage /></ProtectedRoute>} />
-                <Route path="/subscription-success" element={<ProtectedRoute><SubscriptionSuccessPage /></ProtectedRoute>} />
-                <Route path="/subscription-analytics" element={<ProtectedRoute><SubscriptionAnalyticsPage /></ProtectedRoute>} />
-                <Route path="/verification" element={<ProtectedRoute><HealthcareProviderVerification /></ProtectedRoute>} />
-                <Route path="/security" element={<ProtectedRoute><SecurityPage /></ProtectedRoute>} />
-                <Route path="/populate-data" element={<DataPopulationPage />} />
-                <Route path="/privacy" element={<PrivacyPolicyPage />} />
-                <Route path="/contact" element={<ContactUsPage />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <ErrorBoundary>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/onboarding" element={<OnboardingFlow />} />
+                  <Route path="/auth" element={<AuthPage />} />
+                  <Route path="/auth/callback" element={<AuthCallback />} />
+                  <Route path="/auth/debug" element={<AuthDebug />} />
+                  <Route path="/dashboard" element={<ProtectedRoute><PersonalizedDashboard /></ProtectedRoute>} />
+                  <Route path="/conditions" element={<ConditionsPage />} />
+                  <Route path="/assessments" element={<AssessmentsPage />} />
+                  <Route path="/assessment/:toolId" element={<AssessmentPage />} />
+                  <Route path="/protocols" element={<ProtectedRoute><ProtocolsPage /></ProtectedRoute>} />
+                  <Route path="/guidelines" element={<GuidelinesPage />} />
+                  <Route path="/evidence" element={<EvidencePage />} />
+                  <Route path="/cpd" element={<ProtectedRoute><CPDPage /></ProtectedRoute>} />
+                  <Route path="/collaboration" element={<ProtectedRoute><CollaborationPage /></ProtectedRoute>} />
+                  <Route path="/analytics" element={<ProtectedRoute><AnalyticsDashboard /></ProtectedRoute>} />
+                  <Route path="/advanced" element={<ProtectedRoute><AdvancedFeatures /></ProtectedRoute>} />
+                  <Route path="/subscription" element={<ProtectedRoute><SubscriptionPage /></ProtectedRoute>} />
+                  <Route path="/subscription-success" element={<ProtectedRoute><SubscriptionSuccessPage /></ProtectedRoute>} />
+                  <Route path="/subscription-analytics" element={<ProtectedRoute><SubscriptionAnalyticsPage /></ProtectedRoute>} />
+                  <Route path="/verification" element={<ProtectedRoute><HealthcareProviderVerification /></ProtectedRoute>} />
+                  <Route path="/security" element={<ProtectedRoute><SecurityPage /></ProtectedRoute>} />
+                  <Route path="/populate-data" element={<DataPopulationPage />} />
+                  <Route path="/privacy" element={<PrivacyPolicyPage />} />
+                  <Route path="/contact" element={<ContactUsPage />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </ErrorBoundary>
             </BrowserRouter>
           </TooltipProvider>
         </SubscriptionProvider>
