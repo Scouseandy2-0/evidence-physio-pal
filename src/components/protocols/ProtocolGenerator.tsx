@@ -69,28 +69,45 @@ export const ProtocolGenerator = () => {
       for (let offset = 0, batchIndex = 0; offset < total; offset += BATCH_SIZE, batchIndex++) {
         setCurrentCondition(`Batch ${batchIndex + 1} of ${totalBatches}`);
 
-        const { data, error } = await supabase.functions.invoke('generate-condition-protocols', {
-          body: { offset, limit: BATCH_SIZE }
-        });
+        // Retry logic for network issues
+        let retryCount = 0;
+        const maxRetries = 3;
+        let success = false;
 
-        if (error) {
-          throw new Error(`Edge function failed: ${error.message || JSON.stringify(error)}`);
+        while (!success && retryCount < maxRetries) {
+          try {
+            const { data, error } = await supabase.functions.invoke('generate-condition-protocols', {
+              body: { offset, limit: BATCH_SIZE }
+            });
+
+            if (error) {
+              throw new Error(`Edge function failed: ${error.message || JSON.stringify(error)}`);
+            }
+            if (data?.error) {
+              throw new Error(data.error);
+            }
+
+            const raw = (data as any)?.results ?? {};
+            const processed = Number(raw?.processedConditions ?? 0);
+            const generated = Number(raw?.generatedProtocols ?? 0);
+            const errors = Array.isArray(raw?.errors) ? raw.errors : [];
+
+            processedTotal += processed;
+            generatedTotal += generated;
+            allErrors.push(...errors);
+
+            // Update progress based on total processed
+            setProgress(Math.min(99, Math.round((processedTotal / total) * 100)));
+            success = true;
+          } catch (err: any) {
+            retryCount++;
+            if (retryCount >= maxRetries) {
+              throw err;
+            }
+            // Wait before retrying (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+          }
         }
-        if (data?.error) {
-          throw new Error(data.error);
-        }
-
-        const raw = (data as any)?.results ?? {};
-        const processed = Number(raw?.processedConditions ?? 0);
-        const generated = Number(raw?.generatedProtocols ?? 0);
-        const errors = Array.isArray(raw?.errors) ? raw.errors : [];
-
-        processedTotal += processed;
-        generatedTotal += generated;
-        allErrors.push(...errors);
-
-        // Update progress based on total processed
-        setProgress(Math.min(99, Math.round((processedTotal / total) * 100)));
       }
 
       const finalResults: GenerationResults = {
