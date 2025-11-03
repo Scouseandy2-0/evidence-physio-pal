@@ -34,27 +34,8 @@ export const ProtocolGenerator = () => {
   const { toast } = useToast();
   const { trackProtocolCreated } = useActivityTracking();
 
-  if (!user) {
-    return (
-      <Card>
-        <CardContent className="p-12 text-center">
-          <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <h3 className="text-lg font-semibold mb-2">Authentication Required</h3>
-          <p className="text-muted-foreground">Please sign in to use the AI Protocol Generator.</p>
-        </CardContent>
-      </Card>
-    );
-  }
 
   const generateAllProtocols = async () => {
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please sign in to generate protocols.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     setIsGenerating(true);
     setProgress(0);
@@ -150,9 +131,11 @@ export const ProtocolGenerator = () => {
       
       console.log('Generation complete:', finalResults);
 
-      // Track protocol creation
-      for (let i = 0; i < generated; i++) {
-        await trackProtocolCreated();
+      // Track protocol creation (only if logged in)
+      if (user) {
+        for (let i = 0; i < generated; i++) {
+          await trackProtocolCreated();
+        }
       }
 
       if (errors.length === 0) {
