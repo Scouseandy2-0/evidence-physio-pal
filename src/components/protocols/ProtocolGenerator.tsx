@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useActivityTracking } from "@/hooks/useActivityTracking";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   Brain, 
   Database, 
@@ -25,6 +26,7 @@ interface GenerationResults {
 }
 
 export const ProtocolGenerator = () => {
+  const { user } = useAuth();
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<GenerationResults | null>(null);
@@ -32,7 +34,28 @@ export const ProtocolGenerator = () => {
   const { toast } = useToast();
   const { trackProtocolCreated } = useActivityTracking();
 
+  if (!user) {
+    return (
+      <Card>
+        <CardContent className="p-12 text-center">
+          <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <h3 className="text-lg font-semibold mb-2">Authentication Required</h3>
+          <p className="text-muted-foreground">Please sign in to use the AI Protocol Generator.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const generateAllProtocols = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to generate protocols.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsGenerating(true);
     setProgress(0);
     setResults(null);
@@ -50,7 +73,11 @@ export const ProtocolGenerator = () => {
         throw new Error('Could not load conditions from database');
       }
 
-      const total = conditions?.length || 0;
+      if (!conditions || conditions.length === 0) {
+        throw new Error('No conditions found in database');
+      }
+
+      const total = conditions.length;
       let processed = 0;
       let generated = 0;
       const errors: string[] = [];
