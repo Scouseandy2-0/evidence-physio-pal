@@ -61,13 +61,16 @@ function toDoiUrl(input: string): string {
 }
 
 // Detect NICE guidance item pages like /guidance/ng59, /guidance/cg177, /guidance/qs123
+// or Clinical Knowledge Summaries pages like /topics/...
 const niceGuidanceRegex = /nice\.org\.uk\/guidance\/[a-z]{1,3}\d+/i;
+const cksSummaryRegex = /cks\.nice\.org\.uk\/topics\//i;
 function isNiceGuidanceUrl(url: string): boolean {
   try {
     const u = new URL(url);
-    return niceGuidanceRegex.test(u.hostname + u.pathname);
+    const urlString = u.hostname + u.pathname;
+    return niceGuidanceRegex.test(urlString) || cksSummaryRegex.test(urlString);
   } catch {
-    return niceGuidanceRegex.test(url);
+    return niceGuidanceRegex.test(url) || cksSummaryRegex.test(url);
   }
 }
 
@@ -98,14 +101,18 @@ export function getExternalEvidenceLink(e: EvidenceLike): string | null {
   // 1) Prefer explicit URL stored in grade_assessment (used by guidelines), with special handling for NICE
   const gaUrl = (e.grade_assessment?.url || '').trim();
   const isCochraneGa = gaUrl && /cochranelibrary\.com/i.test(gaUrl);
-  const isNiceGa = gaUrl && /nice\.org\.uk/i.test(gaUrl);
+  const isNiceGa = gaUrl && /(cks\.)?nice\.org\.uk/i.test(gaUrl);
   if (gaUrl && gaUrl !== '#') {
     if (isCochraneGa) {
       // Defer Cochrane handling below
     } else if (isNiceGa) {
-      // Prefer specific NICE guidance pages if already mapped correctly
+      // Only return if it's a specific NICE guidance or CKS page
       if (isNiceGuidanceUrl(gaUrl)) return gaUrl;
-      // Not a specific NICE guidance page; continue to other resolution (avoid NICE site search)
+      // For NICE guidelines without specific URLs, generate CKS search
+      const query = buildNiceQuery(e);
+      if (query) {
+        return `https://cks.nice.org.uk/#?q=${encodeURIComponent(query)}`;
+      }
     } else {
       return gaUrl;
     }
