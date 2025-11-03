@@ -5,10 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, FileText, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 export const ProtocolDataPopulator = () => {
   const [isPopulating, setIsPopulating] = useState(false);
-
+  const { user } = useAuth();
   // Basic schema validation for protocol JSON
   const validateProtocol = (data: any) => {
     const required = [
@@ -80,8 +81,8 @@ export const ProtocolDataPopulator = () => {
             contraindications: protocolData.contraindications,
             precautions: protocolData.precautions,
             expected_outcomes: protocolData.expected_outcomes,
-            created_by: null, // System generated
-            is_validated: true
+            created_by: user?.id || null,
+            is_validated: false
           });
 
         if (insertError) throw insertError;
