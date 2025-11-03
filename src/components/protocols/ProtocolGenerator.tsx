@@ -39,59 +39,86 @@ export const ProtocolGenerator = () => {
     setIsGenerating(true);
     setProgress(0);
     setResults(null);
-    setCurrentCondition("Generating via server...");
+    setCurrentCondition("Preparing...");
 
     try {
-      console.log('Starting protocol generation...');
-      
-      // Call single edge function that handles batching & generation server-side
-      // Note: This may take several minutes to complete
-      const { data, error } = await supabase.functions.invoke('generate-condition-protocols', {
-        body: {}
-      });
+      // 1) Get total number of conditions to compute progress
+      const { count, error: countError } = await supabase
+        .from('conditions')
+        .select('*', { count: 'exact', head: true });
 
-      console.log('Edge function response:', { data, error });
-
-      if (error) {
-        console.error('Edge function error:', error);
-        throw new Error(`Edge function failed: ${error.message || JSON.stringify(error)}`);
+      if (countError) {
+        throw new Error(`Failed to count conditions: ${countError.message}`);
       }
 
-      if (data?.error) {
-        console.error('Function returned error:', data.error);
-        throw new Error(data.error);
+      const total = Number(count ?? 0);
+      if (total === 0) {
+        setProgress(100);
+        setResults({ totalConditions: 0, processedConditions: 0, generatedProtocols: 0, errors: [] });
+        toast({ title: "No Conditions Found", description: "There are no conditions to process." });
+        return;
       }
 
-      const rawResults = (data as any)?.results;
-      const res: GenerationResults = {
-        totalConditions: Number(rawResults?.totalConditions ?? 0),
-        processedConditions: Number(rawResults?.processedConditions ?? 0),
-        generatedProtocols: Number(rawResults?.generatedProtocols ?? 0),
-        errors: Array.isArray(rawResults?.errors) ? rawResults.errors : []
+      const BATCH_SIZE = 5; // keep requests fast to avoid timeouts
+      let processedTotal = 0;
+      let generatedTotal = 0;
+      const allErrors: string[] = [];
+
+      const totalBatches = Math.ceil(total / BATCH_SIZE);
+
+      for (let offset = 0, batchIndex = 0; offset < total; offset += BATCH_SIZE, batchIndex++) {
+        setCurrentCondition(`Batch ${batchIndex + 1} of ${totalBatches}`);
+
+        const { data, error } = await supabase.functions.invoke('generate-condition-protocols', {
+          body: { offset, limit: BATCH_SIZE }
+        });
+
+        if (error) {
+          throw new Error(`Edge function failed: ${error.message || JSON.stringify(error)}`);
+        }
+        if (data?.error) {
+          throw new Error(data.error);
+        }
+
+        const raw = (data as any)?.results ?? {};
+        const processed = Number(raw?.processedConditions ?? 0);
+        const generated = Number(raw?.generatedProtocols ?? 0);
+        const errors = Array.isArray(raw?.errors) ? raw.errors : [];
+
+        processedTotal += processed;
+        generatedTotal += generated;
+        allErrors.push(...errors);
+
+        // Update progress based on total processed
+        setProgress(Math.min(99, Math.round((processedTotal / total) * 100)));
+      }
+
+      const finalResults: GenerationResults = {
+        totalConditions: total,
+        processedConditions: processedTotal,
+        generatedProtocols: generatedTotal,
+        errors: allErrors,
       };
 
-      setResults(res);
+      setResults(finalResults);
       setProgress(100);
       setCurrentCondition("Completed");
 
-      console.log('Generation complete (server-side):', res);
-
-      // Track protocol creation (only if logged in)
-      if (user) {
-        for (let i = 0; i < (res.generatedProtocols ?? 0); i++) {
+      if (user && generatedTotal > 0) {
+        for (let i = 0; i < generatedTotal; i++) {
           await trackProtocolCreated();
         }
       }
 
-      if ((res.errors?.length ?? 0) === 0) {
+      if (allErrors.length === 0) {
         toast({
           title: "Protocol Generation Complete",
-          description: `Successfully generated ${res.generatedProtocols} evidence-based protocols`,
+          description: `Successfully generated ${generatedTotal} evidence-based protocols`,
         });
       } else {
         toast({
           title: "Protocol Generation Finished with Errors",
-          description: `Generated ${res.generatedProtocols}. ${res.errors.length} condition(s) had errors.`,
+          description: `Generated ${generatedTotal}. ${allErrors.length} condition(s) had errors.`,
           variant: "destructive",
         });
       }
@@ -99,14 +126,19 @@ export const ProtocolGenerator = () => {
     } catch (error: any) {
       console.error('Protocol generation error:', error);
       setCurrentCondition("Failed");
-      
+
       let errorMessage = "Failed to generate protocols";
-      if (error.message?.includes("Failed to send a request")) {
-        errorMessage = "Network error. The request may have timed out due to large number of protocols. Try refreshing the page and trying again.";
+      const msg = String(error?.message ?? "");
+      if (msg.includes("429")) {
+        errorMessage = "Rate limit reached. Please wait a moment and try again.";
+      } else if (msg.includes("402")) {
+        errorMessage = "Payment required for Lovable AI usage. Please add credits to your workspace.";
+      } else if (msg.includes("Failed to send a request") || msg.toLowerCase().includes("network")) {
+        errorMessage = "Network error or timeout. We now run in small batches — please try again.";
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       toast({
         title: "Generation Failed",
         description: errorMessage,
@@ -116,6 +148,7 @@ export const ProtocolGenerator = () => {
       setIsGenerating(false);
     }
   };
+
 
   return (
     <div className="space-y-6">
