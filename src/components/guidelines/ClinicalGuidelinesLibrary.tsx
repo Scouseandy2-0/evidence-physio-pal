@@ -127,6 +127,31 @@ export const ClinicalGuidelinesLibrary = () => {
     return 'General';
   };
 
+  const cleanupInvalidGuidelines = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.functions.invoke('cleanup-invalid-guidelines');
+
+      if (error) throw error;
+
+      toast({
+        title: "Cleanup Complete",
+        description: data.message || "Successfully cleaned up invalid guidelines",
+      });
+
+      // Refresh the guidelines list
+      await fetchGuidelines();
+    } catch (error: any) {
+      toast({
+        title: "Error during cleanup",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fixGuidelineUrls = async () => {
     try {
       setLoading(true);
@@ -431,6 +456,9 @@ export const ClinicalGuidelinesLibrary = () => {
               Showing {filteredGuidelines.length} of {guidelines.length} guidelines
             </p>
             <div className="flex gap-2">
+              <Button onClick={cleanupInvalidGuidelines} variant="outline" size="sm" disabled={loading}>
+                Clean Up Invalid
+              </Button>
               <Button onClick={fixGuidelineUrls} variant="outline" size="sm" disabled={loading}>
                 Fix URLs
               </Button>
