@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,19 @@ import { useAuth } from "@/hooks/useAuth";
 export const ProtocolDataPopulator = () => {
   const [isPopulating, setIsPopulating] = useState(false);
   const { user } = useAuth();
+
+  // Prevent navigation during population
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isPopulating) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isPopulating]);
   // Basic schema validation for protocol JSON
   const validateProtocol = (data: any) => {
     const required = [
