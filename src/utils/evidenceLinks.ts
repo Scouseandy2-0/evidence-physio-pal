@@ -103,10 +103,12 @@ export function getExternalEvidenceLink(e: EvidenceLike): string | null {
     if (isCochraneGa) {
       // Defer Cochrane handling below
     } else if (isNiceGa) {
-      // Always prefer a scoped NICE search over stored URLs to avoid mis-mapped pages
+      // Prefer specific NICE guidance pages if already mapped correctly
+      if (isNiceGuidanceUrl(gaUrl)) return gaUrl;
+      // Otherwise, fall back to a scoped NICE search
       const q = buildNiceQuery(e);
       if (q) return `https://www.nice.org.uk/search?q=${encodeURIComponent(q)}&ndt=guidance`;
-      return `https://www.nice.org.uk/search?q=${encodeURIComponent(e.title || '')}&ndt=guidance`;
+      return gaUrl;
     } else {
       return gaUrl;
     }
@@ -114,15 +116,6 @@ export function getExternalEvidenceLink(e: EvidenceLike): string | null {
   const doiRaw = (e.doi || '').trim();
   const doiNorm = normalizeDoi(doiRaw);
   const journalLower = (e.journal || '').toLowerCase();
-
-  // Prefer NICE site search when the source indicates NICE (even without a stored URL)
-  const titleLower = (e.title || '').toLowerCase();
-  const tagsLower = ((e.tags || []) as string[]).map(t => t.toLowerCase());
-  const indicatesNice = journalLower.includes('nice') || titleLower.includes('nice') || tagsLower.includes('nice');
-  if (indicatesNice) {
-    const q = buildNiceQuery(e);
-    if (q) return `https://www.nice.org.uk/search?q=${encodeURIComponent(q)}&ndt=guidance`;
-  }
 
 
   // 2) If DOI field is actually a full URL, return a canonical doi.org URL
