@@ -95,71 +95,160 @@ function buildNiceQuery(e: EvidenceLike): string {
   return parts.join(' ').trim();
 }
 
-export function getExternalEvidenceLink(e: EvidenceLike): string | null {
-  if (!e) return null;
+// Multi-source evidence link resolver - returns all available sources with priority ranking
+export interface EvidenceSource {
+  label: string;
+  url: string;
+  priority: number;
+  source: 'NICE' | 'CKS' | 'DOI' | 'PubMed' | 'Cochrane' | 'WHO' | 'TRIP' | 'Epistemonikos' | 'PubMed-Search';
+}
 
-  // 1) Prefer explicit URL stored in grade_assessment (used by guidelines), with special handling for NICE
+export function getEvidenceSourceLinks(e: EvidenceLike): EvidenceSource[] {
+  if (!e) return [];
+  
+  const sources: EvidenceSource[] = [];
   const gaUrl = (e.grade_assessment?.url || '').trim();
-  const isCochraneGa = gaUrl && /cochranelibrary\.com/i.test(gaUrl);
-  const isNiceGa = gaUrl && /(cks\.)?nice\.org\.uk/i.test(gaUrl);
-  if (gaUrl && gaUrl !== '#') {
-    if (isCochraneGa) {
-      // Defer Cochrane handling below
-    } else if (isNiceGa) {
-      // Return specific NICE guidance or CKS topic pages only
-      if (isNiceGuidanceUrl(gaUrl)) return gaUrl;
-      // Not specific: defer to DOI/PMID resolution below; we'll fallback to CKS later if nothing else
-    } else {
-      return gaUrl;
-    }
-  }
   const doiRaw = (e.doi || '').trim();
   const doiNorm = normalizeDoi(doiRaw);
   const journalLower = (e.journal || '').toLowerCase();
-
-
-  // 2) If DOI field is actually a full URL, return a canonical doi.org URL
-  if (doiRaw && (doiRaw.startsWith('http://') || doiRaw.startsWith('https://'))) {
-    const url = toDoiUrl(doiRaw);
-    if (url) return url;
+  
+  // 1) Specific NICE guidance URL (highest priority for NICE items)
+  if (gaUrl && isNiceGuidanceUrl(gaUrl)) {
+    const code = gaUrl.match(/\/(ng\d+|cg\d+|qs\d+|ph\d+)/i)?.[1]?.toUpperCase();
+    sources.push({
+      label: code ? `NICE ${code}` : 'NICE Guidance',
+      url: gaUrl,
+      priority: 1,
+      source: 'NICE'
+    });
   }
-
-  // 3) Cochrane special handling - prefer Cochrane Library search (synthetic DOIs may not resolve)
-  // Cochrane DOIs typically include 10.1002/14651858.CDxxxxxx
-  if (doiNorm && (doiNorm.includes('14651858') || journalLower.includes('cochrane'))) {
-    const q = encodeURIComponent(e.title || doiNorm);
-    return `https://www.cochranelibrary.com/search?searchText=${q}`;
+  
+  // 2) CKS topic page
+  if (gaUrl && cksSummaryRegex.test(gaUrl)) {
+    sources.push({
+      label: 'NICE CKS Topic',
+      url: gaUrl,
+      priority: 2,
+      source: 'CKS'
+    });
   }
-
-  // 4) Other journal special cases
-  if (doiNorm && journalLower.includes('bmj')) {
-    return `https://bmjopenquality.bmj.com/content/${doiNorm.replace('10.1136/', '')}`;
-  }
-  if (doiNorm && journalLower.includes('physical therapy')) {
-    return `https://academic.oup.com/ptj/article-lookup/doi/${doiNorm}`;
-  }
-
-  // 5) Standard DOI resolution
+  
+  // 3) DOI resolution
   if (doiNorm && doiNorm.startsWith('10.')) {
-    return `https://doi.org/${doiNorm}`;
-  }
-
-  // 6) PubMed fallback
-  if (e.pmid) return `https://pubmed.ncbi.nlm.nih.gov/${e.pmid}`;
-
-  // 7) Search fallback
-  if (e.title) return `https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(e.title)}`;
-
-  // 8) As a last resort, return guideline URL if present, prefer specific pages; otherwise generate CKS search for NICE
-  if (gaUrl && gaUrl !== '#') {
-    if (/(cks\.)?nice\.org\.uk/i.test(gaUrl)) {
-      if (isNiceGuidanceUrl(gaUrl)) return gaUrl; // specific NICE guidance or CKS topic
-      const q = buildNiceQuery(e);
-      if (q) return `https://cks.nice.org.uk/#?q=${encodeURIComponent(q)}`;
+    if (doiNorm.includes('14651858') || journalLower.includes('cochrane')) {
+      // Cochrane - prefer library search
+      const q = encodeURIComponent(e.title || doiNorm);
+      sources.push({
+        label: 'Cochrane Library',
+        url: `https://www.cochranelibrary.com/search?searchText=${q}`,
+        priority: 3,
+        source: 'Cochrane'
+      });
+    } else if (journalLower.includes('bmj')) {
+      sources.push({
+        label: 'BMJ',
+        url: `https://bmjopenquality.bmj.com/content/${doiNorm.replace('10.1136/', '')}`,
+        priority: 3,
+        source: 'DOI'
+      });
+    } else if (journalLower.includes('physical therapy')) {
+      sources.push({
+        label: 'OUP Physical Therapy',
+        url: `https://academic.oup.com/ptj/article-lookup/doi/${doiNorm}`,
+        priority: 3,
+        source: 'DOI'
+      });
     } else {
-      return gaUrl;
+      sources.push({
+        label: 'DOI Link',
+        url: `https://doi.org/${doiNorm}`,
+        priority: 3,
+        source: 'DOI'
+      });
     }
   }
+  
+  // 4) PubMed ID
+  if (e.pmid) {
+    sources.push({
+      label: 'PubMed',
+      url: `https://pubmed.ncbi.nlm.nih.gov/${e.pmid}`,
+      priority: 4,
+      source: 'PubMed'
+    });
+  }
+  
+  // 5) External database links from grade_assessment
+  if (gaUrl && gaUrl !== '#') {
+    if (/tripdatabase\.com/i.test(gaUrl)) {
+      sources.push({
+        label: 'TRIP Database',
+        url: gaUrl,
+        priority: 5,
+        source: 'TRIP'
+      });
+    } else if (/epistemonikos\.org/i.test(gaUrl)) {
+      sources.push({
+        label: 'Epistemonikos',
+        url: gaUrl,
+        priority: 5,
+        source: 'Epistemonikos'
+      });
+    } else if (/who\.int/i.test(gaUrl)) {
+      sources.push({
+        label: 'WHO Guidelines',
+        url: gaUrl,
+        priority: 5,
+        source: 'WHO'
+      });
+    } else if (/(cks\.)?nice\.org\.uk/i.test(gaUrl) && !isNiceGuidanceUrl(gaUrl)) {
+      // Generic NICE/CKS search - lower priority
+      sources.push({
+        label: 'NICE/CKS Search',
+        url: gaUrl,
+        priority: 7,
+        source: 'CKS'
+      });
+    } else if (!/nice\.org\.uk\/search/i.test(gaUrl)) {
+      // Other valid URLs
+      sources.push({
+        label: 'External Link',
+        url: gaUrl,
+        priority: 6,
+        source: 'DOI'
+      });
+    }
+  }
+  
+  // 6) PubMed title search as fallback
+  if (e.title && sources.length === 0) {
+    sources.push({
+      label: 'PubMed Search',
+      url: `https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(e.title)}`,
+      priority: 8,
+      source: 'PubMed-Search'
+    });
+  }
+  
+  // 7) CKS search from title/tags as last resort for NICE items
+  if (gaUrl && /(cks\.)?nice\.org\.uk/i.test(gaUrl) && sources.length === 0) {
+    const q = buildNiceQuery(e);
+    if (q) {
+      sources.push({
+        label: 'CKS Search',
+        url: `https://cks.nice.org.uk/#?q=${encodeURIComponent(q)}`,
+        priority: 9,
+        source: 'CKS'
+      });
+    }
+  }
+  
+  // Sort by priority (lower number = higher priority)
+  return sources.sort((a, b) => a.priority - b.priority);
+}
 
-  return null;
+// Get the best single link (top priority from multi-source)
+export function getExternalEvidenceLink(e: EvidenceLike): string | null {
+  const sources = getEvidenceSourceLinks(e);
+  return sources.length > 0 ? sources[0].url : null;
 }

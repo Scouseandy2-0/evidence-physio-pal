@@ -22,10 +22,10 @@ serve(async (req) => {
     }
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Mapping of keywords to correct URLs
+    // Strict mapping of keywords to correct URLs - only apply when there's a clear match
     const urlMappings = [
       {
-        keywords: ['low back pain', 'sciatica', 'back pain', 'lumbar'],
+        keywords: ['low back pain and sciatica', 'sciatica', 'lumbar radiculopathy'],
         url: 'https://www.nice.org.uk/guidance/ng59',
         doi: 'ng59',
         title: 'Low back pain and sciatica in over 16s: assessment and management'
@@ -43,7 +43,7 @@ serve(async (req) => {
         title: 'Chronic obstructive pulmonary disease in over 16s: diagnosis and management'
       },
       {
-        keywords: ['osteoarthritis', 'oa'],
+        keywords: ['osteoarthritis in over 16s', 'osteoarthritis: diagnosis and management'],
         url: 'https://www.nice.org.uk/guidance/ng226',
         doi: 'ng226',
         title: 'Osteoarthritis in over 16s: diagnosis and management'
@@ -202,17 +202,26 @@ serve(async (req) => {
       const tags = (guideline.tags || []).map((t: string) => t.toLowerCase());
       const allText = `${titleLower} ${abstractLower} ${tags.join(' ')}`;
 
-      // Find matching URL mapping
+      // Find matching URL mapping - require strong match
       for (const mapping of urlMappings) {
-        const hasMatch = mapping.keywords.some(keyword => 
-          allText.includes(keyword.toLowerCase())
-        );
+        // Require at least one exact phrase match for precision
+        const hasStrongMatch = mapping.keywords.some(keyword => {
+          const keywordLower = keyword.toLowerCase();
+          // For multi-word keywords, require the full phrase
+          if (keywordLower.includes(' ')) {
+            return allText.includes(keywordLower);
+          }
+          // For single words, require word boundaries
+          const regex = new RegExp(`\\b${keywordLower}\\b`, 'i');
+          return regex.test(allText);
+        });
 
-        if (hasMatch) {
+        if (hasStrongMatch) {
           const updatedGradeAssessment = {
             ...(guideline.grade_assessment || {}),
             url: mapping.url,
-            title: mapping.title
+            title: mapping.title,
+            auto_matched: true
           };
 
           updates.push({
@@ -220,6 +229,7 @@ serve(async (req) => {
             grade_assessment: updatedGradeAssessment,
             doi: mapping.doi
           });
+          console.log(`[FIX-URLS] Matched: "${guideline.title.substring(0, 40)}..." -> ${mapping.doi}`);
           break; // Found a match, move to next guideline
         }
       }

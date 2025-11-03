@@ -64,22 +64,30 @@ Deno.serve(async (req) => {
     evidenceEntries.push(tripEntry);
     console.log('[TRIP-DB] Created Trip Database reference entry');
 
-    // Insert into database
+    // Insert into database with pre-insert check to avoid conflicts
     if (evidenceEntries.length > 0) {
-      const { data, error } = await supabase
-        .from('evidence')
-        .upsert(evidenceEntries, { 
-          onConflict: 'title',
-          ignoreDuplicates: false 
-        })
-        .select();
+      for (const entry of evidenceEntries) {
+        // Check if entry with this URL already exists
+        const { data: existing } = await supabase
+          .from('evidence')
+          .select('id')
+          .eq('grade_assessment->>url', tripUrl)
+          .maybeSingle();
 
-      if (error) {
-        console.error('[TRIP-DB] Error inserting evidence:', error);
-        throw error;
+        if (!existing) {
+          const { error } = await supabase
+            .from('evidence')
+            .insert(entry);
+
+          if (error) {
+            console.error('[TRIP-DB] Error inserting evidence:', error);
+          } else {
+            console.log('[TRIP-DB] Successfully inserted entry');
+          }
+        } else {
+          console.log('[TRIP-DB] Entry already exists, skipping');
+        }
       }
-
-      console.log(`[TRIP-DB] Successfully inserted ${data?.length || 0} entries`);
     }
 
     return new Response(

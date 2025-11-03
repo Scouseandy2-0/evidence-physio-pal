@@ -53,22 +53,30 @@ Deno.serve(async (req) => {
     evidenceEntries.push(epistemEntry);
     console.log('[EPISTEMONIKOS] Created Epistemonikos reference entry');
 
-    // Insert into database
+    // Insert into database with pre-insert check to avoid conflicts
     if (evidenceEntries.length > 0) {
-      const { data, error } = await supabase
-        .from('evidence')
-        .upsert(evidenceEntries, { 
-          onConflict: 'title',
-          ignoreDuplicates: false 
-        })
-        .select();
+      for (const entry of evidenceEntries) {
+        // Check if entry with this URL already exists
+        const { data: existing } = await supabase
+          .from('evidence')
+          .select('id')
+          .eq('grade_assessment->>url', epistemUrl)
+          .maybeSingle();
 
-      if (error) {
-        console.error('[EPISTEMONIKOS] Error inserting evidence:', error);
-        throw error;
+        if (!existing) {
+          const { error } = await supabase
+            .from('evidence')
+            .insert(entry);
+
+          if (error) {
+            console.error('[EPISTEMONIKOS] Error inserting evidence:', error);
+          } else {
+            console.log('[EPISTEMONIKOS] Successfully inserted entry');
+          }
+        } else {
+          console.log('[EPISTEMONIKOS] Entry already exists, skipping');
+        }
       }
-
-      console.log(`[EPISTEMONIKOS] Successfully inserted ${data?.length || 0} entries`);
     }
 
     return new Response(

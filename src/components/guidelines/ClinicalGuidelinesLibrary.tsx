@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { getExternalEvidenceLink } from "@/utils/evidenceLinks";
+import { getExternalEvidenceLink, getEvidenceSourceLinks } from "@/utils/evidenceLinks";
 import { 
   FileText,
   ExternalLink,
@@ -19,8 +19,11 @@ import {
   Users,
   CheckCircle,
   AlertCircle,
-  Star
+  Star,
+  ChevronDown,
+  Wrench
 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 
 interface ClinicalGuideline {
   id: string;
@@ -169,6 +172,31 @@ export const ClinicalGuidelinesLibrary = () => {
     } catch (error: any) {
       toast({
         title: "Error fixing URLs",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const repairGuidelineLinks = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.functions.invoke('repair-guideline-links');
+
+      if (error) throw error;
+
+      toast({
+        title: "Links Repaired",
+        description: data.message || "Successfully repaired mismatched guideline links",
+      });
+
+      // Refresh the guidelines list
+      await fetchGuidelines();
+    } catch (error: any) {
+      toast({
+        title: "Error repairing links",
         description: error.message,
         variant: "destructive",
       });
@@ -388,19 +416,57 @@ export const ClinicalGuidelinesLibrary = () => {
             <FileText className="h-4 w-4 mr-2" />
             View Details
           </Button>
-          {guideline.guideline_url && guideline.guideline_url !== '#' && !/nice\.org\.uk\/search/i.test(guideline.guideline_url) && (
-            <Button 
-              variant="default" 
-              size="sm" 
-              className="flex-1"
-              onClick={() => {
-                window.open(guideline.guideline_url, '_blank', 'noopener,noreferrer');
-              }}
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Open Guide
-            </Button>
-          )}
+          {(() => {
+            const sources = getEvidenceSourceLinks({
+              title: guideline.title,
+              journal: guideline.organization,
+              doi: null,
+              pmid: null,
+              tags: guideline.tags,
+              grade_assessment: { url: guideline.guideline_url }
+            });
+            
+            const primarySource = sources[0];
+            const additionalSources = sources.slice(1);
+            
+            if (!primarySource) return null;
+            
+            return (
+              <div className="flex gap-1 flex-1">
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => window.open(primarySource.url, '_blank', 'noopener,noreferrer')}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  {primarySource.label}
+                </Button>
+                {additionalSources.length > 0 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="default" size="sm" className="px-2">
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>More Sources</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {additionalSources.map((source, idx) => (
+                        <DropdownMenuItem 
+                          key={idx}
+                          onClick={() => window.open(source.url, '_blank', 'noopener,noreferrer')}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          {source.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </CardContent>
     </Card>
@@ -474,6 +540,10 @@ export const ClinicalGuidelinesLibrary = () => {
               </Button>
               <Button onClick={fixGuidelineUrls} variant="outline" size="sm" disabled={loading}>
                 Fix URLs
+              </Button>
+              <Button onClick={repairGuidelineLinks} variant="outline" size="sm" disabled={loading}>
+                <Wrench className="h-4 w-4 mr-2" />
+                Repair Links
               </Button>
               <Button onClick={fetchMoreGuidelines} variant="default" disabled={loading}>
                 <Star className="h-4 w-4 mr-2" />
