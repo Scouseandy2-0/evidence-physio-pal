@@ -79,17 +79,15 @@ function buildNiceQuery(e: EvidenceLike): string {
   // Prefer a specific condition tag if available
   const primaryTag = tags.find(t => !stopWords.test(t));
 
-  // Clean the title and wrap in quotes for exact matching
+  // Clean the title without quotes
   const cleanedTitle = (e.title || '')
     .replace(stopWords, '')
     .replace(/\s{2,}/g, ' ')
     .trim();
 
   const parts: string[] = [];
-  if (cleanedTitle) parts.push(`"${cleanedTitle}"`);
+  if (cleanedTitle) parts.push(cleanedTitle);
   if (primaryTag) parts.push(primaryTag);
-  // Reinforce target and type
-  parts.push('NICE guidance');
 
   return parts.join(' ').trim();
 }
