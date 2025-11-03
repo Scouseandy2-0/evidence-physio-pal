@@ -43,7 +43,9 @@ export const ProtocolGenerator = () => {
 
     try {
       // Call single edge function that handles batching & generation server-side
-      const { data, error } = await supabase.functions.invoke('generate-condition-protocols', {});
+      const { data, error } = await supabase.functions.invoke('generate-condition-protocols', {
+        body: {}
+      });
 
       if (error) {
         console.error('Edge function error:', error);
@@ -55,11 +57,12 @@ export const ProtocolGenerator = () => {
         throw new Error(data.error);
       }
 
-      const res = data?.results ?? {
-        totalConditions: 0,
-        processedConditions: 0,
-        generatedProtocols: 0,
-        errors: [] as string[],
+      const rawResults = (data as any)?.results;
+      const res: GenerationResults = {
+        totalConditions: Number(rawResults?.totalConditions ?? 0),
+        processedConditions: Number(rawResults?.processedConditions ?? 0),
+        generatedProtocols: Number(rawResults?.generatedProtocols ?? 0),
+        errors: Array.isArray(rawResults?.errors) ? rawResults.errors : []
       };
 
       setResults(res);
@@ -178,7 +181,7 @@ export const ProtocolGenerator = () => {
                     <div className="flex items-center gap-2">
                       <AlertCircle className="h-5 w-5 text-orange-500" />
                       <div>
-                        <p className="text-2xl font-bold">{results.errors.length}</p>
+                        <p className="text-2xl font-bold">{results.errors?.length ?? 0}</p>
                         <p className="text-sm text-muted-foreground">Errors</p>
                       </div>
                     </div>
@@ -186,14 +189,14 @@ export const ProtocolGenerator = () => {
                 </Card>
               </div>
 
-              {results.errors.length > 0 && (
+              {(results.errors?.length ?? 0) > 0 && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-orange-600">Generation Errors</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
-                      {results.errors.map((error, index) => (
+                      {results.errors!.map((error, index) => (
                         <Badge key={index} variant="outline" className="text-orange-600">
                           {error}
                         </Badge>
