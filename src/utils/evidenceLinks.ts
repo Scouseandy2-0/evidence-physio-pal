@@ -106,11 +106,9 @@ export function getExternalEvidenceLink(e: EvidenceLike): string | null {
     if (isCochraneGa) {
       // Defer Cochrane handling below
     } else if (isNiceGa) {
-      // If it's a CKS topic page, return it; otherwise prefer CKS search over generic NICE guidance
-      if (cksSummaryRegex.test(gaUrl)) return gaUrl;
-      const query = buildNiceQuery(e);
-      if (query) return `https://cks.nice.org.uk/#?q=${encodeURIComponent(query)}`;
-      // Do not return non-CKS NICE guidance URLs here
+      // Return specific NICE guidance or CKS topic pages only
+      if (isNiceGuidanceUrl(gaUrl)) return gaUrl;
+      // Not specific: defer to DOI/PMID resolution below; we'll fallback to CKS later if nothing else
     } else {
       return gaUrl;
     }
@@ -152,10 +150,12 @@ export function getExternalEvidenceLink(e: EvidenceLike): string | null {
   // 7) Search fallback
   if (e.title) return `https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(e.title)}`;
 
-  // 8) As a last resort, return guideline URL if present, but avoid generic NICE guidance pages
+  // 8) As a last resort, return guideline URL if present, prefer specific pages; otherwise generate CKS search for NICE
   if (gaUrl && gaUrl !== '#') {
     if (/(cks\.)?nice\.org\.uk/i.test(gaUrl)) {
-      if (cksSummaryRegex.test(gaUrl)) return gaUrl;
+      if (isNiceGuidanceUrl(gaUrl)) return gaUrl; // specific NICE guidance or CKS topic
+      const q = buildNiceQuery(e);
+      if (q) return `https://cks.nice.org.uk/#?q=${encodeURIComponent(q)}`;
     } else {
       return gaUrl;
     }
