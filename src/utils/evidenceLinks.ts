@@ -105,10 +105,7 @@ export function getExternalEvidenceLink(e: EvidenceLike): string | null {
     } else if (isNiceGa) {
       // Prefer specific NICE guidance pages if already mapped correctly
       if (isNiceGuidanceUrl(gaUrl)) return gaUrl;
-      // Otherwise, fall back to a scoped NICE search
-      const q = buildNiceQuery(e);
-      if (q) return `https://www.nice.org.uk/search?q=${encodeURIComponent(q)}&ndt=guidance`;
-      return gaUrl;
+      // Not a specific NICE guidance page; continue to other resolution (avoid NICE site search)
     } else {
       return gaUrl;
     }

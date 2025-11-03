@@ -225,7 +225,9 @@ export const ClinicalGuidelinesLibrary = () => {
     const matchesSearch = guideline.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          guideline.organization.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          guideline.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-    return matchesCategory && matchesOrganization && matchesSearch;
+    const isNiceSearch = /nice\.org\.uk\/search/i.test(guideline.guideline_url || '');
+    const isInvalidNice = isNiceSearch || ((guideline.organization || '').toLowerCase().includes('nice') && (!guideline.guideline_url || guideline.guideline_url === '#'));
+    return matchesCategory && matchesOrganization && matchesSearch && !isInvalidNice;
   });
 
   const categories = [...new Set(guidelines.map(g => g.condition_category))];
@@ -348,7 +350,7 @@ export const ClinicalGuidelinesLibrary = () => {
             <FileText className="h-4 w-4 mr-2" />
             View Details
           </Button>
-          {guideline.guideline_url && guideline.guideline_url !== '#' && (
+          {guideline.guideline_url && guideline.guideline_url !== '#' && !/nice\.org\.uk\/search/i.test(guideline.guideline_url) && (
             <Button 
               variant="default" 
               size="sm" 
