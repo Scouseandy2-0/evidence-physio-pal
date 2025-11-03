@@ -131,17 +131,6 @@ serve(async (req) => {
       errors: [] as string[]
     };
 
-    if (conditionsError) {
-      throw new Error(`Failed to fetch conditions: ${conditionsError.message}`);
-    }
-
-    const results = {
-      totalConditions: conditions?.length || 0,
-      processedConditions: 0,
-      generatedProtocols: 0,
-      errors: [] as string[]
-    };
-
     // Process conditions in batches for faster generation
     const BATCH_SIZE = 3; // Process 3 conditions at once
     const batches: Condition[][] = [];
