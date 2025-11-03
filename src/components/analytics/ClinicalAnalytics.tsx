@@ -203,9 +203,10 @@ export const ClinicalAnalytics = () => {
                 <p className="text-sm text-muted-foreground">Improvement Rate</p>
                 <p className="text-3xl font-bold">{metrics.improvementRate.toFixed(0)}%</p>
                 <div className="flex items-center gap-1 mt-2">
-                  {getTrendIcon(metrics.improvementRate)({ 
-                    className: `h-4 w-4 ${getMetricColor(metrics.improvementRate)}` 
-                  })}
+                  {(() => {
+                    const TrendIcon = getTrendIcon(metrics.improvementRate);
+                    return <TrendIcon className={`h-4 w-4 ${getMetricColor(metrics.improvementRate)}`} />;
+                  })()}
                   <span className={`text-sm ${getMetricColor(metrics.improvementRate)}`}>
                     Outcome Tracking
                   </span>
