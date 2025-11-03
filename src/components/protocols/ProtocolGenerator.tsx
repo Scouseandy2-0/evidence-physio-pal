@@ -36,117 +36,54 @@ export const ProtocolGenerator = () => {
 
 
   const generateAllProtocols = async () => {
-
     setIsGenerating(true);
     setProgress(0);
     setResults(null);
-    setCurrentCondition("Initializing...");
+    setCurrentCondition("Generating via server...");
 
     try {
-      // Fetch all conditions and process one-by-one to avoid Edge Function timeouts
-      const { data: conditions, error: condErr } = await supabase
-        .from('conditions')
-        .select('id, name')
-        .order('name');
+      // Call single edge function that handles batching & generation server-side
+      const { data, error } = await supabase.functions.invoke('generate-condition-protocols', {});
 
-      if (condErr) {
-        console.error('Failed to fetch conditions:', condErr);
-        throw new Error('Could not load conditions from database');
+      if (error) {
+        console.error('Edge function error:', error);
+        throw error;
       }
 
-      if (!conditions || conditions.length === 0) {
-        throw new Error('No conditions found in database');
+      if (data?.error) {
+        console.error('Function returned error:', data.error);
+        throw new Error(data.error);
       }
 
-      const total = conditions.length;
-      let processed = 0;
-      let generated = 0;
-      const errors: string[] = [];
-
-      console.log(`Starting protocol generation for ${total} conditions`);
-
-      // Process sequentially to avoid AI rate limits; backend already batches evidence
-      const DISPLAY_BATCH_SIZE = 1;
-      for (let i = 0; i < conditions.length; i += DISPLAY_BATCH_SIZE) {
-        const batch = conditions.slice(i, Math.min(i + DISPLAY_BATCH_SIZE, conditions.length));
-        
-        // Process batch
-        const batchPromises = batch.map(async (condition) => {
-          setCurrentCondition(condition.name);
-          console.log(`[${i + batch.indexOf(condition) + 1}/${total}] Processing: ${condition.name}`);
-          
-          try {
-            const { data, error } = await supabase.functions.invoke('generate-condition-protocols', {
-              body: { conditionId: condition.id }
-            });
-            
-            if (error) {
-              console.error(`Error for ${condition.name}:`, error);
-              errors.push(`${condition.name}: ${error.message || 'invoke error'}`);
-              return 0;
-            } else if (data?.error) {
-              console.error(`Data error for ${condition.name}:`, data.error);
-              errors.push(`${condition.name}: ${data.error}`);
-              return 0;
-            } else {
-              const genCount = data?.results?.generatedProtocols ?? 0;
-              const funcErrors = data?.results?.errors ?? [];
-              if (funcErrors.length) {
-                funcErrors.forEach((err: string) => errors.push(`${condition.name}: ${err}`));
-              }
-              if (genCount === 0 && funcErrors.length === 0) {
-                errors.push(`${condition.name}: No protocol generated`);
-              }
-              console.log(`✓ ${condition.name}: Generated ${genCount} protocol(s)`);
-              return genCount;
-            }
-          } catch (e: any) {
-            console.error(`Exception for ${condition.name}:`, e);
-            errors.push(`${condition.name}: ${e?.message || 'request failed'}`);
-            return 0;
-          }
-        });
-
-        // Wait for batch to complete
-        const batchResults = await Promise.all(batchPromises);
-        generated += batchResults.reduce((sum, count) => sum + count, 0);
-        processed += batch.length;
-        
-        const newProgress = Math.round((processed / total) * 100);
-        setProgress(newProgress);
-        console.log(`Batch ${Math.floor(i / DISPLAY_BATCH_SIZE) + 1} complete. Progress: ${processed}/${total} (${newProgress}%)`);
-        // Gentle pacing to avoid AI rate limits
-        await new Promise((res) => setTimeout(res, 400));
-      }
-
-      const finalResults = { 
-        totalConditions: total, 
-        processedConditions: processed, 
-        generatedProtocols: generated, 
-        errors 
+      const res = data?.results ?? {
+        totalConditions: 0,
+        processedConditions: 0,
+        generatedProtocols: 0,
+        errors: [] as string[],
       };
-      
-      setResults(finalResults);
+
+      setResults(res);
+      setProgress(100);
       setCurrentCondition("Completed");
-      
-      console.log('Generation complete:', finalResults);
+
+      console.log('Generation complete (server-side):', res);
 
       // Track protocol creation (only if logged in)
       if (user) {
-        for (let i = 0; i < generated; i++) {
+        for (let i = 0; i < (res.generatedProtocols ?? 0); i++) {
           await trackProtocolCreated();
         }
       }
 
-      if (errors.length === 0) {
+      if ((res.errors?.length ?? 0) === 0) {
         toast({
           title: "Protocol Generation Complete",
-          description: `Successfully generated ${generated} evidence-based protocols`,
+          description: `Successfully generated ${res.generatedProtocols} evidence-based protocols`,
         });
       } else {
         toast({
           title: "Protocol Generation Finished with Errors",
-          description: `Generated ${generated} protocols. ${errors.length} condition(s) had errors.`,
+          description: `Generated ${res.generatedProtocols}. ${res.errors.length} condition(s) had errors.`,
           variant: "destructive",
         });
       }
