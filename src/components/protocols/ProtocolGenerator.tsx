@@ -42,14 +42,19 @@ export const ProtocolGenerator = () => {
     setCurrentCondition("Generating via server...");
 
     try {
+      console.log('Starting protocol generation...');
+      
       // Call single edge function that handles batching & generation server-side
+      // Note: This may take several minutes to complete
       const { data, error } = await supabase.functions.invoke('generate-condition-protocols', {
         body: {}
       });
 
+      console.log('Edge function response:', { data, error });
+
       if (error) {
         console.error('Edge function error:', error);
-        throw error;
+        throw new Error(`Edge function failed: ${error.message || JSON.stringify(error)}`);
       }
 
       if (data?.error) {
@@ -94,9 +99,17 @@ export const ProtocolGenerator = () => {
     } catch (error: any) {
       console.error('Protocol generation error:', error);
       setCurrentCondition("Failed");
+      
+      let errorMessage = "Failed to generate protocols";
+      if (error.message?.includes("Failed to send a request")) {
+        errorMessage = "Network error. The request may have timed out due to large number of protocols. Try refreshing the page and trying again.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Generation Failed",
-        description: error.message || "Failed to generate protocols",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
