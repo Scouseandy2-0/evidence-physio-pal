@@ -73,21 +73,25 @@ function isNiceGuidanceUrl(url: string): boolean {
 
 // Build a stable NICE search query from tags or a cleaned title
 function buildNiceQuery(e: EvidenceLike): string {
-  const fromTags = (e.tags || []) as string[];
-  let base = '';
-  if (fromTags && fromTags.length) {
-    const filtered = fromTags
-      .filter(t => !/guideline|nice|clinical|practice|evidence|rehab|physiotherapy/i.test(t))
-      .slice(0, 3);
-    if (filtered.length) base = filtered.join(' ');
-  }
-  if (!base && e.title) {
-    base = e.title
-      .replace(/\b(NICE|guideline|guidelines|clinical|practice|recommendations?)\b/gi, '')
-      .replace(/\s{2,}/g, ' ')
-      .trim();
-  }
-  return base || e.title || '';
+  const tags = (e.tags || []) as string[];
+  const stopWords = /\b(guideline|guidelines|nice|clinical|practice|recommendations?|evidence|rehabilitation|physiotherapy)\b/gi;
+
+  // Prefer a specific condition tag if available
+  const primaryTag = tags.find(t => !stopWords.test(t));
+
+  // Clean the title and wrap in quotes for exact matching
+  const cleanedTitle = (e.title || '')
+    .replace(stopWords, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+  const parts: string[] = [];
+  if (cleanedTitle) parts.push(`"${cleanedTitle}"`);
+  if (primaryTag) parts.push(primaryTag);
+  // Reinforce target and type
+  parts.push('NICE guidance');
+
+  return parts.join(' ').trim();
 }
 
 export function getExternalEvidenceLink(e: EvidenceLike): string | null {
@@ -101,12 +105,10 @@ export function getExternalEvidenceLink(e: EvidenceLike): string | null {
     if (isCochraneGa) {
       // Defer Cochrane handling below
     } else if (isNiceGa) {
-      // If it's already a specific guidance page, keep it
-      if (isNiceGuidanceUrl(gaUrl)) return gaUrl;
-      // Otherwise, build a precise NICE search query
+      // Always prefer a scoped NICE search over stored URLs to avoid mis-mapped pages
       const q = buildNiceQuery(e);
-      if (q) return `https://www.nice.org.uk/search?q=${encodeURIComponent(q)}`;
-      return gaUrl;
+      if (q) return `https://www.nice.org.uk/search?q=${encodeURIComponent(q)}&ndt=guidance`;
+      return `https://www.nice.org.uk/search?q=${encodeURIComponent(e.title || '')}&ndt=guidance`;
     } else {
       return gaUrl;
     }
@@ -114,6 +116,16 @@ export function getExternalEvidenceLink(e: EvidenceLike): string | null {
   const doiRaw = (e.doi || '').trim();
   const doiNorm = normalizeDoi(doiRaw);
   const journalLower = (e.journal || '').toLowerCase();
+
+  // Prefer NICE site search when the source indicates NICE (even without a stored URL)
+  const titleLower = (e.title || '').toLowerCase();
+  const tagsLower = ((e.tags || []) as string[]).map(t => t.toLowerCase());
+  const indicatesNice = journalLower.includes('nice') || titleLower.includes('nice') || tagsLower.includes('nice');
+  if (indicatesNice) {
+    const q = buildNiceQuery(e);
+    if (q) return `https://www.nice.org.uk/search?q=${encodeURIComponent(q)}&ndt=guidance`;
+  }
+
 
   // 2) If DOI field is actually a full URL, return a canonical doi.org URL
   if (doiRaw && (doiRaw.startsWith('http://') || doiRaw.startsWith('https://'))) {
