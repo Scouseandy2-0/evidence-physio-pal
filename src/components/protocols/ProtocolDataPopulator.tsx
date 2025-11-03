@@ -27,7 +27,7 @@ export const ProtocolDataPopulator = () => {
   };
   const [populatedCount, setPopulatedCount] = useState(0);
 
-  const generateTreatmentProtocol = async (condition: any) => {
+  const generateTreatmentProtocol = async (condition: any, existingId?: string) => {
     try {
       const response = await supabase.functions.invoke('ai-chat', {
         body: {
@@ -78,23 +78,35 @@ export const ProtocolDataPopulator = () => {
         const validation = validateProtocol(protocolData);
         if (!validation.valid) throw new Error(validation.reason || 'Invalid protocol schema');
         
-        const { error: insertError } = await supabase
-          .from('treatment_protocols')
-          .insert({
-            name: protocolData.name,
-            description: protocolData.description,
-            condition_id: condition.id,
-            protocol_steps: protocolData.protocol_steps,
-            duration_weeks: protocolData.duration_weeks,
-            frequency_per_week: protocolData.frequency_per_week,
-            contraindications: protocolData.contraindications,
-            precautions: protocolData.precautions,
-            expected_outcomes: protocolData.expected_outcomes,
-            created_by: user?.id || null,
-            is_validated: false
-          });
+        const protocolPayload = {
+          name: protocolData.name,
+          description: protocolData.description,
+          condition_id: condition.id,
+          protocol_steps: protocolData.protocol_steps,
+          duration_weeks: protocolData.duration_weeks,
+          frequency_per_week: protocolData.frequency_per_week,
+          contraindications: protocolData.contraindications,
+          precautions: protocolData.precautions,
+          expected_outcomes: protocolData.expected_outcomes,
+          created_by: user?.id || null,
+          is_validated: false
+        };
 
-        if (insertError) throw insertError;
+        let error;
+        if (existingId) {
+          // Update existing protocol
+          ({ error } = await supabase
+            .from('treatment_protocols')
+            .update(protocolPayload)
+            .eq('id', existingId));
+        } else {
+          // Insert new protocol
+          ({ error } = await supabase
+            .from('treatment_protocols')
+            .insert(protocolPayload));
+        }
+
+        if (error) throw error;
         
         return true;
       } catch (parseError) {
@@ -130,21 +142,19 @@ export const ProtocolDataPopulator = () => {
           .from('treatment_protocols')
           .select('id')
           .eq('condition_id', condition.id)
-          .single();
+          .maybeSingle();
 
-        if (!existing) {
-          console.log(`Generating protocol for: ${condition.name}`);
-          const success = await generateTreatmentProtocol(condition);
-          if (success) {
-            successCount++;
-            setPopulatedCount(successCount);
-          } else {
-            failedCount++;
-          }
-          
-          // Add delay to respect rate limits
-          await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log(`${existing ? 'Updating' : 'Generating'} protocol for: ${condition.name}`);
+        const success = await generateTreatmentProtocol(condition, existing?.id);
+        if (success) {
+          successCount++;
+          setPopulatedCount(successCount);
+        } else {
+          failedCount++;
         }
+        
+        // Add delay to respect rate limits
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
 
       if (failedCount > 0) {
