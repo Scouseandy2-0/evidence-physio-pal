@@ -53,6 +53,8 @@ export const ClinicalAnalytics = () => {
   useEffect(() => {
     if (user) {
       fetchClinicalData();
+    } else {
+      setLoading(false);
     }
   }, [user]);
 
@@ -139,6 +141,18 @@ export const ClinicalAnalytics = () => {
         <div className="text-center">
           <Activity className="h-12 w-12 animate-pulse mx-auto mb-4 text-primary" />
           <p className="text-muted-foreground">Loading clinical analytics...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <h3 className="font-medium mb-2">Authentication Required</h3>
+          <p className="text-muted-foreground">Please sign in to view clinical analytics</p>
         </div>
       </div>
     );
