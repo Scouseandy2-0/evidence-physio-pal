@@ -41,6 +41,10 @@ interface ClinicalGuideline {
   key_recommendations: string[];
   implementation_notes: string;
   tags: string[];
+  doi?: string | null;
+  pmid?: string | null;
+  journal?: string | null;
+  grade_assessment?: any;
 }
 
 export const ClinicalGuidelinesLibrary = () => {
@@ -96,7 +100,11 @@ export const ClinicalGuidelinesLibrary = () => {
           clinical_questions: [],
           key_recommendations: gradeAssessment?.recommendations || item.key_findings?.split(';') || [],
           implementation_notes: item.clinical_implications || '',
-          tags: item.tags || []
+          tags: item.tags || [],
+          doi: item.doi,
+          pmid: item.pmid,
+          journal: item.journal,
+          grade_assessment: gradeAssessment
         };
       });
 
@@ -419,11 +427,11 @@ export const ClinicalGuidelinesLibrary = () => {
           {(() => {
             const sources = getEvidenceSourceLinks({
               title: guideline.title,
-              journal: guideline.organization,
-              doi: null,
-              pmid: null,
+              journal: guideline.journal,
+              doi: guideline.doi,
+              pmid: guideline.pmid,
               tags: guideline.tags,
-              grade_assessment: { url: guideline.guideline_url }
+              grade_assessment: guideline.grade_assessment
             });
             
             const primarySource = sources[0];
