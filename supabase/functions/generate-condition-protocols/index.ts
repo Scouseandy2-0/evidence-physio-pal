@@ -332,10 +332,12 @@ Format your response as a JSON object with this exact structure:
 Base all recommendations strictly on the provided evidence. Include evidence levels when possible.`;
 
     let data: any | null = null;
-    let model = 'openai/gpt-5-mini';
+    let model = 'google/gemini-2.5-flash';
     let lastError = '';
 
     for (let attempt = 1; attempt <= 3; attempt++) {
+      console.log(`Attempt ${attempt} for ${condition.name} using model: ${model}`);
+      
       const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -374,8 +376,8 @@ Base all recommendations strictly on the provided evidence. Include evidence lev
 
       // Try a fallback model on the next attempt
       if (attempt === 2) {
-        console.warn('Switching to fallback model google/gemini-2.5-flash');
-        model = 'google/gemini-2.5-flash';
+        console.warn('Switching to fallback model google/gemini-2.5-pro');
+        model = 'google/gemini-2.5-pro';
       }
 
       // Backoff before retrying
