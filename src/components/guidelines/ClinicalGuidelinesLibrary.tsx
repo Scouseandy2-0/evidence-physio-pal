@@ -449,13 +449,14 @@ export const ClinicalGuidelinesLibrary = () => {
                         <ChevronDown className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
+                    <DropdownMenuContent align="end" className="z-50 bg-background border shadow-lg">
                       <DropdownMenuLabel>More Sources</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       {additionalSources.map((source, idx) => (
                         <DropdownMenuItem 
                           key={idx}
                           onClick={() => window.open(source.url, '_blank', 'noopener,noreferrer')}
+                          className="cursor-pointer"
                         >
                           <ExternalLink className="h-4 w-4 mr-2" />
                           {source.label}
