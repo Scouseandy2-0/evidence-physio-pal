@@ -60,11 +60,18 @@ export const ProtocolDataPopulator = () => {
         
         console.log(`AI Response for ${condition.name}:`, cleanedResponse.substring(0, 200));
         
-        // Remove markdown JSON code blocks
-        if (cleanedResponse.startsWith('```json')) {
-          cleanedResponse = cleanedResponse.replace(/^```json\s*\n/, '').replace(/\n```$/, '');
-        } else if (cleanedResponse.startsWith('```')) {
-          cleanedResponse = cleanedResponse.replace(/^```\s*\n/, '').replace(/\n```$/, '');
+        // Remove markdown JSON code blocks and any other formatting
+        cleanedResponse = cleanedResponse
+          .replace(/^```json\s*\n?/gm, '')
+          .replace(/^```\s*\n?/gm, '')
+          .replace(/\n```$/gm, '')
+          .replace(/```$/gm, '')
+          .trim();
+        
+        // Try to extract JSON if there's text before/after it
+        const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          cleanedResponse = jsonMatch[0];
         }
         
         let protocolData = JSON.parse(cleanedResponse);
