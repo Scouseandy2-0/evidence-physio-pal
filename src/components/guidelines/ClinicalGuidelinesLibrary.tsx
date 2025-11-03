@@ -195,22 +195,35 @@ export const ClinicalGuidelinesLibrary = () => {
 
       toast({
         title: "Fetching Guidelines",
-        description: `Searching for ${selectedCategory === 'all' ? 'general' : selectedCategory} guidelines...`,
+        description: `Searching multiple databases for ${selectedCategory === 'all' ? 'general' : selectedCategory} guidelines...`,
       });
 
-      const { data, error } = await supabase.functions.invoke('guidelines-integration', {
-        body: {
-          searchTerms,
-          organization: 'NICE',
-          condition: searchTerms
-        }
-      });
+      // Call all database integrations in parallel
+      const integrations = [
+        supabase.functions.invoke('guidelines-integration', {
+          body: { searchTerms, organization: 'NICE', condition: searchTerms }
+        }),
+        supabase.functions.invoke('trip-database-integration', {
+          body: { searchTerms, condition: searchTerms }
+        }),
+        supabase.functions.invoke('epistemonikos-integration', {
+          body: { searchTerms, condition: searchTerms }
+        }),
+        supabase.functions.invoke('who-guidelines-integration', {
+          body: { searchTerms, condition: searchTerms }
+        })
+      ];
 
-      if (error) throw error;
+      const results = await Promise.allSettled(integrations);
+      
+      const successCount = results.filter(r => r.status === 'fulfilled').length;
+      const failedCount = results.filter(r => r.status === 'rejected').length;
+
+      console.log('[FETCH-GUIDELINES] Results:', { successCount, failedCount, results });
 
       toast({
         title: "Guidelines Updated",
-        description: data.message || `Successfully processed ${data.guidelines?.length || 0} guidelines`,
+        description: `Successfully fetched from ${successCount} database${successCount !== 1 ? 's' : ''}${failedCount > 0 ? `, ${failedCount} failed` : ''}`,
       });
 
       // Refresh the guidelines list
@@ -218,7 +231,7 @@ export const ClinicalGuidelinesLibrary = () => {
     } catch (error: any) {
       toast({
         title: "Error fetching guidelines",
-        description: error.message || "Failed to fetch NICE guidelines. Please try again.",
+        description: error.message || "Failed to fetch guidelines. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -464,7 +477,7 @@ export const ClinicalGuidelinesLibrary = () => {
               </Button>
               <Button onClick={fetchMoreGuidelines} variant="default" disabled={loading}>
                 <Star className="h-4 w-4 mr-2" />
-                {loading ? 'Fetching...' : 'Fetch NICE Guidelines'}
+                {loading ? 'Fetching...' : 'Fetch from All Databases'}
               </Button>
             </div>
           </div>
