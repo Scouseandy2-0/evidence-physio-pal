@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { PremiumFeature } from "@/components/subscription/PremiumFeature";
 import { useSubscription } from "@/hooks/useSubscription";
-import { ProtocolGenerator } from "./ProtocolGenerator";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +26,6 @@ import {
   Save,
   Eye,
   Edit,
-  Brain
 } from "lucide-react";
 
 interface ProtocolStep {
@@ -345,24 +344,6 @@ export const TreatmentProtocolBuilder = () => {
           Create evidence-based treatment protocols with structured phases, exercises, and outcome measures.
         </p>
       </div>
-
-      <Tabs defaultValue="generator" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="generator" className="flex items-center gap-2">
-            <Brain className="h-4 w-4" />
-            AI Protocol Generator
-          </TabsTrigger>
-          <TabsTrigger value="manual" className="flex items-center gap-2">
-            <Edit className="h-4 w-4" />
-            Manual Builder
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="generator" className="space-y-6">
-          <ProtocolGenerator />
-        </TabsContent>
-
-        <TabsContent value="manual" className="space-y-6">
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Protocol Information */}
@@ -784,8 +765,6 @@ export const TreatmentProtocolBuilder = () => {
           </CardContent>
         </Card>
       )}
-        </TabsContent>
-      </Tabs>
     </div>
   );
 };
