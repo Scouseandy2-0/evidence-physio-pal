@@ -42,93 +42,47 @@ export const ProtocolDataPopulator = () => {
 
   const generateTreatmentProtocol = async (condition: any, existingId?: string) => {
     try {
-      const response = await supabase.functions.invoke('ai-chat', {
-        body: {
-          messages: [{
-            role: 'user',
-            content: `Create a detailed evidence-based treatment protocol for ${condition.name}. Include:
-            
-            1. Protocol name (max 100 chars)
-            2. Detailed description (2-3 paragraphs)
-            3. Step-by-step protocol with specific exercises/interventions (return as JSON array)
-            4. Duration in weeks (number)
-            5. Frequency per week (number)
-            6. Contraindications (array of strings)
-            7. Precautions (array of strings)
-            8. Expected outcomes (detailed paragraph)
-            
-            Return ONLY a valid JSON object with these exact keys: name, description, protocol_steps, duration_weeks, frequency_per_week, contraindications, precautions, expected_outcomes
-            
-            Do not include any markdown formatting, code blocks, or explanatory text. Return only the raw JSON object.`
-          }],
-          specialty: 'physiotherapy'
-        }
+      const { data, error } = await supabase.functions.invoke('generate-protocol-json', {
+        body: { condition: { id: condition.id, name: condition.name } },
       });
+      if (error) throw error;
 
-      if (response.error) throw response.error;
+      const protocolData = data?.protocol;
+      if (!protocolData) throw new Error('No protocol returned');
 
-      try {
-        // Clean the AI response - remove markdown code blocks if present
-        let cleanedResponse = response.data.response.trim();
-        
-        console.log(`AI Response for ${condition.name}:`, cleanedResponse.substring(0, 200));
-        
-        // Remove markdown JSON code blocks and any other formatting
-        cleanedResponse = cleanedResponse
-          .replace(/^```json\s*\n?/gm, '')
-          .replace(/^```\s*\n?/gm, '')
-          .replace(/\n```$/gm, '')
-          .replace(/```$/gm, '')
-          .trim();
-        
-        // Try to extract JSON if there's text before/after it
-        const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          cleanedResponse = jsonMatch[0];
-        }
-        
-        let protocolData = JSON.parse(cleanedResponse);
-        const validation = validateProtocol(protocolData);
-        if (!validation.valid) throw new Error(validation.reason || 'Invalid protocol schema');
-        
-        const protocolPayload = {
-          name: protocolData.name,
-          description: protocolData.description,
-          condition_id: condition.id,
-          protocol_steps: protocolData.protocol_steps,
-          duration_weeks: protocolData.duration_weeks,
-          frequency_per_week: protocolData.frequency_per_week,
-          contraindications: protocolData.contraindications,
-          precautions: protocolData.precautions,
-          expected_outcomes: protocolData.expected_outcomes,
-          created_by: user?.id || null,
-          is_validated: false
-        };
+      const validation = validateProtocol(protocolData);
+      if (!validation.valid) throw new Error(validation.reason || 'Invalid protocol schema');
 
-        let error;
-        if (existingId) {
-          // Update existing protocol
-          ({ error } = await supabase
-            .from('treatment_protocols')
-            .update(protocolPayload)
-            .eq('id', existingId));
-        } else {
-          // Insert new protocol
-          ({ error } = await supabase
-            .from('treatment_protocols')
-            .insert(protocolPayload));
-        }
+      const protocolPayload = {
+        name: protocolData.name,
+        description: protocolData.description,
+        condition_id: condition.id,
+        protocol_steps: protocolData.protocol_steps,
+        duration_weeks: protocolData.duration_weeks,
+        frequency_per_week: protocolData.frequency_per_week,
+        contraindications: protocolData.contraindications,
+        precautions: protocolData.precautions,
+        expected_outcomes: protocolData.expected_outcomes,
+        created_by: user?.id || null,
+        is_validated: false,
+      };
 
-        if (error) throw error;
-        
-        return true;
-      } catch (parseError) {
-        console.error(`Failed to parse AI response for ${condition.name}:`, parseError);
-        console.log('Skipping this condition and continuing with others...');
-        return false;
+      let upsertError;
+      if (existingId) {
+        ({ error: upsertError } = await supabase
+          .from('treatment_protocols')
+          .update(protocolPayload)
+          .eq('id', existingId));
+      } else {
+        ({ error: upsertError } = await supabase
+          .from('treatment_protocols')
+          .insert(protocolPayload));
       }
-    } catch (error) {
-      console.error('Error generating protocol for', condition.name, error);
+
+      if (upsertError) throw upsertError;
+      return true;
+    } catch (err) {
+      console.error('Error generating protocol for', condition.name, err);
       return false;
     }
   };
