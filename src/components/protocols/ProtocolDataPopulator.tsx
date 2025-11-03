@@ -136,25 +136,44 @@ export const ProtocolDataPopulator = () => {
       let successCount = 0;
       let failedCount = 0;
       
-      for (const condition of conditions) {
-        // Check if protocol already exists
-        const { data: existing } = await supabase
-          .from('treatment_protocols')
-          .select('id')
-          .eq('condition_id', condition.id)
-          .maybeSingle();
-
-        console.log(`${existing ? 'Updating' : 'Generating'} protocol for: ${condition.name}`);
-        const success = await generateTreatmentProtocol(condition, existing?.id);
-        if (success) {
-          successCount++;
-          setPopulatedCount(successCount);
-        } else {
-          failedCount++;
-        }
+      // Process conditions in batches of 5 for faster generation
+      const BATCH_SIZE = 5;
+      for (let i = 0; i < conditions.length; i += BATCH_SIZE) {
+        const batch = conditions.slice(i, i + BATCH_SIZE);
         
-        // Add delay to respect rate limits
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Get existing protocols for this batch
+        const conditionIds = batch.map(c => c.id);
+        const { data: existingProtocols } = await supabase
+          .from('treatment_protocols')
+          .select('id, condition_id')
+          .in('condition_id', conditionIds);
+        
+        const existingMap = new Map(existingProtocols?.map(p => [p.condition_id, p.id]) || []);
+        
+        // Process batch in parallel
+        const results = await Promise.allSettled(
+          batch.map(condition => {
+            const existingId = existingMap.get(condition.id);
+            console.log(`${existingId ? 'Updating' : 'Generating'} protocol for: ${condition.name}`);
+            return generateTreatmentProtocol(condition, existingId);
+          })
+        );
+        
+        // Count successes and failures
+        results.forEach(result => {
+          if (result.status === 'fulfilled' && result.value) {
+            successCount++;
+          } else {
+            failedCount++;
+          }
+        });
+        
+        setPopulatedCount(successCount);
+        
+        // Small delay between batches to avoid rate limits
+        if (i + BATCH_SIZE < conditions.length) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
 
       if (failedCount > 0) {
