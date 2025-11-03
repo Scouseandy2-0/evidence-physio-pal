@@ -47,9 +47,13 @@ export const ProtocolDataPopulator = () => {
       });
       if (error) {
         const msg = (error as any)?.message?.toString().toLowerCase() || '';
-        if (msg.includes('402') || msg.includes('credit')) {
-          toast.error('AI credits depleted. Please add credits or connect your own OpenAI API key.');
-          throw new Error('AI_CREDITS');
+        if (msg.includes('429') || msg.includes('rate limit')) {
+          toast.error('OpenAI rate limit exceeded. Please wait a moment and try again.');
+          throw new Error('RATE_LIMIT');
+        }
+        if (msg.includes('401') || msg.includes('invalid') || msg.includes('api key')) {
+          toast.error('Invalid OpenAI API key. Please check your configuration.');
+          throw new Error('API_KEY_ERROR');
         }
         throw error;
       }
@@ -133,24 +137,23 @@ export const ProtocolDataPopulator = () => {
           })
         );
         
-        // Count successes and failures and detect credit exhaustion
-        let creditsDepleted = false;
+        // Count successes and failures and detect errors
+        let shouldStop = false;
         results.forEach(result => {
           if (result.status === 'fulfilled' && result.value) {
             successCount++;
           } else {
             failedCount++;
             const reason: any = (result as PromiseRejectedResult).reason;
-            if (reason?.message === 'AI_CREDITS') {
-              creditsDepleted = true;
+            if (reason?.message === 'RATE_LIMIT' || reason?.message === 'API_KEY_ERROR') {
+              shouldStop = true;
             }
           }
         });
         
         setPopulatedCount(successCount);
         
-        if (creditsDepleted) {
-          toast.error('AI credits depleted. Stopping generation.');
+        if (shouldStop) {
           break;
         }
         

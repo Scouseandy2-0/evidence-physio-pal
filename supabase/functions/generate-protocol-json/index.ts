@@ -1,3 +1,4 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -19,8 +20,8 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY is not configured');
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY is not configured');
 
     const messages = [
       {
@@ -81,17 +82,16 @@ serve(async (req) => {
     ];
 
     const body = {
-      model: 'google/gemini-2.5-flash',
+      model: 'gpt-4o-mini',
       messages,
       tools,
       tool_choice: { type: 'function', function: { name: 'build_protocol' } },
-      stream: false,
-    } as const;
+    };
 
-    const aiResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const aiResp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
@@ -102,20 +102,20 @@ serve(async (req) => {
       console.error('AI gateway error:', aiResp.status, txt);
 
       if (aiResp.status === 429) {
-        return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please try again shortly.' }), {
+        return new Response(JSON.stringify({ error: 'OpenAI rate limit exceeded. Please try again shortly.' }), {
           status: 429,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      if (aiResp.status === 402) {
+      if (aiResp.status === 401) {
         return new Response(
-          JSON.stringify({ error: 'AI credits depleted. Please add credits to your Lovable workspace.' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'Invalid OpenAI API key. Please check your configuration.' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      return new Response(JSON.stringify({ error: 'AI gateway error' }), {
+      return new Response(JSON.stringify({ error: 'OpenAI API error' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
