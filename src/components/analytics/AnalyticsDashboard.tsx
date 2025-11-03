@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/Header";
+import { ClinicalAnalytics } from "./ClinicalAnalytics";
 import {
   TrendingUp,
   Users,
@@ -420,56 +421,7 @@ export const AnalyticsDashboard = () => {
         </TabsContent>
 
         <TabsContent value="clinical" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Patient Outcomes Summary</CardTitle>
-                <CardDescription>
-                  Track patient progress and treatment effectiveness
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="font-medium mb-2">Clinical Analytics</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Advanced outcome tracking and clinical metrics will be available in the next update.
-                  </p>
-                  <Badge variant="outline">Coming Soon</Badge>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Treatment Effectiveness</CardTitle>
-                <CardDescription>
-                  Monitor protocol success rates and patient satisfaction
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Protocol Adherence</span>
-                    <span className="font-medium">87%</span>
-                  </div>
-                  <Progress value={87} className="h-2" />
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Patient Satisfaction</span>
-                    <span className="font-medium">92%</span>
-                  </div>
-                  <Progress value={92} className="h-2" />
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Treatment Goals Met</span>
-                    <span className="font-medium">78%</span>
-                  </div>
-                  <Progress value={78} className="h-2" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <ClinicalAnalytics />
         </TabsContent>
 
         <TabsContent value="engagement" className="space-y-4">
