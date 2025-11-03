@@ -45,7 +45,14 @@ export const ProtocolDataPopulator = () => {
       const { data, error } = await supabase.functions.invoke('generate-protocol-json', {
         body: { condition: { id: condition.id, name: condition.name } },
       });
-      if (error) throw error;
+      if (error) {
+        const msg = (error as any)?.message?.toString().toLowerCase() || '';
+        if (msg.includes('402') || msg.includes('credit')) {
+          toast.error('AI credits depleted. Please add credits or connect your own OpenAI API key.');
+          throw new Error('AI_CREDITS');
+        }
+        throw error;
+      }
 
       const protocolData = data?.protocol;
       if (!protocolData) throw new Error('No protocol returned');
@@ -126,16 +133,26 @@ export const ProtocolDataPopulator = () => {
           })
         );
         
-        // Count successes and failures
+        // Count successes and failures and detect credit exhaustion
+        let creditsDepleted = false;
         results.forEach(result => {
           if (result.status === 'fulfilled' && result.value) {
             successCount++;
           } else {
             failedCount++;
+            const reason: any = (result as PromiseRejectedResult).reason;
+            if (reason?.message === 'AI_CREDITS') {
+              creditsDepleted = true;
+            }
           }
         });
         
         setPopulatedCount(successCount);
+        
+        if (creditsDepleted) {
+          toast.error('AI credits depleted. Stopping generation.');
+          break;
+        }
         
         // Small delay between batches to avoid rate limits
         if (i + BATCH_SIZE < conditions.length) {
