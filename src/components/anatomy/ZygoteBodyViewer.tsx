@@ -31,11 +31,6 @@ export const ZygoteBodyViewer = () => {
         </CardTitle>
         <CardDescription>
           Interactive full-body anatomy viewer powered by Zygote Body
-          {!hasPremiumAccess && (
-            <span className="block mt-2 text-primary">
-              • Subscribe to Basic plan (£3.99/month) to unlock ZygoteBody Premium features
-            </span>
-          )}
         </CardDescription>
       </CardHeader>
       <CardContent>
