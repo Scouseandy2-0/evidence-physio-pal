@@ -9,7 +9,8 @@ import { ChatGPTInterface } from "@/components/ai/ChatGPTInterface";
 import { RealtimeChat } from "@/components/collaboration/RealtimeChat";
 import { ZygoteBodyViewer } from "@/components/anatomy/ZygoteBodyViewer";
 import VoiceChat from "@/components/ai/VoiceChat";
-import { EnhancedAnalytics } from "@/components/analytics/EnhancedAnalytics";
+import { EnhancedAnalyticsDashboard } from "@/components/advanced/EnhancedAnalyticsDashboard";
+import { AddSessionForm } from "@/components/analytics/AddSessionForm";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { StudyGroups } from "@/components/collaboration/StudyGroups";
 import { Header } from "@/components/Header";
@@ -154,18 +155,8 @@ export const AdvancedFeatures = () => {
 
         {activeFeature === "analytics" && (
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5 text-primary" />
-                  Advanced Practice Analytics
-                </CardTitle>
-                <CardDescription>
-                  Comprehensive insights into your practice performance, patient outcomes, and intervention effectiveness
-                </CardDescription>
-              </CardHeader>
-            </Card>
-            <EnhancedAnalytics />
+            <AddSessionForm />
+            <EnhancedAnalyticsDashboard />
           </div>
         )}
 
