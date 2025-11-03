@@ -62,10 +62,22 @@ function toDoiUrl(input: string): string {
 export function getExternalEvidenceLink(e: EvidenceLike): string | null {
   if (!e) return null;
 
-  // 1) Prefer explicit URL stored in grade_assessment (used by guidelines)
+  // 1) Prefer explicit URL stored in grade_assessment (used by guidelines), with special handling for NICE
   const gaUrl = (e.grade_assessment?.url || '').trim();
   const isCochraneGa = gaUrl && /cochranelibrary\.com/i.test(gaUrl);
-  if (gaUrl && gaUrl !== '#' && !isCochraneGa) return gaUrl;
+  const isNiceGa = gaUrl && /nice\.org\.uk/i.test(gaUrl);
+  if (gaUrl && gaUrl !== '#') {
+    if (isCochraneGa) {
+      // Defer Cochrane handling below
+    } else if (isNiceGa) {
+      // Many records were mapped too broadly to a single NICE page.
+      // Use a NICE site search scoped by the exact title for higher accuracy.
+      if (e.title) return `https://www.nice.org.uk/search?q=${encodeURIComponent(e.title)}`;
+      return gaUrl;
+    } else {
+      return gaUrl;
+    }
+  }
   const doiRaw = (e.doi || '').trim();
   const doiNorm = normalizeDoi(doiRaw);
   const journalLower = (e.journal || '').toLowerCase();
