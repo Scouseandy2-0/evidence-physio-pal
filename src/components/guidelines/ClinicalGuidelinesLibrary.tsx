@@ -74,6 +74,7 @@ export const ClinicalGuidelinesLibrary = () => {
           journal: item.journal,
           doi: item.doi,
           pmid: item.pmid,
+          tags: item.tags,
           grade_assessment: gradeAssessment
         }) || '#';
         

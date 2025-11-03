@@ -6,6 +6,7 @@ export interface EvidenceLike {
   journal?: string | null;
   doi?: string | null;
   pmid?: string | null;
+  tags?: string[] | null;
   grade_assessment?: { url?: string | null } | null;
 }
 
@@ -59,6 +60,36 @@ function toDoiUrl(input: string): string {
   return n ? `https://doi.org/${n}` : '';
 }
 
+// Detect NICE guidance item pages like /guidance/ng59, /guidance/cg177, /guidance/qs123
+const niceGuidanceRegex = /nice\.org\.uk\/guidance\/[a-z]{1,3}\d+/i;
+function isNiceGuidanceUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return niceGuidanceRegex.test(u.hostname + u.pathname);
+  } catch {
+    return niceGuidanceRegex.test(url);
+  }
+}
+
+// Build a stable NICE search query from tags or a cleaned title
+function buildNiceQuery(e: EvidenceLike): string {
+  const fromTags = (e.tags || []) as string[];
+  let base = '';
+  if (fromTags && fromTags.length) {
+    const filtered = fromTags
+      .filter(t => !/guideline|nice|clinical|practice|evidence|rehab|physiotherapy/i.test(t))
+      .slice(0, 3);
+    if (filtered.length) base = filtered.join(' ');
+  }
+  if (!base && e.title) {
+    base = e.title
+      .replace(/\b(NICE|guideline|guidelines|clinical|practice|recommendations?)\b/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+  return base || e.title || '';
+}
+
 export function getExternalEvidenceLink(e: EvidenceLike): string | null {
   if (!e) return null;
 
@@ -70,9 +101,11 @@ export function getExternalEvidenceLink(e: EvidenceLike): string | null {
     if (isCochraneGa) {
       // Defer Cochrane handling below
     } else if (isNiceGa) {
-      // Many records were mapped too broadly to a single NICE page.
-      // Use a NICE site search scoped by the exact title for higher accuracy.
-      if (e.title) return `https://www.nice.org.uk/search?q=${encodeURIComponent(e.title)}`;
+      // If it's already a specific guidance page, keep it
+      if (isNiceGuidanceUrl(gaUrl)) return gaUrl;
+      // Otherwise, build a precise NICE search query
+      const q = buildNiceQuery(e);
+      if (q) return `https://www.nice.org.uk/search?q=${encodeURIComponent(q)}`;
       return gaUrl;
     } else {
       return gaUrl;
