@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getExternalEvidenceLink } from "@/utils/evidenceLinks";
 import { 
   FileText,
   ExternalLink,
@@ -67,9 +68,14 @@ export const ClinicalGuidelinesLibrary = () => {
       // Transform the data to match our interface
       const transformedGuidelines: ClinicalGuideline[] = (data || []).map(item => {
         const gradeAssessment = item.grade_assessment as any;
-        // Try multiple sources for the URL: grade_assessment.url, doi, or fallback
-        const guidelineUrl = gradeAssessment?.url || item.doi || 
-          (item.title?.toLowerCase().includes('nice') ? 'https://www.nice.org.uk/guidance' : '#');
+        // Use the evidenceLinks utility to properly resolve the URL
+        const guidelineUrl = getExternalEvidenceLink({
+          title: item.title,
+          journal: item.journal,
+          doi: item.doi,
+          pmid: item.pmid,
+          grade_assessment: gradeAssessment
+        }) || '#';
         
         return {
           id: item.id,
