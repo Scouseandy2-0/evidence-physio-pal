@@ -311,9 +311,22 @@ export const ClinicalGuidelinesLibrary = () => {
     const matchesSearch = !q || guideline.title.toLowerCase().includes(q) ||
                          guideline.organization.toLowerCase().includes(q) ||
                          guideline.tags?.some(tag => tag.toLowerCase().includes(q));
-    const isNiceSearch = /nice\.org\.uk\/search/i.test(guideline.guideline_url || '');
-    const isInvalidNice = isNiceSearch || ((guideline.organization || '').toLowerCase().includes('nice') && (!guideline.guideline_url || guideline.guideline_url === '#'));
-    return matchesCategory && matchesOrganization && matchesSearch && !isInvalidNice;
+    
+    // Filter out guidelines that only have search URLs (not specific pages)
+    // We rely on evidenceLinks.ts to generate proper links dynamically
+    const sources = getEvidenceSourceLinks({
+      title: guideline.title,
+      journal: guideline.journal,
+      doi: guideline.doi,
+      pmid: guideline.pmid,
+      tags: guideline.tags,
+      grade_assessment: guideline.grade_assessment
+    });
+    
+    // Keep only if we can generate at least one valid source link
+    const hasValidSource = sources.length > 0;
+    
+    return matchesCategory && matchesOrganization && matchesSearch && hasValidSource;
   });
 
   const categories = [...new Set(guidelines.map(g => g.condition_category))];

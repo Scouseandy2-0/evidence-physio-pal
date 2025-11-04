@@ -74,6 +74,23 @@ function isNiceGuidanceUrl(url: string): boolean {
   }
 }
 
+// Detect if a URL is a search results page (not a specific document)
+function isSearchUrl(url: string): boolean {
+  if (!url || url === '#') return true;
+  
+  const searchPatterns = [
+    /\/search\?/i,           // Generic search
+    /\/\?q=/i,               // Query parameter
+    /\?criteria=/i,          // TRIP criteria
+    /\?keywords=/i,          // WHO keywords
+    /\?term=/i,              // PubMed term
+    /\?searchText=/i,        // Cochrane searchText
+    /#\?q=/i,                // CKS hash query
+  ];
+  
+  return searchPatterns.some(pattern => pattern.test(url));
+}
+
 // Build a stable NICE search query from tags or a cleaned title
 function buildNiceQuery(e: EvidenceLike): string {
   const tags = (e.tags || []) as string[];
@@ -178,39 +195,35 @@ export function getEvidenceSourceLinks(e: EvidenceLike): EvidenceSource[] {
     });
   }
   
-  // 5) External database links from grade_assessment
-  if (gaUrl && gaUrl !== '#') {
-    if (/tripdatabase\.com/i.test(gaUrl)) {
+// 5) External database links from grade_assessment
+  // ONLY include if it's a specific page, not a search URL
+  if (gaUrl && gaUrl !== '#' && !isSearchUrl(gaUrl)) {
+    if (/tripdatabase\.com\/doc\//i.test(gaUrl)) {
+      // Specific TRIP document
       sources.push({
         label: 'TRIP Database',
         url: gaUrl,
         priority: 5,
         source: 'TRIP'
       });
-    } else if (/epistemonikos\.org/i.test(gaUrl)) {
+    } else if (/epistemonikos\.org\/documents\//i.test(gaUrl)) {
+      // Specific Epistemonikos document
       sources.push({
         label: 'Epistemonikos',
         url: gaUrl,
         priority: 5,
         source: 'Epistemonikos'
       });
-    } else if (/who\.int/i.test(gaUrl)) {
+    } else if (/who\.int\/publications\/[^?]+$/i.test(gaUrl)) {
+      // Specific WHO publication (not search)
       sources.push({
         label: 'WHO Guidelines',
         url: gaUrl,
         priority: 5,
         source: 'WHO'
       });
-    } else if (/(cks\.)?nice\.org\.uk/i.test(gaUrl) && !isNiceGuidanceUrl(gaUrl)) {
-      // Generic NICE/CKS search - lower priority
-      sources.push({
-        label: 'NICE/CKS Search',
-        url: gaUrl,
-        priority: 7,
-        source: 'CKS'
-      });
-    } else if (!/nice\.org\.uk\/search/i.test(gaUrl)) {
-      // Other valid URLs
+    } else if (!/(cks\.)?nice\.org\.uk/i.test(gaUrl)) {
+      // Other valid URLs that aren't search pages
       sources.push({
         label: 'External Link',
         url: gaUrl,
