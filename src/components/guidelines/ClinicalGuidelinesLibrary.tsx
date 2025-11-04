@@ -425,19 +425,20 @@ export const ClinicalGuidelinesLibrary = () => {
             View Details
           </Button>
           {(() => {
-            const sources = getEvidenceSourceLinks({
-              title: guideline.title,
-              journal: guideline.journal,
-              doi: guideline.doi,
-              pmid: guideline.pmid,
-              tags: guideline.tags,
-              grade_assessment: guideline.grade_assessment
-            });
-            
-            const primarySource = sources[0];
-            const additionalSources = sources.slice(1);
-            
-            if (!primarySource) return null;
+            try {
+              const sources = getEvidenceSourceLinks({
+                title: guideline.title,
+                journal: guideline.journal,
+                doi: guideline.doi,
+                pmid: guideline.pmid,
+                tags: guideline.tags,
+                grade_assessment: guideline.grade_assessment
+              });
+              
+              const primarySource = sources[0];
+              const additionalSources = sources.slice(1);
+              
+              if (!primarySource) return null;
             
             return (
               <div className="flex gap-1 flex-1">
@@ -475,6 +476,20 @@ export const ClinicalGuidelinesLibrary = () => {
                 )}
               </div>
             );
+            } catch (error) {
+              console.error('[GUIDELINE-CARD] Error getting evidence sources:', error);
+              return (
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => window.open(`https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(guideline.title)}`, '_blank', 'noopener,noreferrer')}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Search PubMed
+                </Button>
+              );
+            }
           })()}
         </div>
       </CardContent>
