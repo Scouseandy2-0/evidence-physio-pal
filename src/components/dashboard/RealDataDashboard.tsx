@@ -42,6 +42,7 @@ export const RealDataDashboard = () => {
         supabase
           .from('evidence')
           .select('title, publication_date, evidence_level, journal')
+          .not('publication_date', 'is', null)
           .order('publication_date', { ascending: false })
           .limit(5)
       ]);
