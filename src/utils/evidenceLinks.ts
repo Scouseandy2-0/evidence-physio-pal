@@ -220,8 +220,8 @@ export function getEvidenceSourceLinks(e: EvidenceLike): EvidenceSource[] {
     }
   }
   
-  // 6) PubMed title search as fallback
-  if (e.title && sources.length === 0) {
+  // 6) Always include PubMed title search as an additional option (low priority)
+  if (e.title && !sources.some(s => s.source === 'PubMed-Search')) {
     sources.push({
       label: 'PubMed Search',
       url: `https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(e.title)}`,
@@ -230,10 +230,10 @@ export function getEvidenceSourceLinks(e: EvidenceLike): EvidenceSource[] {
     });
   }
   
-  // 7) CKS search from title/tags as last resort for NICE items
-  if (gaUrl && /(cks\.)?nice\.org\.uk/i.test(gaUrl) && sources.length === 0) {
+  // 7) CKS search from title/tags as an additional option (lowest priority)
+  {
     const q = buildNiceQuery(e);
-    if (q) {
+    if (q && !sources.some(s => s.source === 'CKS')) {
       sources.push({
         label: 'CKS Search',
         url: `https://cks.nice.org.uk/#?q=${encodeURIComponent(q)}`,
