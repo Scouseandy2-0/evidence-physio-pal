@@ -2,8 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -38,6 +38,24 @@ import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
+// Handles cases where auth tokens are in the URL hash or code in search on any route
+const AuthHashHandler = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Redirect to /auth/callback when tokens are present but we're on a different route
+  useEffect(() => {
+    const hasAuthHash = typeof window !== 'undefined' && window.location.hash?.includes('access_token');
+    const code = new URLSearchParams(location.search).get('code');
+    if ((hasAuthHash || code) && location.pathname !== '/auth/callback') {
+      const target = `/auth/callback${location.search}${window.location.hash || ''}`;
+      navigate(target, { replace: true });
+    }
+  }, [location, navigate]);
+
+  return null;
+};
+
 const App = () => (
   <>
     <QueryClientProvider client={queryClient}>
@@ -49,11 +67,13 @@ const App = () => (
             {/* Global error boundary to prevent blank screen on unexpected errors */}
             <BrowserRouter>
               <ErrorBoundary>
+                <AuthHashHandler />
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/onboarding" element={<OnboardingFlow />} />
                   <Route path="/auth" element={<AuthPage />} />
                   <Route path="/auth/callback" element={<AuthCallback />} />
+                  <Route path="/verify" element={<AuthCallback />} />
                   <Route path="/auth/debug" element={<AuthDebug />} />
                   <Route path="/dashboard" element={<ProtectedRoute><PersonalizedDashboard /></ProtectedRoute>} />
                   <Route path="/conditions" element={<ConditionsPage />} />
