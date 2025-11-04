@@ -233,22 +233,35 @@ export function getEvidenceSourceLinks(e: EvidenceLike): EvidenceSource[] {
     }
   }
   
-  // 6) Only add PubMed search if we have a clean, short title (to avoid failed searches)
-  if (e.title && !sources.some(s => s.source === 'PubMed-Search') && sources.length === 0) {
-    const cleanTitle = e.title
-      .replace(/\b(guideline|guidelines|clinical|practice|recommendations?|evidence)\b/gi, '')
-      .replace(/[^a-zA-Z0-9\s-]/g, ' ') // Remove special chars
-      .replace(/\s+/g, ' ')
-      .trim();
-    
-    // Only add if title is reasonable length and has medical terms
-    if (cleanTitle.length > 5 && cleanTitle.length < 100) {
+  // 6) As a fallback, prefer NICE site search for NICE items; otherwise PubMed
+  if (sources.length === 0) {
+    const isNice = ((e.journal || '').toLowerCase().includes('nice')) 
+      || ((e.title || '').toLowerCase().includes('nice'))
+      || ((e.tags || []) as string[]).some(t => (t || '').toLowerCase().includes('nice'));
+
+    const niceQuery = buildNiceQuery(e);
+
+    if (isNice && niceQuery && niceQuery.length > 3) {
       sources.push({
-        label: 'PubMed Search',
-        url: `https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(cleanTitle)}`,
+        label: 'NICE Search',
+        url: `https://www.nice.org.uk/search?q=${encodeURIComponent(niceQuery)}`,
         priority: 8,
-        source: 'PubMed-Search'
+        source: 'NICE'
       });
+    } else if (e.title) {
+      const cleanTitle = (e.title || '')
+        .replace(/\b(guideline|guidelines|clinical|practice|recommendations?|evidence)\b/gi, '')
+        .replace(/[^a-zA-Z0-9\s-]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (cleanTitle.length > 5 && cleanTitle.length < 100) {
+        sources.push({
+          label: 'TRIP Database',
+          url: `https://www.tripdatabase.com/search?criteria=${encodeURIComponent(cleanTitle)}`,
+          priority: 8,
+          source: 'TRIP'
+        });
+      }
     }
   }
   
