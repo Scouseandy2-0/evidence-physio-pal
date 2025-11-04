@@ -233,20 +233,29 @@ export function getEvidenceSourceLinks(e: EvidenceLike): EvidenceSource[] {
     }
   }
   
-  // 6) Always include PubMed title search as an additional option (low priority)
-  if (e.title && !sources.some(s => s.source === 'PubMed-Search')) {
-    sources.push({
-      label: 'PubMed Search',
-      url: `https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(e.title)}`,
-      priority: 8,
-      source: 'PubMed-Search'
-    });
+  // 6) Only add PubMed search if we have a clean, short title (to avoid failed searches)
+  if (e.title && !sources.some(s => s.source === 'PubMed-Search') && sources.length === 0) {
+    const cleanTitle = e.title
+      .replace(/\b(guideline|guidelines|clinical|practice|recommendations?|evidence)\b/gi, '')
+      .replace(/[^a-zA-Z0-9\s-]/g, ' ') // Remove special chars
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    // Only add if title is reasonable length and has medical terms
+    if (cleanTitle.length > 5 && cleanTitle.length < 100) {
+      sources.push({
+        label: 'PubMed Search',
+        url: `https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(cleanTitle)}`,
+        priority: 8,
+        source: 'PubMed-Search'
+      });
+    }
   }
   
-  // 7) CKS search from title/tags as an additional option (lowest priority)
-  {
+  // 7) CKS search only as last resort if NO other sources found
+  if (sources.length === 0) {
     const q = buildNiceQuery(e);
-    if (q && !sources.some(s => s.source === 'CKS')) {
+    if (q && q.length > 5) {
       sources.push({
         label: 'CKS Search',
         url: `https://cks.nice.org.uk/#?q=${encodeURIComponent(q)}`,
