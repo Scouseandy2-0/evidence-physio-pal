@@ -52,6 +52,11 @@ export const ClinicalGuidelinesLibrary = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedOrganization, setSelectedOrganization] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearchTerm(searchTerm), 250);
+    return () => clearTimeout(id);
+  }, [searchTerm]);
   const [loading, setLoading] = useState(false);
   const [selectedGuideline, setSelectedGuideline] = useState<ClinicalGuideline | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -75,15 +80,21 @@ export const ClinicalGuidelinesLibrary = () => {
       // Transform the data to match our interface
       const transformedGuidelines: ClinicalGuideline[] = (data || []).map(item => {
         const gradeAssessment = item.grade_assessment as any;
-        // Use the evidenceLinks utility to properly resolve the URL
-        const guidelineUrl = getExternalEvidenceLink({
-          title: item.title,
-          journal: item.journal,
-          doi: item.doi,
-          pmid: item.pmid,
-          tags: item.tags,
-          grade_assessment: gradeAssessment
-        }) || '#';
+        // Use the evidenceLinks utility to properly resolve the URL (safe)
+        let guidelineUrl = '#';
+        try {
+          const resolved = getExternalEvidenceLink({
+            title: item.title,
+            journal: item.journal,
+            doi: item.doi,
+            pmid: item.pmid,
+            tags: item.tags,
+            grade_assessment: gradeAssessment
+          });
+          if (resolved) guidelineUrl = resolved;
+        } catch {
+          guidelineUrl = '#';
+        }
         
         return {
           id: item.id,
@@ -296,9 +307,10 @@ export const ClinicalGuidelinesLibrary = () => {
   const filteredGuidelines = guidelines.filter(guideline => {
     const matchesCategory = selectedCategory === 'all' || guideline.condition_category === selectedCategory;
     const matchesOrganization = selectedOrganization === 'all' || guideline.organization === selectedOrganization;
-    const matchesSearch = guideline.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         guideline.organization.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         guideline.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+    const q = debouncedSearchTerm.toLowerCase();
+    const matchesSearch = !q || guideline.title.toLowerCase().includes(q) ||
+                         guideline.organization.toLowerCase().includes(q) ||
+                         guideline.tags?.some(tag => tag.toLowerCase().includes(q));
     const isNiceSearch = /nice\.org\.uk\/search/i.test(guideline.guideline_url || '');
     const isInvalidNice = isNiceSearch || ((guideline.organization || '').toLowerCase().includes('nice') && (!guideline.guideline_url || guideline.guideline_url === '#'));
     return matchesCategory && matchesOrganization && matchesSearch && !isInvalidNice;
