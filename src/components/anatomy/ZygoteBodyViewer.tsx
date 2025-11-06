@@ -19,24 +19,23 @@ export const ZygoteBodyViewer = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>BodyParts3D Human Anatomy</CardTitle>
+        <CardTitle>Innerbody Anatomy Explorer</CardTitle>
         <CardDescription>
-          Interactive 3D anatomy viewer with detailed anatomical labels and structures
+          Comprehensive interactive anatomy explorer with detailed anatomical systems and labels
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="w-full h-[600px] border rounded-lg overflow-hidden bg-background">
           <iframe
-            src="http://lifesciencedb.jp/bp3d/"
+            src="https://www.innerbody.com/image/skelfov.html"
             className="w-full h-full"
-            title="BodyParts3D Anatomy Viewer"
+            title="Innerbody Anatomy Explorer"
             allowFullScreen
           />
         </div>
         <div className="mt-4 p-4 bg-muted/30 rounded-lg">
           <p className="text-sm text-muted-foreground">
-            💡 BodyParts3D provides free access to 3D anatomical structures with proper labeling.
-            Use the viewer controls to explore muscles, bones, ligaments, nerves, and other anatomical systems.
+            💡 Innerbody Anatomy Explorer provides detailed views of all major body systems including skeletal, muscular, cardiovascular, nervous, and more. Click on structures to explore detailed information and labels.
           </p>
         </div>
       </CardContent>
