@@ -19,24 +19,24 @@ export const ZygoteBodyViewer = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Zygote Body 3D Human Anatomy</CardTitle>
+        <CardTitle>BodyParts3D Human Anatomy</CardTitle>
         <CardDescription>
-          Interactive full-body anatomy viewer powered by Zygote Body
+          Interactive 3D anatomy viewer with detailed anatomical labels and structures
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="w-full h-[600px] border rounded-lg overflow-hidden bg-background">
           <iframe
-            src="https://www.zygotebody.com"
+            src="http://lifesciencedb.jp/bp3d/"
             className="w-full h-full"
-            title="Zygote Body 3D Anatomy Viewer"
+            title="BodyParts3D Anatomy Viewer"
             allowFullScreen
           />
         </div>
         <div className="mt-4 p-4 bg-muted/30 rounded-lg">
           <p className="text-sm text-muted-foreground">
-            💡 Use the controls within the Zygote Body viewer to explore detailed 3D human anatomy.
-            You can rotate, zoom, and toggle different anatomical systems.
+            💡 BodyParts3D provides free access to 3D anatomical structures with proper labeling.
+            Use the viewer controls to explore muscles, bones, ligaments, nerves, and other anatomical systems.
           </p>
         </div>
       </CardContent>
