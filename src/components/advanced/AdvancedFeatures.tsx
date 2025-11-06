@@ -42,8 +42,7 @@ export const AdvancedFeatures = () => {
       id: "anatomy-3d",
       label: "3D Anatomy",
       icon: <Heart className="h-4 w-4" />,
-      description: "Interactive anatomical viewer",
-      badge: "Premium"
+      description: "Interactive anatomical viewer"
     },
     {
       id: "analytics",
