@@ -1,12 +1,8 @@
 import { useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { useSubscription } from "@/hooks/useSubscription";
 import { useActivityTracking } from "@/hooks/useActivityTracking";
 
 export const ZygoteBodyViewer = () => {
-  const { hasAccess } = useSubscription();
-  const hasPremiumAccess = hasAccess('basic');
   const { trackAnatomyViewer } = useActivityTracking();
   const sessionStartRef = useRef<Date>(new Date());
 
@@ -23,12 +19,7 @@ export const ZygoteBodyViewer = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>Zygote Body 3D Human Anatomy</span>
-          {hasPremiumAccess && (
-            <Badge variant="default" className="ml-2">Premium Features Enabled</Badge>
-          )}
-        </CardTitle>
+        <CardTitle>Zygote Body 3D Human Anatomy</CardTitle>
         <CardDescription>
           Interactive full-body anatomy viewer powered by Zygote Body
         </CardDescription>
@@ -36,28 +27,17 @@ export const ZygoteBodyViewer = () => {
       <CardContent>
         <div className="w-full h-[600px] border rounded-lg overflow-hidden bg-background">
           <iframe
-            src={hasPremiumAccess 
-              ? "https://www.zygotebody.com/#premium=true" 
-              : "https://www.zygotebody.com"}
+            src="https://www.zygotebody.com"
             className="w-full h-full"
             title="Zygote Body 3D Anatomy Viewer"
             allowFullScreen
           />
         </div>
-        <div className="mt-4 p-4 bg-muted/30 rounded-lg space-y-2">
+        <div className="mt-4 p-4 bg-muted/30 rounded-lg">
           <p className="text-sm text-muted-foreground">
             💡 Use the controls within the Zygote Body viewer to explore detailed 3D human anatomy.
             You can rotate, zoom, and toggle different anatomical systems.
           </p>
-          {hasPremiumAccess ? (
-            <p className="text-sm font-medium text-primary">
-              ✨ Premium features active: Advanced layers, detailed annotations, and enhanced visualization
-            </p>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              🔒 Subscribe to access premium ZygoteBody features including advanced anatomical layers and detailed annotations
-            </p>
-          )}
         </div>
       </CardContent>
     </Card>
