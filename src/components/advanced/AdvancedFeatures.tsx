@@ -7,7 +7,7 @@ import { Brain, MessageSquare, Mic, Volume2, Heart, BarChart3, Bell, Users, Spar
 import { AISummarizer } from "@/components/ai/AISummarizer";
 import { ChatGPTInterface } from "@/components/ai/ChatGPTInterface";
 import { RealtimeChat } from "@/components/collaboration/RealtimeChat";
-import { AnatomyViewer3D } from "@/components/anatomy/AnatomyViewer3D";
+import { ZygoteBodyViewer } from "@/components/anatomy/ZygoteBodyViewer";
 import VoiceChat from "@/components/ai/VoiceChat";
 import { EnhancedAnalyticsDashboard } from "@/components/advanced/EnhancedAnalyticsDashboard";
 import { AddSessionForm } from "@/components/analytics/AddSessionForm";
@@ -148,7 +148,7 @@ export const AdvancedFeatures = () => {
 
         {activeFeature === "anatomy-3d" && (
           <div className="space-y-6">
-            <AnatomyViewer3D />
+            <ZygoteBodyViewer />
           </div>
         )}
 
