@@ -27,7 +27,7 @@ export const ZygoteBodyViewer = () => {
       <CardContent>
         <div className="w-full h-[600px] border rounded-lg overflow-hidden bg-background">
           <iframe
-            src="https://www.innerbody.com/image/skelfov.html"
+            src="https://www.innerbody.com/htm/body.html"
             className="w-full h-full"
             title="Innerbody Anatomy Explorer"
             allowFullScreen
