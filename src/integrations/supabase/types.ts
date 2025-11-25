@@ -803,10 +803,7 @@ export type Database = {
         Args: { details?: Json; event_type: string; user_id?: string }
         Returns: undefined
       }
-      check_password_strength: {
-        Args: { password: string }
-        Returns: boolean
-      }
+      check_password_strength: { Args: { password: string }; Returns: boolean }
       check_rate_limit: {
         Args: {
           max_attempts?: number
@@ -816,12 +813,9 @@ export type Database = {
         }
         Returns: boolean
       }
-      get_security_headers: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      get_security_headers: { Args: never; Returns: Json }
       get_user_healthcare_status: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           approved_for_access: boolean
           healthcare_role: string
@@ -829,14 +823,8 @@ export type Database = {
           license_verified: boolean
         }[]
       }
-      is_admin: {
-        Args: { user_id?: string }
-        Returns: boolean
-      }
-      is_verified_admin: {
-        Args: { user_id?: string }
-        Returns: boolean
-      }
+      is_admin: { Args: { user_id?: string }; Returns: boolean }
+      is_verified_admin: { Args: { user_id?: string }; Returns: boolean }
       secure_assign_healthcare_role: {
         Args: {
           department?: string
@@ -846,10 +834,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      update_subscription_analytics: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      update_subscription_analytics: { Args: never; Returns: undefined }
       update_user_activity_stat: {
         Args: { increment_value?: number; stat_type: string }
         Returns: undefined
