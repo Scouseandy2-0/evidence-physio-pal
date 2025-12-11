@@ -10,9 +10,12 @@ const AuthCallback = () => {
     const run = async () => {
       try {
         console.log('AuthCallback: Starting auth callback handling');
+        console.log('AuthCallback: Full URL:', window.location.href);
 
         const url = new URL(window.location.href);
         const code = url.searchParams.get('code');
+        const token = url.searchParams.get('token');
+        const type = url.searchParams.get('type');
         const hasHash = !!window.location.hash;
         const rawHash = window.location.hash?.startsWith('#')
           ? window.location.hash.substring(1)
@@ -20,8 +23,29 @@ const AuthCallback = () => {
         const hashParams = new URLSearchParams(rawHash);
         const access_token = hashParams.get('access_token');
         const refresh_token = hashParams.get('refresh_token');
+        const error = hashParams.get('error');
+        const error_description = hashParams.get('error_description');
 
-        if (code) {
+        // Handle errors in hash
+        if (error) {
+          console.error('AuthCallback: Error in hash:', error, error_description);
+          navigate("/auth", { replace: true, state: { error: error_description || error } });
+          return;
+        }
+
+        // Handle magic link token verification (token + type params)
+        if (token && type) {
+          console.log('AuthCallback: Verifying OTP token', { type });
+          const { error: verifyError } = await supabase.auth.verifyOtp({
+            token_hash: token,
+            type: type as 'magiclink' | 'email' | 'signup' | 'recovery',
+          });
+          if (verifyError) {
+            console.error('AuthCallback: verifyOtp error:', verifyError);
+          } else {
+            console.log('AuthCallback: OTP verified successfully');
+          }
+        } else if (code) {
           console.log('AuthCallback: Exchanging code for session');
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) {

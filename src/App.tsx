@@ -46,9 +46,18 @@ const AuthHashHandler = () => {
   // Redirect to /auth/callback when tokens are present but we're on a different route
   useEffect(() => {
     const hasAuthHash = typeof window !== 'undefined' && window.location.hash?.includes('access_token');
-    const code = new URLSearchParams(location.search).get('code');
-    if ((hasAuthHash || code) && location.pathname !== '/auth/callback') {
+    const hasErrorHash = typeof window !== 'undefined' && window.location.hash?.includes('error');
+    const searchParams = new URLSearchParams(location.search);
+    const code = searchParams.get('code');
+    const token = searchParams.get('token');
+    const type = searchParams.get('type');
+    
+    // Handle magic link tokens and other auth flows
+    const hasAuthParams = hasAuthHash || hasErrorHash || code || (token && type);
+    
+    if (hasAuthParams && location.pathname !== '/auth/callback') {
       const target = `/auth/callback${location.search}${window.location.hash || ''}`;
+      console.log('AuthHashHandler: Redirecting to callback', { target, pathname: location.pathname });
       navigate(target, { replace: true });
     }
   }, [location, navigate]);
