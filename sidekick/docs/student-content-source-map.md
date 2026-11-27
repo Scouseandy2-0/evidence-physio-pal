@@ -1,6 +1,6 @@
 # Student starter content source map
 
-Version 2026-11-27.1 · Prepared 27 November 2026. Independent content review pending for all five units and 25 questions. Original prompts and fictional arithmetic are not published research findings. Source maps support checking; they are not an approval.
+Version 2026-11-27.2 · Prepared 27 November 2026. Independent content review pending for all five units and 25 questions. Original prompts and fictional arithmetic are not published research findings. Source maps support checking; they are not an approval.
 
 | Unit / question ID | Source location | Original resource | Independent review |
 |---|---|---|---|
@@ -26,13 +26,13 @@ Version 2026-11-27.1 · Prepared 27 November 2026. Independent content review pe
 | appraisal-uncertainty / appraisal-transfer | 15.2 Issues of indirectness and applicability | [Cochrane Handbook · Chapter 15](https://www.cochrane.org/authors/handbooks-and-manuals/handbook/current/chapter-15) | Pending |
 | anatomy-evidence / anatomy-position | 9.5: anatomical position, before Figure 9.12 | [OpenStax · Anatomy and Physiology 2e, 9.5](https://openstax.org/books/anatomy-and-physiology-2e/pages/9-5-types-of-body-movements) | Pending |
 | anatomy-evidence / anatomy-flexion | 9.5: Flexion and Extension | [OpenStax · Anatomy and Physiology 2e, 9.5](https://openstax.org/books/anatomy-and-physiology-2e/pages/9-5-types-of-body-movements) | Pending |
-| anatomy-evidence / anatomy-scope | What the source contains: skeletal structure catalogue | [PhysioSidekick · Pinned model provenance and scope](https://physiosidekick-workspace.andrew-lockhart.chatgpt.site/anatomy-upstream-provenance.md) | Pending |
+| anatomy-evidence / anatomy-scope | Model coverage: separate skeletal and muscle assets; nerve notes | [PhysioSidekick · Model coverage and source notes](https://physiosidekick-workspace.andrew-lockhart.chatgpt.site/anatomy-coverage.md) | Pending |
 | anatomy-evidence / anatomy-mechanism | 3.2: participants, interventions, comparisons and outcomes | [Cochrane Handbook · Chapter 3](https://www.cochrane.org/authors/handbooks-and-manuals/handbook/current/chapter-03) | Pending |
 | anatomy-evidence / anatomy-question | Types of research question and study-design table | [CASP · Study Designs](https://casp-uk.net/study-designs/) | Pending |
 
 ## Source versions and review boundaries
 
-NLM guide displayed last update 30 September 2026. Cochrane chapter 15 displayed November 2026 / Handbook 6.5.1; chapters 3 and 14 displayed August 2023 chapters cited in Handbook 6.5 (2024). CASP and OpenStax are web resources located on the preparation date; no claim of a later editorial revision is made. The model scope source is the pinned upstream provenance already bundled with the app. The 3D asset is skeletal, with some cartilage/discs; this unit does not imply muscles or nerves have been supplied.
+NLM guide displayed last update 30 September 2026. Cochrane chapter 15 displayed November 2026 / Handbook 6.5.1; chapters 3 and 14 displayed August 2023 chapters cited in Handbook 6.5 (2024). CASP and OpenStax are web resources located on the preparation date; no claim of a later editorial revision is made. The model scope source is the current bundled coverage record with exact pinned upstream links. A separate grouped muscle model is now supplied; the skeletal model still cannot show muscles and no 3D nerve paths are supplied. The anatomy-scope item was revised accordingly.
 
 Explanations are concise original paraphrases, not copied checklists or textbook figures. No source organisation endorses the app. Review should assess every question/explanation pair, numerical example, scope statement and link; record reviewer/date/corrections in content-review-register.md. Never turn a source-location date into a review date.
 

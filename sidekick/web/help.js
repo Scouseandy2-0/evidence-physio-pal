@@ -1,4 +1,4 @@
-export const appRelease = '2026-11-27-student-five-units';
+export const appRelease = '2026-11-27-regional-muscles';
 export const guideKey = 'physiosidekick.guide.hidden.v1';
 export function guideProgress(workspace = {}) {
   return [

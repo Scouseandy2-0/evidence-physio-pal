@@ -75,7 +75,7 @@ The library stores publication metadata and indexed abstracts for personal proto
 - External paper/resource links open other providers. Google Fonts is the only other external UI resource.
 - Teaching and reflection entries must contain no identifiable patient information.
 - Intended for private product testing, not patient-specific decision support.
-- Integrated skeletal anatomy preview now uses the licensed BodyParts3D / OrganUI source described below. Expanded anatomy systems and expert review remain outstanding.
+- Separate skeletal and muscle previews now use pinned BodyParts3D / OrganUI assets. Seven source-linked regional drafts are integrated; expert review and device verification remain outstanding.
 - This is not a signed native iOS app. The next native phase should package local assets with Capacitor, retain verified-source search, test downloads/storage/external links on iPhone, and use TestFlight after Mac signing and Apple enrolment.
 
 ## Historical delivery roadmap (superseded by V1-COMPLETION.md)
@@ -83,7 +83,7 @@ The library stores publication metadata and indexed abstracts for personal proto
 1. Test search and known-paper retrieval with students and clinicians; consider a more expressive, transparent search builder based on observed needs.
 2. Validate account loading, import/recovery and refreshed cross-device records on physical iPhone/Safari and Mac. Review storage regions, retention, deletion and account export before wider distribution.
 3. Add structured appraisal notes and cautiously evaluated source-grounded explanations. Keep claims traceable to actual text and distinguish abstracts from full-text review.
-4. Extend and independently review skeletal anatomy; test physical iPhone GPU performance before expanding to muscle and nerve systems.
+4. Independently review the skeletal/muscle models and regional notes; test physical iPhone GPU performance, software fallback and assistive-technology use.
 5. Add individually reviewed clinical resources and validated outcome measures with exact versions, permitted use and scoring tests.
 6. Develop FCP teaching packs with objectives, fictional cases, facilitator notes and verified references; define review/version ownership before selling them.
 7. Obtain brand clearance, review content/data/provider obligations, decide subscriptions, package iOS and validate TestFlight before App Store submission.
@@ -208,3 +208,11 @@ Draft/reviewed counts are separate: six source-linked drafts prepared, zero with
 Learn now opens a supplied library covering finding papers, study design, results interpretation, appraisal/uncertainty and anatomy-to-evidence. Each unit has five question/explanation pairs with direct source links and section locations, a real-paper application task and a Markdown export. Explanations are revealed deliberately; no results are scored or marked completed. Fictional numerical examples are labelled.
 
 The personal-revision bridge creates a set plus an editable question-only draft. It requires the learner to choose an actual saved paper and write their own answer before saving a card. Supplied content and resource links never become invented PubMed paper references. Five units / 25 questions are prepared drafts, with zero independent content reviews; V1-S remains open. See docs/student-content-source-map.md for item mappings and source versions.
+
+## Regional anatomy and muscle model
+
+Seven learning regions now connect whole skeletal structures, selected major-muscle meshes, joint/movement notes, 11 key-nerve note cards, original learning tasks and source-preserving Markdown exports. Guides connect to original-paper search, the anatomy-to-evidence student unit and a personal question-only revision draft. No nerve path, ligament, capsule or labrum mesh has been invented.
+
+A separate, unchanged 5,624,592-byte muscle GLB is pinned to OrganUI muscles-3d commit 1c746c36d12a78c5f3fd452dbe5d29ae869cad04, SHA256 615ed2cf0d5ca9aa63f30bb806a65c740ed2ab057463a19505e19eff2bf207ce. It represents 177 groups from 428 source meshes. Paired sides and some heads are combined. It is not aligned as an overlay with the skeletal asset. Runtime verifies checksum/size/catalogue before use; both modes retain independent accessible lists and one-structure software rendering. Skeleton side filters include midline structures. Region groups are teaching selections and use whole meshes, not joint crops.
+
+The model and derived views retain CC BY-SA 2.1 Japan attribution/terms. Model source catalogues, checksum manifest, notices and upstream preparation links are bundled. The original muscle descriptions are not copied. Run npm test to verify/fetch both pinned model binaries in a GitHub source checkout. The Sites repository carries both binaries; the GitHub mirror uses reproducible fetching for binary assets. See docs/anatomy-regional-review.md. All seven guides and representations require independent review; this build does not complete V1-A.
