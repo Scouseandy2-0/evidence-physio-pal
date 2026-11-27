@@ -1,3 +1,4 @@
+import { securityHeaders } from '../worker/security.js';
 // Local preview only. This fixed fictional identity is never included in the hosted build.
 import { createServer } from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
@@ -24,10 +25,10 @@ createServer(async (req, res) => {
       const chunks = []; for await (const part of req) chunks.push(part);
       const headers = new Headers(req.headers); headers.set('oai-authenticated-user-id', 'local-preview-user'); headers.set('oai-authenticated-user-email', 'preview@example.invalid'); headers.set('oai-authenticated-user-full-name', 'Local preview');
       const response = await (url.pathname === '/api/paper' ? paperAPI : url.pathname === '/api/research' ? researchAPI : workspaceAPI)(new Request(url, { method: req.method, headers, ...(['PUT', 'POST'].includes(req.method) ? { body: Buffer.concat(chunks) } : {}) }), { DB: adapter });
-      res.writeHead(response.status, Object.fromEntries(response.headers)); res.end(await response.text()); return;
+      res.writeHead(response.status, {...securityHeaders,...Object.fromEntries(response.headers)}); res.end(await response.text()); return;
     }
     const path = url.pathname === '/' ? '/index.html' : url.pathname;
     if (!/^\/[a-zA-Z0-9.-]+$/.test(path)) { res.writeHead(404); res.end(); return; }
-    const content = readFileSync(`web${path}`); res.writeHead(200, { 'content-type': types[path.split('.').at(-1)] || 'text/plain', 'cache-control': 'no-store' }); res.end(content);
+    const content = readFileSync(`web${path}`); res.writeHead(200, { ...securityHeaders, 'content-type': types[path.split('.').at(-1)] || 'text/plain', 'cache-control': 'no-store' }); res.end(content);
   } catch { res.writeHead(404); res.end('Not found'); }
 }).listen(port, '0.0.0.0', () => console.log(`Local app preview on ${port}`));

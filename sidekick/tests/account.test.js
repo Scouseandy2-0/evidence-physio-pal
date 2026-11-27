@@ -232,3 +232,27 @@ test('malformed initial records do not enable editing under an unverified accoun
   await sync.init();assert.equal(sync.account,null);assert.equal(sync.status,'unavailable');
  }
 });
+
+test('backup import preserves unsaved local edits as well as account and imported records',async()=>{
+ const {create}=syncEnvironment();const a=create();await a.sync.init();
+ a.sync.queue({...emptyWorkspace(),reflections:[reflection('account-record')]});await a.sync.flush();
+ a.sync.queue({...emptyWorkspace(),reflections:[reflection('account-record'),reflection('pending-record')]});
+ await a.sync.combine({...emptyWorkspace(),reflections:[reflection('imported-record')]},true,false);
+ const b=create({storage:memory()});await b.sync.init();assert.deepEqual(b.data.reflections.map(r=>r.id).sort(),['account-record','imported-record','pending-record']);assert.equal(a.sync.status,'saved');
+});
+test('an invalid edit can be recovered by explicitly importing a corrected backup',async()=>{
+ const {create}=syncEnvironment();const a=create();await a.sync.init();
+ const invalid={...emptyWorkspace(),reflections:[{...reflection('corrected-record'),date:'2026-02-31'}]};a.sync.queue(invalid);assert.ok(a.sync.invalidPending);
+ await a.sync.combine({...emptyWorkspace(),reflections:[reflection('corrected-record')]},true,false);
+ assert.equal(a.sync.status,'saved');assert.equal(a.sync.invalidPending,null);
+ const b=create({storage:memory()});await b.sync.init();assert.equal(b.data.reflections[0].id,'corrected-record');
+});
+test('importing an unrelated backup does not acknowledge or hide unimported legacy records',async()=>{
+ const {create}=syncEnvironment();const a=create({legacy:{...emptyWorkspace(),reflections:[reflection('legacy-record')]}});await a.sync.init();assert.equal(a.sync.needsImport,true);
+ await a.sync.combine({...emptyWorkspace(),reflections:[reflection('backup-record')]},true,false);assert.equal(a.sync.needsImport,true);
+});
+test('a new invalid edit arriving during corrected-backup recovery blocks the older import',async()=>{
+ const {create,fetcher}=syncEnvironment();const a=create();await a.sync.init();a.sync.queue({...emptyWorkspace(),reflections:[{...reflection(),date:'bad'}]});
+ const held=holdNextRead(fetcher);a.sync.fetcher=held.fetcher;const importing=a.sync.combine({...emptyWorkspace(),reflections:[reflection('corrected')]},true,false);await held.started;
+ const latest={...emptyWorkspace(),reflections:[{...reflection('latest'),date:'bad'}]};a.sync.queue(latest);held.release();await importing;assert.deepEqual(a.sync.invalidPending,latest);assert.equal(a.sync.status,'conflict');
+});

@@ -108,18 +108,21 @@ export class WorkspaceSync {
     finally { this.refreshing = false; }
     if (this.pending && this.status === 'pending') await this.flush();
   }
-  async combine(device = this.pending, importing = false) {
+  async combine(device = this.pending, importing = false, acknowledgeLegacy = importing) {
     if (!this.account || !device || this.inflight || this.refreshTask || this.combining) return;
-    const sequence = this.sequence;
+    const sequence = this.sequence, invalidBefore = this.invalidPending;
     this.combining = true;
     this.emit('loading');
     try {
       const data = await this.request();
       if (data.account?.id !== this.account.id) throw new Error('The signed-in account changed. Reload before continuing.');
-      if (this.sequence !== sequence || this.invalidPending) throw new Error('This device changed during recovery. Your new changes are kept here. Review recovery options again.');
-      const merged = mergeWorkspaces(data.workspace, device);
-      this.revision = data.revision; this.emit('pending'); this.queue(merged); this.onData(merged); this.combining = false; await this.flush();
-      if (importing && !this.pending) { this.needsImport = false; this.write(`${this.key}.imported`, JSON.stringify(this.legacy)); this.onStatus(this); }
+      if (this.sequence !== sequence || this.invalidPending !== invalidBefore) throw new Error('This device changed during recovery. Your new changes are kept here. Review recovery options again.');
+      if (invalidBefore && !importing) throw new Error('Export and correct the invalid device version, then import that corrected backup.');
+      if (!Number.isSafeInteger(data.revision) || data.revision < this.revision) throw new Error('The account version could not be verified. Keep your recovery file and retry.');
+      const base = importing && this.pending && this.pending !== device ? mergeWorkspaces(data.workspace, this.pending) : data.workspace;
+      const merged = mergeWorkspaces(base, device);
+      this.revision = data.revision; this.emit('pending'); if(!this.queue(merged))return; this.onData(merged); this.combining = false; await this.flush();
+      if (acknowledgeLegacy && importing && this.status === 'saved' && !this.pending && !this.invalidPending) { this.needsImport = false; this.write(`${this.key}.imported`, JSON.stringify(this.legacy)); this.onStatus(this); }
     } catch (e) { this.emit('conflict', e.message); }
     finally { this.combining = false; this.onStatus(this); }
   }
