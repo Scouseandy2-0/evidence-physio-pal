@@ -117,3 +117,8 @@ button{min-height:44px}
 .learning-followups { margin:18px 0; }
 #study-filters { margin-top:20px; }
 @media(max-width:650px) { .learning-exports .button { flex:1 1 180px; } }
+
+/* iOS date controls must fit their parent even with Safari's intrinsic sizing. */
+input[type="date"] { min-width:0; width:100%; max-width:100%; box-sizing:border-box; }
+.form-row > .field { min-width:0; }
+#review-date-form input,#review-date-form select { font-size:1rem; min-height:44px; }

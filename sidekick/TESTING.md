@@ -224,3 +224,10 @@ Andrew’s uploaded files/screenshots establish iPhone PDF/DOCX downloads and Pa
 Chrome local preview created clearly fictional software-test notes against a real paper record. Appraisal PDF and revision PDF were generated/downloaded through the new modal Save file links and their extracted contents inspected. A teaching DOCX was generated/downloaded and its ZIP/text/reference/planned-time content checked. Revision search matched a PMID. A local fictional CPD record was given a review date and the due-date count/selection updated correctly. These were local preview records; Andrew’s production records were not edited.
 
 No new schema, supplier, external message, payment, access change or clinical-content approval. Independent content review, comprehensive anatomy and real-device checks for these new flows remain open. Earlier confirmed iPhone reflection/portfolio exports are preserved in docs/device-evidence.md.
+
+
+## Review-date linking repair — 27 November 2026
+
+151 automated tests passed, including a pure assignment check and an actual-app DOM/event scenario that starts with an undated reflection hidden by due filtering, selects it in the date dialog, saves tomorrow’s date through the account-sync path, confirms future-view visibility and preserves date/minutes/outcome, then changes it to today and verifies due visibility. The helper rejects missing records, invalid calendar dates, empty dates and dates before the learning date. Existing tests protect other account/CAS paths.
+
+Chrome local preview used the new action to link tomorrow’s date to an existing fictional reflection, showed it under Future review dates, then selected Due today or earlier to reproduce 0-of-1 visibility. The new action still selected that hidden reflection with its saved date. This was local-only QA; Andrew’s owner workspace was not changed. Safari-specific width rules are implemented, not established as passed on a physical iPhone. IMG_7258.png and the open retest are recorded in docs/device-evidence.md.

@@ -266,3 +266,10 @@ Recent production logs also exposed Safari’s conventional icon requests return
 5. Home/CPD show due/future review-date counts and a due-date action. CPD adds due/future/undated filters; all portfolio formats apply the same date-based selection and record its reference day. An existing outcome does not imply a review is closed. No notification or reminder is scheduled.
 
 Binary exports share the existing self-hosted document/font bundle and are prepared on-device. Each uses a fresh Save file link suitable for an intentional download tap. Format generation does not upload learning notes to an external conversion service. The new workflows have developer/desktop evidence, separate from Andrew’s already-confirmed iPhone portfolio exports.
+
+
+## Direct CPD review-date assignment — 27 November 2026
+
+CPD now has Set review date above its filters and Set/Change review date on each reflection. The picker lists all saved reflections independently of current filters, so a hidden undated/future record can still be updated. The change preserves the learning date, minutes, content and outcomes; invalid dates or dates before learning are rejected. Account-save acknowledgements remain distinct from a queued edit. After assignment, unrelated filters reset, the relevant due/future view opens and the updated record is focused.
+
+From/To are labelled Learning date from/to, review filtering is labelled explicitly, and empty-state guidance explains hidden records. Safari date inputs are constrained to their parent width. No notification is scheduled and no production record was changed by the developer to choose a date for Andrew.

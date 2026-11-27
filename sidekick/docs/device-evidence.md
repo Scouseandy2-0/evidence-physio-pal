@@ -20,3 +20,10 @@ The filenames above identify evidence already supplied in the conversation; copi
 - Test hosted topic/exact research search, source links and original abstracts on iPhone; record failures and recovery separately.
 - Test iPhone portrait/landscape anatomy selection, detail panel, load/memory, and VoiceOver.
 - Test interrupted account save/conflict recovery in a designated disposable workspace with backups.
+
+
+## Review-date linking report — 27 November 2026, 20:53
+
+Andrew supplied IMG_7258.png from iPhone and reported that he could not link a due-date CPD follow-up. The screenshot shows portfolio filter controls and 0 of 1 reflections selected. It establishes a real iPhone usability report; it does not establish the hidden record’s exact current date or which filter excluded it. The displayed From/To fields filter learning dates and were not assignment controls.
+
+A direct Set review date action was added, with an all-record picker that remains usable when the current filters hide a reflection. It validates an actual review date, updates only the selected record, selects due/future view as appropriate, and focuses the updated record. Filter labels/empty guidance distinguish assignment from discovery. Date-input width constraints address the visible iPhone overflow risk. Automated and desktop checks pass; a successful retest on Andrew’s iPhone is still open.
