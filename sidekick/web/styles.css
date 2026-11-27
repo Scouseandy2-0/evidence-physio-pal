@@ -13,3 +13,5 @@
 .appraisal-source{overflow-wrap:anywhere}.appraisal-source h2{font-size:1.2rem;line-height:1.5}#appraisal-form label{font-size:1rem}#appraisal-form .subtle{font-size:.9rem;margin:6px 0 10px;line-height:1.6}#appraisal-form textarea{min-height:125px;font-size:1rem}#appraisal-form .notice{font-size:.95rem}#appraisal-form .button-row{gap:12px;flex-wrap:wrap}
 
 .teaching-summary{padding:20px 0;border-top:1px solid var(--line);margin-top:18px;overflow-wrap:anywhere}.teaching-summary h3{font-size:1.05rem;line-height:1.5}#saved-teaching-form label{font-size:1rem}#saved-teaching-form textarea{min-height:125px;font-size:1rem}#saved-teaching-form .subtle,#session-sources .subtle{font-size:.9rem;line-height:1.6;margin:7px 0 12px}#session-sources .field{max-width:460px}
+
+#revision-card-form label{font-size:1rem}#revision-card-form textarea{min-height:130px;font-size:1rem}#revision-card-form .field{margin-top:20px}.recall-card h2{font-size:1.3rem;line-height:1.6;margin:20px 0}.recall-card .reflection-content{font-size:1rem;line-height:1.8;white-space:pre-wrap}.recall-card{max-width:900px;margin-left:auto;margin-right:auto}

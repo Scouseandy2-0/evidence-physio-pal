@@ -1,3 +1,4 @@
+import { newStudySet, cardFromNotes, saveStudyCard, rateStudyCard, studyMarkdown } from './study.js';
 import { newTeachingPlan, teachingSource, teachingMarkdown, suggestedAgenda, readingLabels } from './teaching.js';
 import { loadOriginalAbstract, applyOriginalAbstract } from './paper-details.js';
 import { newAppraisal, appraisalFields, basisLabels, reflectionFromAppraisal, appraisalMarkdown } from './appraisal.js';
@@ -42,7 +43,7 @@ let controller;
 let requestNumber = 0;
 const abstractRequests = new Map();
 const abstractErrors = new Map();
-let learnTab = 'appraisal';
+let learnTab = 'revision';
 let quizIndex = 0;
 let quizAnswered = false;
 let libraryFilter = '';
@@ -51,6 +52,9 @@ let reflectionEditing = null;
 let reflectionDraft = null;
 let activeAppraisal = null;
 let activeTeaching = null;
+let activeStudy = null;
+let studyPractice = null;
+let studyDraft = null;
 let toastTimer;
 const nav = [['home', 'Overview'], ['research', 'Research'], ['learn', 'Learn & anatomy'], ['practice', 'Practice resources'], ['cpd', 'My CPD'], ['fcp', 'FCP workspace'], ['library', 'Saved papers']];
 function persist() {
@@ -67,7 +71,7 @@ function updateNav() {
   document.querySelector('#desktop-nav').innerHTML = nav.map(([id, label]) => `<a href="#${id}" class="nav-item ${route === id ? 'active' : ''}" ${route === id ? 'aria-current="page"' : ''}>${icon(id)}<span>${label}</span>${id === 'fcp' ? '<span class="premium">PREVIEW</span>' : ''}${id === 'library' ? `<span class="count">${workspace.saved.length}</span>` : ''}</a>`).join('');
   const mobile = [['home', 'Home'], ['research', 'Research'], ['learn', 'Learn'], ['cpd', 'CPD'], ['fcp', 'FCP']];
   document.querySelector('#mobile-nav').innerHTML = mobile.map(([id, label]) => `<a href="#${id}" class="${route === id ? 'active' : ''}" ${route === id ? 'aria-current="page"' : ''}>${icon(id)}<span>${label}</span></a>`).join('');
-  document.querySelector('#breadcrumb').textContent = nav.find(([id]) => route === id)?.[1] || (route === 'appraisal' ? 'Paper appraisal' : route === 'teaching' ? 'Teaching session' : 'Overview');
+  document.querySelector('#breadcrumb').textContent = nav.find(([id]) => route === id)?.[1] || (route === 'appraisal' ? 'Paper appraisal' : route === 'teaching' ? 'Teaching session' : route === 'study' ? 'My revision' : 'Overview');
 }
 function intro(eyebrow, title, description, action = '') {
   return `<div class="page-intro"><span class="eyebrow">${eyebrow}</span><div class="title-row"><h1>${title}</h1>${action}</div><p>${description}</p></div>`;
@@ -223,12 +227,84 @@ function library() {
 }
 function resourceCard(r) { return `<article class="card resource-card"><span class="badge">${r.label}</span><h3>${r.name}</h3><p>${r.description}</p><a class="text-button" href="${r.url}" target="_blank" rel="noopener noreferrer">Open original resource</a></article>`; }
 function learn() {
-  main.innerHTML = `${intro('LEARN WITH INTENTION', 'Understand more. Keep questioning.', 'Build the habits that connect anatomy, evidence and thoughtful practice.')}<div class="tabs" role="tablist" aria-label="Learning areas">${[['appraisal', 'Critical appraisal'], ['anatomy', 'Anatomy'], ['sources', 'Research sources']].map(([id, label]) => `<button class="tab ${learnTab === id ? 'active' : ''}" role="tab" aria-selected="${learnTab === id}" data-learn-tab="${id}" id="tab-${id}" aria-controls="learning-content">${label}</button>`).join('')}</div><section id="learning-content" role="tabpanel" aria-labelledby="tab-${learnTab}"></section>`;
+  main.innerHTML = `${intro('LEARN WITH INTENTION', 'Understand more. Keep questioning.', 'Build the habits that connect anatomy, evidence and thoughtful practice.')}<div class="tabs" role="tablist" aria-label="Learning areas">${[['revision', 'My revision'], ['appraisal', 'Critical appraisal'], ['anatomy', 'Anatomy'], ['sources', 'Research sources']].map(([id, label]) => `<button class="tab ${learnTab === id ? 'active' : ''}" role="tab" aria-selected="${learnTab === id}" data-learn-tab="${id}" id="tab-${id}" aria-controls="learning-content">${label}</button>`).join('')}</div><section id="learning-content" role="tabpanel" aria-labelledby="tab-${learnTab}"></section>`;
   const area = document.querySelector('#learning-content');
-  if (learnTab === 'anatomy') area.innerHTML = `<div class="anatomy-placeholder">${icon('anatomy')}<div><span class="eyebrow">ANATOMY WORKSPACE</span><h2>Start with the foundations.</h2><p>An integrated 3D anatomy viewer is planned. It is not included in this prototype: the model accuracy, licence and mobile performance need checking first.</p></div></div><div class="resource-grid">${resources.filter(r => r.area === 'anatomy').map(resourceCard).join('')}<article class="card resource-card"><span class="badge">Connect the learning</span><h3>From structure to research</h3><p>Explore papers about shoulder anatomy and biomechanics, then keep useful findings in a collection.</p><button class="text-button" data-search="Shoulder anatomy biomechanics">Find shoulder anatomy papers</button></article></div>`;
+  if (learnTab === 'revision') { renderStudySets(area); }
+  else if (learnTab === 'anatomy') area.innerHTML = `<div class="anatomy-placeholder">${icon('anatomy')}<div><span class="eyebrow">ANATOMY WORKSPACE</span><h2>Start with the foundations.</h2><p>An integrated 3D anatomy viewer is planned. It is not included in this prototype: the model accuracy, licence and mobile performance need checking first.</p></div></div><div class="resource-grid">${resources.filter(r => r.area === 'anatomy').map(resourceCard).join('')}<article class="card resource-card"><span class="badge">Connect the learning</span><h3>From structure to research</h3><p>Explore papers about shoulder anatomy and biomechanics, then keep useful findings in a collection.</p><button class="text-button" data-search="Shoulder anatomy biomechanics">Find shoulder anatomy papers</button></article></div>`;
   else if (learnTab === 'sources') area.innerHTML = `<div class="resource-grid">${resources.filter(r => r.area === 'research').map(resourceCard).join('')}</div>`;
   else { area.innerHTML = `<div class="two-col"><section class="card" id="quiz-area"></section><article class="card resource-card"><span class="badge">Start a useful habit</span><h3>Read. Question. Reflect.</h3><p>A summary is a starting point. Check the original source, write down what remains uncertain and decide what you need to learn next.</p><a href="#cpd" class="text-button">Capture a reflection</a><div class="notice">These short learning checks are introductory exercises, not accredited training or a clinical competency assessment.</div><a class="text-button" href="${resources[3].url}" target="_blank" rel="noopener noreferrer">Explore CASP appraisal checklists</a></article></div>`; renderQuiz(); }
 }
+function renderStudySets(area) {
+  area.innerHTML = `<div class="card"><div class="split-heading"><h2>Your revision sets</h2><button class="button" data-new-study>New study set</button></div><p>Turn your reading into questions you can practise. Answers are your own notes; check the original paper before relying on them.</p>${workspace.studySets.length ? workspace.studySets.map(set => `<article class="teaching-summary"><h3>${esc(set.title || 'Untitled study set')}</h3><p class="subtle">${set.cards.length} ${set.cards.length === 1 ? 'card' : 'cards'} · ${set.cards.filter(c => c.rating === 'again').length} marked for another look</p><button class="button secondary" data-open-study="${esc(set.id)}">Open study set</button></article>`).join('') : '<p class="subtle">Create a set, choose a saved paper and write a question and answer. You can also bring in your own appraisal notes.</p>'}</div>`;
+}
+function studyEditor() {
+  const set = workspace.studySets.find(set => set.id === activeStudy);
+  if (!set) { learnTab = 'revision'; learn(); return; }
+  if (studyPractice?.setId === set.id) { renderStudyPractice(set); return; }
+  main.innerHTML = `${intro('FROM READING TO RECALL', 'Make the learning stick.', 'Create your own source-linked questions. Set titles and practice ratings save automatically; use Save card to keep a new or edited card.')}<div class="button-row" style="margin-bottom:20px"><a class="text-button" href="#learn">All study sets</a><button class="button secondary" id="export-study">Export study set</button></div><section class="card"><div class="field"><label for="study-title">Study set title</label><input id="study-title" maxlength="180" value="${esc(set.title)}"></div><div class="button-row"><button class="button" id="new-study-card">Add revision card</button><button class="button secondary" id="practise-study" ${set.cards.length ? '' : 'disabled'}>Practise all cards</button><button class="text-button" id="practise-again" ${set.cards.some(c => c.rating === 'again') ? '' : 'disabled'}>Practise cards marked again</button></div><p class="subtle">${set.cards.length} ${set.cards.length === 1 ? 'card' : 'cards'} · ${set.cards.filter(c => c.rating === 'unrated').length} unrated · ${set.cards.filter(c => c.rating === 'again').length} marked again · ${set.cards.filter(c => c.rating === 'recalled').length} recalled on last attempt</p></section><div id="study-card-form"></div><div class="paper-list">${set.cards.map(card => `<article class="card"><span class="badge">${card.rating === 'again' ? 'Another look' : card.rating === 'recalled' ? 'Recalled · self-rated' : 'Not rated'}</span><h2>${esc(card.question)}</h2><details><summary>Show my saved answer</summary><p class="reflection-content">${esc(card.answer)}</p></details><p class="subtle">Source: ${esc(card.source.title)} · ${esc(readingLabels[card.source.readingBasis])}</p>${card.source.retracted ? '<div class="notice error">Source marked as retracted. Check the retraction notice.</div>' : ''}<div class="button-row"><a href="https://pubmed.ncbi.nlm.nih.gov/${esc(card.source.pmid)}/" target="_blank" rel="noopener noreferrer">Open original paper record</a><button class="text-button" data-edit-card="${esc(card.id)}">Edit card</button><button class="danger-button" data-remove-card="${esc(card.id)}">Remove card</button></div></article>`).join('')}</div><div class="notice">Recall ratings are self-reported and apply to these personal notes. They do not verify the answer or assess clinical competence. No study time is automatically added to CPD.</div><button class="danger-button" id="remove-study">Remove study set</button>`;
+  const editable = () => sync?.account && !sync.combining && sync.status !== 'loading';
+  document.querySelector('#study-title').oninput = e => { if (!editable()) return; set.title = e.target.value; set.updatedAt = new Date().toISOString(); persist(); };
+  document.querySelector('#new-study-card').onclick = () => { if (!editable()) return; if (set.cards.length >= 100) { toast('A study set can hold up to 100 cards.'); return; } if (studyDraft?.dirty) { toast('Save or cancel the current card first.'); return; } studyDraft = { setId: set.id, question: '', answer: '', sourceId: '', dirty: false }; renderStudyCardForm(set); };
+  document.querySelector('#export-study').onclick = () => download('physiosidekick-study-set.md', studyMarkdown(set), 'text/markdown');
+  const practise = onlyAgain => { if (studyDraft?.dirty) { toast('Save or cancel the current card before practising.'); return; } studyPractice = { setId: set.id, ids: set.cards.filter(c => !onlyAgain || c.rating === 'again').map(c => c.id), at: 0, revealed: false }; studyEditor(); };
+  document.querySelector('#practise-study').onclick = () => practise(false); document.querySelector('#practise-again').onclick = () => practise(true);
+  document.querySelectorAll('[data-edit-card]').forEach(button => button.onclick = () => {
+    if (!editable()) return; if (studyDraft?.dirty) { toast('Save or cancel the current card first.'); return; }
+    const c = set.cards.find(c => c.id === button.dataset.editCard); studyDraft = { setId: set.id, cardId: c.id, question: c.question, answer: c.answer, sourceId: `MED:${c.source.pmid}`, dirty: false }; renderStudyCardForm(set);
+  });
+  document.querySelectorAll('[data-remove-card]').forEach(button => button.onclick = () => {
+    if (!editable()) return;
+    openDialog('<h2 id="dialog-title">Remove this revision card?</h2><p>The card and its recall rating will be removed. Its saved paper and appraisal remain.</p><button class="button" id="confirm-card-remove">Remove card</button>');
+    document.querySelector('#confirm-card-remove').onclick = () => { if (!editable()) return; set.cards = set.cards.filter(c => c.id !== button.dataset.removeCard); set.updatedAt = new Date().toISOString(); persist(); dialog.close(); studyDraft = null; studyEditor(); };
+  });
+  document.querySelector('#remove-study').onclick = () => {
+    if (!editable()) return;
+    openDialog('<h2 id="dialog-title">Remove this study set?</h2><p>This removes its cards and recall ratings from your account workspace. Export it first to keep a copy. Papers, appraisals and CPD records remain.</p><button class="button" id="confirm-study-remove">Remove study set</button>');
+    document.querySelector('#confirm-study-remove').onclick = () => { if (!editable()) return; workspace.studySets = workspace.studySets.filter(s => s.id !== set.id); activeStudy = null; studyDraft = null; persist(); dialog.close(); learnTab = 'revision'; navigate('learn'); };
+  };
+  if (studyDraft?.setId === set.id) renderStudyCardForm(set);
+}
+function renderStudyCardForm(set) {
+  const d = studyDraft, existing = set.cards.find(c => c.id === d.cardId);
+  const oldSourceMissing = existing && !workspace.saved.some(p => p.pmid === existing.source.pmid);
+  document.querySelector('#study-card-form').innerHTML = `<form id="revision-card-form" class="card form-card" style="margin-top:20px"><h2>${existing ? 'Edit revision card' : 'Write a revision card'}</h2><p>Write an answer you have checked. Bringing in appraisal notes creates an editable draft, not an AI answer.</p><div class="field"><label for="revision-source">Source paper</label><select id="revision-source" required><option value="">Choose a saved paper</option>${oldSourceMissing ? `<option value="MED:${esc(existing.source.pmid)}">${esc(existing.source.title)} · retained source snapshot</option>` : ''}${workspace.saved.map(p => `<option value="${esc(p.id)}">${esc(p.title)}</option>`).join('')}</select></div><div class="button-row"><button class="button secondary" type="button" id="notes-to-card">Use my appraisal notes</button><a class="text-button" href="#research">Find papers</a></div><div class="field"><label for="revision-question">Question</label><textarea id="revision-question" maxlength="1000" required>${esc(d.question)}</textarea></div><div class="field"><label for="revision-answer">Answer in your own words</label><textarea id="revision-answer" maxlength="6000" required>${esc(d.answer)}</textarea></div><p class="subtle">Editing a question, answer or source resets its last recall rating. Your previous review count is retained.</p><div class="button-row"><button class="button" type="submit">Save card</button><button class="button secondary" type="button" id="cancel-study-card">Cancel card edit</button></div></form>`;
+  document.querySelector('#revision-source').value = d.sourceId;
+  const capture = () => { d.question = document.querySelector('#revision-question').value; d.answer = document.querySelector('#revision-answer').value; d.sourceId = document.querySelector('#revision-source').value; d.dirty = true; };
+  document.querySelector('#revision-card-form').oninput = capture;
+  document.querySelector('#revision-source').onchange = capture;
+  document.querySelector('#notes-to-card').onclick = () => {
+    const sourceId = document.querySelector('#revision-source').value;
+    const a = workspace.appraisals.filter(a => a.paperId === sourceId).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+    if (document.querySelector('#revision-answer').value.trim() || document.querySelector('#revision-question').value.trim()) { toast('This card already has text. Start a new card to bring in appraisal notes.'); return; }
+    try { const notes = cardFromNotes(a); document.querySelector('#revision-question').value = notes.question; document.querySelector('#revision-answer').value = notes.answer; capture(); } catch(e) { toast(e.message); }
+  };
+  document.querySelector('#cancel-study-card').onclick = () => { studyDraft = null; document.querySelector('#study-card-form').innerHTML = ''; };
+  document.querySelector('#revision-card-form').onsubmit = e => {
+    e.preventDefault(); if (!sync?.account || sync.combining || sync.status === 'loading') return; capture();
+    const paper = workspace.saved.find(p => p.id === d.sourceId);
+    const a = workspace.appraisals.filter(a => a.paperId === d.sourceId).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+    try {
+      const source = existing && d.sourceId === `MED:${existing.source.pmid}` ? existing.source : undefined;
+      const card = saveStudyCard({ question: d.question, answer: d.answer, paper, appraisal: a, source, existing });
+      if (existing) set.cards = set.cards.map(c => c.id === existing.id ? card : c); else set.cards.push(card);
+      set.updatedAt = new Date().toISOString(); persist(); studyDraft = null; studyEditor(); toast('Revision card queued for saving');
+    } catch(e) { toast(e.message); }
+  };
+  document.querySelector('#revision-source').focus();
+}
+function renderStudyPractice(set) {
+  const session = studyPractice, card = set.cards.find(c => c.id === session.ids[session.at]);
+  main.innerHTML = `${intro('TRY BEFORE YOU REVEAL', 'Recall in your own words.', 'Think of your answer first, then reveal your saved notes and rate your recall.')}<button class="text-button" id="end-study-practice">Back to study set</button><section class="card recall-card" style="margin-top:20px">${card ? `${card.source.retracted ? '<div class="notice error">Source marked as retracted. Check the original record before studying these notes.</div>' : ''}<span class="eyebrow">CARD ${session.at+1} OF ${session.ids.length}</span><h2>${esc(card.question)}</h2>${session.revealed ? `<h3>Your saved answer</h3><p class="reflection-content">${esc(card.answer)}</p><p class="subtle">${esc(card.source.title)} · ${esc(readingLabels[card.source.readingBasis])}</p><a href="https://pubmed.ncbi.nlm.nih.gov/${esc(card.source.pmid)}/" target="_blank" rel="noopener noreferrer">Check original source</a>${card.source.retracted ? '<div class="notice error">Source marked as retracted. Investigate the retraction notice.</div>' : ''}<div class="button-row" style="margin-top:20px"><button class="button secondary" id="rate-again">Needs another look</button><button class="button" id="rate-recalled">I recalled it</button></div>` : '<button class="button" id="reveal-study-answer">Reveal my answer</button>'}` : '<h2>This round is complete.</h2><p>Your recall ratings have been queued for account saving. You can return to cards marked for another look.</p>'}</section><div class="notice">This compares your recall with your own notes. It does not verify the answer, establish competence or log CPD time.</div>`;
+  document.querySelector('#end-study-practice').onclick = () => { studyPractice = null; studyEditor(); };
+  document.querySelector('#reveal-study-answer')?.addEventListener('click', () => { session.revealed = true; renderStudyPractice(set); });
+  const rate = rating => {
+    if (!session.revealed || !card || !sync?.account || sync.combining || sync.status === 'loading') return;
+    set.cards = set.cards.map(c => c.id === card.id ? rateStudyCard(c, rating) : c); set.updatedAt = new Date().toISOString(); persist(); session.at++; session.revealed = false; renderStudyPractice(set);
+  };
+  document.querySelector('#rate-again')?.addEventListener('click', () => rate('again'));
+  document.querySelector('#rate-recalled')?.addEventListener('click', () => rate('recalled'));
+}
+
 function renderQuiz() {
   quizAnswered = false; const q = questions[quizIndex];
   document.querySelector('#quiz-area').innerHTML = `<span class="eyebrow">A MOMENT TO THINK · ${quizIndex + 1} OF ${questions.length}</span><h2 style="margin:18px 0;font-size:1.2rem;line-height:1.5">${q.question}</h2><div>${q.options.map((o, i) => `<button class="quiz-option" data-answer="${i}">${o}</button>`).join('')}</div><div id="quiz-feedback" aria-live="polite"></div><button class="text-button" id="next-question" hidden>Next learning check</button>`;
@@ -375,8 +451,8 @@ async function copyCitation(id) {
   catch { openDialog(`<h2 id="dialog-title">Copy this citation</h2><p>${esc(citation(p))}</p><p class="subtle">Check against your university or publisher’s required referencing style.</p>`); }
 }
 function privacy() {
-  openDialog(`<span class="eyebrow">YOUR ACCOUNT WORKSPACE</span><h2 id="dialog-title">Your data & privacy</h2><p>Your papers, notes, saved searches, appraisals, teaching plans and reflections are stored in the app’s account database, tied to your signed-in identity. The app keeps an account-specific device copy of pending changes so interrupted saves can be recovered.</p><p>Open the same private app on your iPhone or Mac and sign in with the same account. Data loads when you open the app; “Refresh from account” fetches newer changes. This is not live simultaneous editing.</p><p>Research keywords pass through the app server to Europe PMC, with PubMed (NCBI) as a backup. Publication metadata may be cached for five minutes. Opening a missing abstract can request that paper’s PMID from PubMed; a retrieved abstract and its source are kept when you save the paper. Your account identity is not forwarded to either research service. External resources use their own privacy policies, and fonts load from Google Fonts. Keep identifiable patient information out of this educational prototype.</p><div class="button-row"><button class="button" id="export-workspace">${icon('download')}Export workspace backup</button><label class="button secondary" for="import-workspace">Import a backup</label><input id="import-workspace" type="file" accept="application/json,.json" class="file-input"></div><p class="subtle" style="margin-top:15px">Import shows a summary before combining records. It does not replace the account workspace. Conflicting notes are kept together and conflicting reflections become separate entries.</p>${sync?.pending ? '<div class="notice">This device has changes not yet confirmed by the account server. The export includes your current version.</div>' : ''}<p><a href="/signout-with-chatgpt?return_to=%2F" target="_top">Sign out of this app</a></p>`);
-  document.querySelector('#export-workspace').onclick = () => download('physiosidekick-workspace.json', JSON.stringify({ version: 5, exportedAt: new Date().toISOString(), workspace: sync.invalidPending || sync.pending || workspace }, null, 2), 'application/json');
+  openDialog(`<span class="eyebrow">YOUR ACCOUNT WORKSPACE</span><h2 id="dialog-title">Your data & privacy</h2><p>Your papers, notes, saved searches, appraisals, teaching plans, revision sets and reflections are stored in the app’s account database, tied to your signed-in identity. The app keeps an account-specific device copy of pending changes so interrupted saves can be recovered.</p><p>Open the same private app on your iPhone or Mac and sign in with the same account. Data loads when you open the app; “Refresh from account” fetches newer changes. This is not live simultaneous editing.</p><p>Research keywords pass through the app server to Europe PMC, with PubMed (NCBI) as a backup. Publication metadata may be cached for five minutes. Opening a missing abstract can request that paper’s PMID from PubMed; a retrieved abstract and its source are kept when you save the paper. Your account identity is not forwarded to either research service. External resources use their own privacy policies, and fonts load from Google Fonts. Keep identifiable patient information out of this educational prototype.</p><div class="button-row"><button class="button" id="export-workspace">${icon('download')}Export workspace backup</button><label class="button secondary" for="import-workspace">Import a backup</label><input id="import-workspace" type="file" accept="application/json,.json" class="file-input"></div><p class="subtle" style="margin-top:15px">Import shows a summary before combining records. It does not replace the account workspace. Conflicting notes are kept together and conflicting reflections become separate entries.</p>${sync?.pending ? '<div class="notice">This device has changes not yet confirmed by the account server. The export includes your current version.</div>' : ''}<p><a href="/signout-with-chatgpt?return_to=%2F" target="_top">Sign out of this app</a></p>`);
+  document.querySelector('#export-workspace').onclick = () => download('physiosidekick-workspace.json', JSON.stringify({ version: 6, exportedAt: new Date().toISOString(), workspace: sync.invalidPending || sync.pending || workspace }, null, 2), 'application/json');
   document.querySelector('#import-workspace').onchange = async e => {
     const file = e.target.files[0]; if (!file) return;
     try { if (file.size > 2 * 1024 * 1024) throw new Error('Use a workspace export no larger than 2 MB.'); const raw = JSON.parse(await file.text()); reviewImport(validateWorkspace(raw.workspace || raw), false); }
@@ -385,7 +461,7 @@ function privacy() {
 }
 function reviewImport(data, legacy = false) {
   if (cpdFormOpen) { toast('Save or cancel your reflection before importing records.'); return; }
-  openDialog(`<span class="eyebrow">REVIEW IMPORT</span><h2 id="dialog-title">Bring your records into your account</h2><p>This ${legacy ? 'browser' : 'backup'} contains <strong>${data.saved.length} papers, ${data.reflections.length} reflections and ${data.searches.length} searches and ${data.appraisals.length} appraisals and ${data.teachingPlans.length} teaching plans</strong>.</p><p>These will be combined with your account records. Duplicate papers stay as one paper; different notes are kept together. Conflicting reflections, appraisals and teaching plans become separate entries. Different collection names are recorded in the paper’s notes.</p><p>The original ${legacy ? 'browser records' : 'backup file'} will remain intact. Imports may restore a record you previously removed from the account.</p><button class="button" id="confirm-import" ${!sync?.account || sync?.inflight ? 'disabled' : ''}>Combine with my account records</button>`);
+  openDialog(`<span class="eyebrow">REVIEW IMPORT</span><h2 id="dialog-title">Bring your records into your account</h2><p>This ${legacy ? 'browser' : 'backup'} contains <strong>${data.saved.length} papers, ${data.reflections.length} reflections and ${data.searches.length} searches and ${data.appraisals.length} appraisals and ${data.teachingPlans.length} teaching plans and ${data.studySets.length} study sets</strong>.</p><p>These will be combined with your account records. Duplicate papers stay as one paper; different notes are kept together. Conflicting reflections, appraisals, teaching plans and study sets become separate entries. Different collection names are recorded in the paper’s notes.</p><p>The original ${legacy ? 'browser records' : 'backup file'} will remain intact. Imports may restore a record you previously removed from the account.</p><button class="button" id="confirm-import" ${!sync?.account || sync?.inflight ? 'disabled' : ''}>Combine with my account records</button>`);
   document.querySelector('#confirm-import').onclick = async () => { dialog.close(); await sync.combine(data, legacy); };
 }
 function syncStatus(state) {
@@ -406,23 +482,23 @@ function syncStatus(state) {
   if (state.account) document.querySelector('.profile strong').textContent = state.account.name;
 }
 function conflictDialog() {
-  openDialog(`<h2 id="dialog-title">Keep both versions safe</h2><p>Your device has pending changes and the account has a newer version. No automatic overwrite has taken place.</p><p>You can combine both sets of records. Different notes are kept together and different versions of a reflection, appraisal or teaching plan become separate entries. Removed records may return during a merge.</p><div class="button-row"><button class="button" id="merge-conflict">Combine both versions</button><button class="button secondary" id="export-pending">Export this device’s version</button></div>`);
+  openDialog(`<h2 id="dialog-title">Keep both versions safe</h2><p>Your device has pending changes and the account has a newer version. No automatic overwrite has taken place.</p><p>You can combine both sets of records. Different notes are kept together and different versions of reflections, appraisals, teaching plans and study sets become separate entries. Removed records may return during a merge.</p><div class="button-row"><button class="button" id="merge-conflict">Combine both versions</button><button class="button secondary" id="export-pending">Export this device’s version</button></div>`);
   document.querySelector('#merge-conflict').onclick = async () => { dialog.close(); await sync.combine(); };
-  document.querySelector('#export-pending').onclick = () => download('physiosidekick-pending-changes.json', JSON.stringify({ version: 5, workspace: sync.pending || workspace }, null, 2), 'application/json');
+  document.querySelector('#export-pending').onclick = () => download('physiosidekick-pending-changes.json', JSON.stringify({ version: 6, workspace: sync.pending || workspace }, null, 2), 'application/json');
 }
 function accountDialog() {
   openDialog(`<h2 id="dialog-title">Account saving</h2><p><strong>${esc(document.querySelector('#sync-status').textContent)}</strong>${sync.updatedAt ? ` · last confirmed ${esc(new Date(sync.updatedAt).toLocaleString('en-GB'))}` : ''}</p><p>Changes save automatically after a short pause. Open this same private app with the same account on another device, then refresh its account copy.</p><div class="button-row"><button class="button" id="refresh-account" ${!sync.account || sync.inflight ? 'disabled' : ''}>${sync.pending ? 'Retry pending save' : 'Refresh from account'}</button><button class="button secondary" id="account-privacy">Backups & privacy</button></div>`);
   document.querySelector('#refresh-account').onclick = async () => { dialog.close(); if (sync.status === 'conflict') conflictDialog(); else if (sync.pending) await sync.flush(); else if (!cpdFormOpen) await sync.refresh(); else toast('Save or cancel your reflection before refreshing account records.'); };
   document.querySelector('#account-privacy').onclick = privacy;
 }
-function about() { openDialog('<span class="eyebrow">FROM STUDY TO PRACTICE</span><h2 id="dialog-title">A first chapter for PhysioSidekick.</h2><p>This is a private working prototype of a career companion for physiotherapists and students.</p><h3>Working now</h3><ul><li>Live publication search from Europe PMC’s indexed PubMed records.</li><li>Original paper links, indexed abstracts and source access information.</li><li>Saved papers, notes, collections and reference exports.</li><li>Saved teaching sessions with attached paper references and editable exports.</li><li>Structured paper appraisals linked to editable CPD reflections.</li><li>Personal learning reflections and editable FCP teaching outlines.</li><li>Account saving across devices, backup import and conflict recovery.</li></ul><h3>Still to build and validate</h3><p>Licensed 3D anatomy, reviewed clinical tools, source-grounded explanations, a premium FCP curriculum and the signed iPhone app.</p><p>PhysioSidekick is a working name pending trademark clearance. This prototype is for product testing, not patient-specific decision support.</p>'); }
+function about() { openDialog('<span class="eyebrow">FROM STUDY TO PRACTICE</span><h2 id="dialog-title">A first chapter for PhysioSidekick.</h2><p>This is a private working prototype of a career companion for physiotherapists and students.</p><h3>Working now</h3><ul><li>Live publication search from Europe PMC’s indexed PubMed records.</li><li>Original paper links, indexed abstracts and source access information.</li><li>Saved papers, notes, collections and reference exports.</li><li>Source-linked revision cards with self-test practice and saved recall ratings.</li><li>Saved teaching sessions with attached paper references and editable exports.</li><li>Structured paper appraisals linked to editable CPD reflections.</li><li>Personal learning reflections and editable FCP teaching outlines.</li><li>Account saving across devices, backup import and conflict recovery.</li></ul><h3>Still to build and validate</h3><p>Licensed 3D anatomy, reviewed clinical tools, source-grounded explanations, a premium FCP curriculum and the signed iPhone app.</p><p>PhysioSidekick is a working name pending trademark clearance. This prototype is for product testing, not patient-specific decision support.</p>'); }
 function render() {
-  route = (['appraisal','teaching'].includes(location.hash.slice(1)) || nav.some(([id]) => id === location.hash.slice(1))) ? location.hash.slice(1) : 'home';
-  updateNav(); ({ home, research, library, learn, practice, cpd, fcp, appraisal, teaching: teachingEditor }[route])();
-  document.title = `${(nav.find(([id]) => id === route)?.[1] || (route === 'teaching' ? 'Teaching session' : 'Paper appraisal'))} · PhysioSidekick`;
+  route = (['appraisal','teaching','study'].includes(location.hash.slice(1)) || nav.some(([id]) => id === location.hash.slice(1))) ? location.hash.slice(1) : 'home';
+  updateNav(); ({ home, research, library, learn, practice, cpd, fcp, appraisal, teaching: teachingEditor, study: studyEditor }[route])();
+  document.title = `${(nav.find(([id]) => id === route)?.[1] || (route === 'teaching' ? 'Teaching session' : route === 'study' ? 'My revision' : 'Paper appraisal'))} · PhysioSidekick`;
 }
 document.addEventListener('click', e => {
-  const el = e.target.closest('[data-new-teaching],[data-copy-teaching],[data-open-teaching],[data-teaching],[data-appraise],[data-open-appraisal],[data-save],[data-save-notes],[data-delete-reflection],[data-edit-reflection],[data-remove-search],#save-search,#new-reflection,#first-reflection');
+  const el = e.target.closest('[data-new-study],[data-open-study],[data-new-teaching],[data-copy-teaching],[data-open-teaching],[data-teaching],[data-appraise],[data-open-appraisal],[data-save],[data-save-notes],[data-delete-reflection],[data-edit-reflection],[data-remove-search],#save-search,#new-reflection,#first-reflection');
   if (el && (!sync?.account || sync.combining || sync.status === 'loading')) { e.preventDefault(); e.stopImmediatePropagation(); toast('Wait for the account connection before editing records.'); }
 }, true);
 document.addEventListener('submit', e => {
@@ -431,6 +507,9 @@ document.addEventListener('submit', e => {
 document.addEventListener('click', e => {
   if (e.target.closest('[data-all-appraisals]')) activeAppraisal = null;
   const target = e.target.closest('button'); if (!target) return;
+  if ((('newStudy' in target.dataset) || target.dataset.openStudy) && studyDraft?.dirty) { activeStudy = studyDraft.setId; navigate('study'); toast('Save or cancel the current card first.'); return; }
+  if ('newStudy' in target.dataset) { const set = newStudySet(); workspace.studySets.unshift(set); activeStudy = set.id; studyPractice = null; studyDraft = null; persist(); navigate('study'); }
+  if (target.dataset.openStudy) { activeStudy = target.dataset.openStudy; studyPractice = null; studyDraft = null; navigate('study'); }
   if ('newTeaching' in target.dataset) createTeaching();
   if (target.dataset.openTeaching) { activeTeaching = target.dataset.openTeaching; navigate('teaching'); }
   if (target.dataset.copyTeaching) {
@@ -500,3 +579,5 @@ sync = new WorkspaceSync({
 syncStatus(sync);
 sync.init();
 window.addEventListener('online', () => { if (sync.account && sync.pending && sync.status !== 'conflict') sync.flush(); });
+
+window.addEventListener('beforeunload', e => { if (studyDraft?.dirty) { e.preventDefault(); e.returnValue = ''; } });

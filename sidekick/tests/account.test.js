@@ -140,3 +140,13 @@ test('saved teaching sessions reload with source snapshots and reject old tabs o
   assert.equal((await workspaceAPI(req('a','PUT',{revision:1,workspace:old}),env)).status,409);
   assert.equal((await (await workspaceAPI(req('a'),env)).json()).workspace.teachingPlans.length,1);
 });
+
+test('study cards and recall ratings reload from accounts and old tabs cannot omit them',async()=>{
+ const env={DB:database()};const {newStudySet,saveStudyCard,rateStudyCard}=await import('../web/study.js');
+ const study=newStudySet('set-1');study.cards=[rateStudyCard(saveStudyCard({question:'QA question',answer:'QA answer',paper:paper(),id:'card-1'}),'again')];
+ const workspace={...emptyWorkspace(),studySets:[study]};
+ assert.equal((await workspaceAPI(req('a','PUT',{revision:0,workspace}),env)).status,200);
+ const data=await(await workspaceAPI(req('a'),env)).json();assert.equal(data.workspace.studySets[0].cards[0].rating,'again');
+ const old={...workspace};delete old.studySets;assert.equal((await workspaceAPI(req('a','PUT',{revision:1,workspace:old}),env)).status,409);
+ assert.equal((await(await workspaceAPI(req('a'),env)).json()).workspace.studySets.length,1);
+});
