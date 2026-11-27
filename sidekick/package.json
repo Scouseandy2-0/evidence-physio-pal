@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "check": "node --check web/app.js && node --check web/research.js && node --check web/sync.js && node --check worker/api.js && node --check worker/research.js",
+    "check": "node --check web/app.js && node --check web/appraisal.js && node --check web/workspace-data.js && node --check web/research.js && node --check web/sync.js && node --check worker/api.js && node --check worker/research.js",
     "dev": "node scripts/dev.mjs",
     "build": "node scripts/build.mjs",
     "db:generate": "drizzle-kit generate"

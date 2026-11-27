@@ -100,3 +100,17 @@ test('an invalid oversized edit remains exportable and cannot trigger a destruct
   await a.sync.refresh(); assert.deepEqual(a.sync.invalidPending, invalid);
   const b = create(); await b.sync.init(); assert.equal(b.sync.status, 'error'); assert.deepEqual(b.sync.invalidPending, invalid);
 });
+
+test('appraisals persist with linked CPD and an old app tab cannot silently strip them', async () => {
+  const env = { DB: database() };
+  const { newAppraisal, reflectionFromAppraisal } = await import('../web/appraisal.js');
+  const a = { ...newAppraisal(paper(), 'appraisal-1'), basis: 'abstract', findings: 'Software test notes', nextStep: 'Check source' };
+  const workspace = { ...emptyWorkspace(), appraisals: [a], reflections: [{ ...reflection('linked-reflection'), ...reflectionFromAppraisal(a) }] };
+  assert.equal((await workspaceAPI(req('a', 'PUT', { revision: 0, workspace }), env)).status, 200);
+  const stored = await (await workspaceAPI(req('a'), env)).json();
+  assert.equal(stored.workspace.appraisals[0].findings, 'Software test notes');
+  assert.equal(stored.workspace.reflections[0].appraisalId, a.id);
+  const legacy = { saved: [], reflections: [], searches: [] };
+  assert.equal((await workspaceAPI(req('a', 'PUT', { revision: 1, workspace: legacy }), env)).status, 409);
+  assert.equal((await (await workspaceAPI(req('a'), env)).json()).workspace.appraisals.length, 1);
+});

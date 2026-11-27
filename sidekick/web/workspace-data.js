@@ -1,5 +1,5 @@
 import { safeURL, defaultFilters } from './research.js';
-export const emptyWorkspace = () => ({ saved: [], reflections: [], searches: [] });
+export const emptyWorkspace = () => ({ saved: [], reflections: [], searches: [], appraisals: [] });
 const fail = message => { throw new Error(message); };
 const str = (v, max, label, required = false) => {
   if (v == null && !required) return '';
@@ -37,7 +37,16 @@ export function validateWorkspace(input) {
     if (!r || !/^[a-zA-Z0-9_-]{1,100}$/.test(r.id)) fail('Invalid reflection identifier.');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(r.date) || !Number.isFinite(Date.parse(r.date)) || new Date(r.date).toISOString().slice(0, 10) !== r.date) fail('Invalid reflection date.');
     if (!Number.isInteger(r.minutes) || r.minutes < 1 || r.minutes > 1440) fail('Invalid learning time.');
-    return { id: r.id, date: r.date, minutes: r.minutes, title: str(r.title, 180, 'reflection title', true), kind: str(r.kind, 100, 'activity', true), learning: str(r.learning, 10000, 'learning', true), action: str(r.action, 10000, 'next step', true), source: str(r.source, 1000, 'source') };
+    if (r.appraisalId && (!/^[a-zA-Z0-9_-]{1,100}$/.test(r.appraisalId) || !/^MED:\d{1,9}$/.test(r.paperId) || !['abstract', 'fullText'].includes(r.basis))) fail('Invalid linked appraisal reflection.');
+    return { id: r.id, date: r.date, minutes: r.minutes, title: str(r.title, 180, 'reflection title', true), kind: str(r.kind, 100, 'activity', true), learning: str(r.learning, 10000, 'learning', true), action: str(r.action, 10000, 'next step', true), source: str(r.source, 1000, 'source'), ...(r.appraisalId ? { appraisalId: str(r.appraisalId, 100, 'linked appraisal'), paperId: str(r.paperId, 100, 'linked paper'), basis: str(r.basis, 30, 'reflection reading basis') } : {}) };
+  });
+  const appraisals = list(input.appraisals || [], 1000, 'appraisals').map(a => {
+    if (!a || !/^[a-zA-Z0-9_-]{1,100}$/.test(a.id) || !/^\d{1,9}$/.test(a.pmid) || a.paperId !== `MED:${a.pmid}`) fail('Invalid appraisal identifier.');
+    if (!Number.isFinite(Date.parse(a.updatedAt))) fail('Invalid appraisal time.');
+    if (!['notRead', 'abstract', 'fullText'].includes(a.basis)) fail('Invalid appraisal reading basis.');
+    const result = { id: a.id, paperId: a.paperId, pmid: a.pmid, basis: a.basis, title: str(a.title, 4000, 'appraisal paper title', true), citation: str(a.citation, 20000, 'appraisal citation'), design: str(a.design, 200, 'study design'), updatedAt: str(a.updatedAt, 100, 'appraisal time') };
+    for (const key of ['question', 'findings', 'strengths', 'limitations', 'applicability', 'uncertainties', 'nextStep']) result[key] = str(a[key], 5000, 'appraisal notes');
+    return result;
   });
   const searches = list(input.searches || [], 20, 'saved searches').map(s => {
     const f = s.filters || {};
@@ -49,9 +58,9 @@ export function validateWorkspace(input) {
     filters.openAccess = f.openAccess === true; filters.author = str(f.author, 100, 'search author');
     return { term: str(s.term, 250, 'search term'), filters, savedAt: str(s.savedAt, 100, 'search time') };
   });
-  return { saved: unique(saved, p => p.id, 'papers'), reflections: unique(reflections, r => r.id, 'reflections'), searches };
+  return { saved: unique(saved, p => p.id, 'papers'), reflections: unique(reflections, r => r.id, 'reflections'), searches, appraisals: unique(appraisals, a => a.id, 'appraisals') };
 }
-export function hasRecords(w) { return w.saved.length + w.reflections.length + w.searches.length > 0; }
+export function hasRecords(w) { return w.saved.length + w.reflections.length + (w.searches.length + (w.appraisals?.length || 0)) > 0; }
 export function mergeWorkspaces(remote, device, newId = () => crypto.randomUUID()) {
   const a = validateWorkspace(remote), b = validateWorkspace(device);
   const papers = new Map(a.saved.map(p => [p.id, p]));
@@ -64,11 +73,21 @@ export function mergeWorkspaces(remote, device, newId = () => crypto.randomUUID(
       else if (p.collection && p.collection !== existing.collection) existing.notes += `\n\n[Device collection] ${p.collection}`;
     }
   }
+  const appraisals = new Map(a.appraisals.map(entry => [entry.id, entry]));
+  const remapped = new Map();
+  for (const entry of b.appraisals) {
+    const existing = appraisals.get(entry.id);
+    if (!existing) appraisals.set(entry.id, entry);
+    else if (JSON.stringify(existing) !== JSON.stringify(entry)) {
+      const copy = { ...entry, id: newId() }; appraisals.set(copy.id, copy); remapped.set(entry.id, copy.id);
+    }
+  }
   const reflections = new Map(a.reflections.map(r => [r.id, r]));
-  for (const r of b.reflections) {
+  for (const original of b.reflections) {
+    const r = remapped.has(original.appraisalId) ? { ...original, appraisalId: remapped.get(original.appraisalId) } : original;
     if (!reflections.has(r.id)) reflections.set(r.id, r);
     else if (JSON.stringify(reflections.get(r.id)) !== JSON.stringify(r)) { const copy = { ...r, id: newId() }; reflections.set(copy.id, copy); }
   }
   const searches = new Map([...a.searches, ...b.searches].map(s => [JSON.stringify([s.term, s.filters]), s]));
-  return validateWorkspace({ saved: [...papers.values()], reflections: [...reflections.values()], searches: [...searches.values()] });
+  return validateWorkspace({ saved: [...papers.values()], reflections: [...reflections.values()], searches: [...searches.values()], appraisals: [...appraisals.values()] });
 }

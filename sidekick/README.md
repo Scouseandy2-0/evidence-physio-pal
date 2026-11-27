@@ -14,6 +14,8 @@ A connected career companion for physiotherapists and students: learning and ana
 - Saved papers, named collections, notes and citation/RIS exports.
 - Up to 20 account-backed saved searches, rerun with their options; downloadable search records with the actual query, run time and reported result count.
 - Direct indexed free-full-text links on results, separate text/PDF source choices and institutional-access guidance where free access is unconfirmed.
+- Structured paper appraisal notes with explicit reading basis, original-reference snapshots, auto-saving and Markdown export.
+- Appraisal notes seed an editable CPD draft with a canonical PubMed link. The reader supplies learning time and explicitly saves; later appraisal edits do not rewrite the reflection.
 - Personal CPD reflections with editing and Markdown export.
 - Original-source resource shelf, three introductory critical-appraisal learning checks.
 - Editable FCP teaching outlines that download as Markdown. These are frameworks, not clinical teaching packs or an accredited curriculum.
@@ -64,8 +66,8 @@ The library stores publication metadata and indexed abstracts for personal proto
 - No patient database, clinical records, AI calls, paid subscriptions or analytics.
 - Account records are scoped by the platform-supplied user ID. The API ignores body owner IDs, validates input and rejects missing identity, mismatched write origins, oversized payloads and stale revisions.
 - Local browser storage holds account-specific pending recovery data and the retained original legacy copy. Clearing it can remove changes that have not yet reached the account server. Storage failures are shown.
-- Workspaces currently have a 2 MB server limit, up to 500 papers, 1000 reflections and 20 saved searches. Invalid local edits remain exportable; they do not overwrite the server copy.
-- Imports are opt-in and combine records, rather than replacing the account. Different notes are combined, different reflections become distinct entries, and conflicting collection names are retained in notes. Removed records may return during a merge. There is no automatic last-writer-wins overwrite.
+- Workspaces currently have a 2 MB server limit, up to 500 papers, 1000 appraisals, 1000 reflections and 20 saved searches. Invalid local edits remain exportable; they do not overwrite the server copy.
+- Imports are opt-in and combine records, rather than replacing the account. Different notes are combined, different appraisals and reflections become distinct entries with preserved source links, and conflicting collection names are retained in notes. Removed records may return during a merge. There is no automatic last-writer-wins overwrite.
 - External paper/resource links open other providers. Google Fonts is the only other external UI resource.
 - Teaching and reflection entries must contain no identifiable patient information.
 - Intended for private product testing, not patient-specific decision support.
@@ -92,3 +94,11 @@ The old `evidence-physio-pal` code is retained separately as historical source. 
 `GET /api/workspace` reads only the signed-in owner’s row. `PUT` requires the expected revision; insert/update uses a conditional atomic SQL statement and returns HTTP 409 for a stale revision. The client retains that device version and offers an explicit merge/export choice. Changes queued during a successful write are written in a subsequent revision. Authentication and Site membership remain controlled by the existing private host, not by client-supplied owner fields.
 
 The local preview DB and tests are separate from hosted D1. No preview fixture records are included in the deployment archive. Local tests establish the API/sync logic; hosted identity and D1 provisioning still depend on a successful platform deployment. A pending publication is not proof of hosted end-to-end operation.
+
+## Paper appraisal and linked learning workflow
+
+Open a real publication record or saved paper and choose **Appraise this paper**. The paper is retained in the saved library; appraisal drafts save on input. Record whether the source is unread, abstract-only or full text. Original prompts cover the question, findings, methods/strengths, limitations, applicability, uncertainty and next learning step. They are general educational prompts, not a licensed or validated appraisal instrument and provide no evidence score.
+
+**Create CPD reflection** requires a declared reading basis, reader findings and a next step. It opens a reviewable form with no invented learning time. Saving creates a linked, independent snapshot of the reader’s notes. Existing linked reflections reopen for editing rather than multiplying each time the button is pressed. Both appraisal Markdown exports and CPD exports retain source provenance and reading basis. Workspace backups preserve appraisals.
+
+Appraisals retain paper title, citation and PMID after removing a paper from the saved library. Conflict merges retain both appraisal versions and remap device reflection links to their preserved version. Legacy workspaces load with an empty appraisal list. An old browser attempting to omit existing appraisal data receives a conflict response requiring export/reload. No SQL migration is required: these records use the validated owner-scoped workspace JSON.

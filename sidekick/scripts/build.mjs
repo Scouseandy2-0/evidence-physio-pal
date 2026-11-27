@@ -1,6 +1,6 @@
 import { build } from 'esbuild';
 import { readFileSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
-const types = { 'index.html': 'text/html', 'styles.css': 'text/css', 'app.js': 'text/javascript', 'research.js': 'text/javascript', 'content.js': 'text/javascript', 'sync.js': 'text/javascript', 'workspace-data.js': 'text/javascript', 'icon.svg': 'image/svg+xml' };
+const types = { 'index.html': 'text/html', 'styles.css': 'text/css', 'app.js': 'text/javascript', 'appraisal.js': 'text/javascript', 'research.js': 'text/javascript', 'content.js': 'text/javascript', 'sync.js': 'text/javascript', 'workspace-data.js': 'text/javascript', 'icon.svg': 'image/svg+xml' };
 const assets = Object.fromEntries(Object.entries(types).map(([path, type]) => [`/${path}`, { type, body: readFileSync(`web/${path}`, 'utf8') }]));
 // All assets are bundled into the Worker; no independent static hosting is needed.
 rmSync('dist', { recursive: true, force: true }); mkdirSync('dist/server', { recursive: true }); mkdirSync('dist/.openai', { recursive: true });

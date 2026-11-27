@@ -26,6 +26,11 @@ export async function workspaceAPI(request, env) {
     let body, workspace;
     try { body = JSON.parse(new TextDecoder().decode(buffer)); workspace = validateWorkspace(body.workspace); } catch (e) { return json({ error: e.message || 'Invalid workspace.' }, 400); }
     if (!Number.isSafeInteger(body.revision) || body.revision < 0) return json({ error: 'Invalid workspace revision.' }, 400);
+    // A previously opened v3 browser must not silently remove v4 appraisal records.
+    if (!Array.isArray(body.workspace.appraisals)) {
+      const current = await env.DB.prepare('SELECT data FROM workspaces WHERE owner_id = ?').bind(owner).first();
+      if (current && JSON.parse(current.data).appraisals?.length) return json({ error: 'This app tab is out of date. Export pending changes, then reload before saving appraisal records.' }, 409);
+    }
     const data = JSON.stringify(workspace), updatedAt = new Date().toISOString();
     if (new TextEncoder().encode(data).length > limit) return json({ error: 'Workspace exceeds the 2 MB prototype limit.' }, 413);
     const result = body.revision === 0
