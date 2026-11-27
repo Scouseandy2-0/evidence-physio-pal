@@ -26,3 +26,5 @@
 button{min-height:44px}
 
 .readiness-list section{padding:18px 0;border-top:1px solid var(--line)}.readiness-list strong{display:block;color:var(--muted);margin:4px 0 10px}
+
+.pack-section{padding-top:18px;border-top:1px solid var(--line);margin-top:18px}.pack-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7}

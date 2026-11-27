@@ -1,5 +1,7 @@
 # PhysioSidekick — independent beta test script
 
+Whole-product sessions follow completion of V1-COMPLETION.md. Focused clinical/anatomical review of completed material is a separate prerequisite, not a claim that the whole app is finished.
+
 Audience: a small mix of physiotherapists, FCPs and students once access is intentionally granted. This document prepares the work; no participation or review is implied.
 
 Use fictional notes. Observe the first attempt before explaining a feature. Record time, success, assistance needed, confusion and the participant’s words. Ask permission before recording a session; no recording is required.

@@ -1,5 +1,7 @@
 # PhysioSidekick — private beta readiness
 
+First-version scope is now fixed in **V1-COMPLETION.md**. Finish that feature/content checklist before whole-product tester recruitment. This file records verification/release gates and does not supersede the V1 scope.
+
 Reviewed: 27 November 2026. Working name; no claim of trademark clearance.
 
 **Decision: keep owner-private.** The implemented workflows are ready for further product testing, but a public or paid launch is not signed off. Existing Site sharing is unchanged. No testers have been contacted or granted access.

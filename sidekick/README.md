@@ -2,6 +2,10 @@
 
 Working name, pending trademark clearance. Owner: Andrew Lockhart. Started 27 November 2026.
 
+## Fixed V1 scope
+
+[V1-COMPLETION.md](V1-COMPLETION.md) is the authoritative first-version checklist and build order. It supersedes the earlier open-ended delivery roadmap below. Complete the defined content areas before inviting whole-product usability assessment; clinical/anatomical review of completed material remains necessary.
+
 ## Product intent
 
 A connected career companion for physiotherapists and students: learning and anatomy, real research, professional practice resources, CPD and a specialist FCP area. The long-term product is deliberately all-in-one; delivery is incremental, with independently useful workflows.
@@ -51,7 +55,7 @@ https://www.ebi.ac.uk/europepmc/webservices/rest/search
 
 Documentation: https://dev.europepmc.org/RestfulWebService
 
-Europe PMC has a seven-second deadline; on first-page failure, discovery without an OA filter falls back to NCBI PubMed ESearch plus ESummary. Backup pagination remains on PubMed, and later primary-page failures do not mix providers. The backup search has genuine bibliographic metadata but no abstracts or confirmed access labels. A separate on-demand original-abstract loader uses PubMed EFetch by a verified numeric PMID. The UI explicitly explains this limitation. An OA filter is never silently replaced with a free-to-read filter. Exact identifier lookups still bypass discovery filters. Both providers have bounded requests. Repeated identical requests share in-flight work and a five-minute, bounded in-memory metadata cache.
+Europe PMC has a fifteen-second deadline; on first-page failure, discovery without an OA filter falls back to NCBI PubMed ESearch plus ESummary. Backup pagination remains on PubMed, and later primary-page failures do not mix providers. The backup search has genuine bibliographic metadata but no abstracts or confirmed access labels. A separate on-demand original-abstract loader uses PubMed EFetch by a verified numeric PMID. The UI explicitly explains this limitation. An OA filter is never silently replaced with a free-to-read filter. Exact identifier lookups still bypass discovery filters. Both providers have bounded requests. Repeated identical requests share in-flight work and a five-minute, bounded in-memory metadata cache.
 
 All titles, authors, abstracts, identifiers and publication types come from those provider responses. Missing information is shown as missing. There is no paper generator, synthetic fallback, fake DOI, inferred PEDro score or automatic evidence-quality grade. Publication indexing is not clinical appraisal. Publisher access labels are cautious: no indexed open-access indicator does not prove a paywall.
 
@@ -74,7 +78,7 @@ The library stores publication metadata and indexed abstracts for personal proto
 - Integrated skeletal anatomy preview now uses the licensed BodyParts3D / OrganUI source described below. Expanded anatomy systems and expert review remain outstanding.
 - This is not a signed native iOS app. The next native phase should package local assets with Capacitor, retain verified-source search, test downloads/storage/external links on iPhone, and use TestFlight after Mac signing and Apple enrolment.
 
-## Delivery roadmap
+## Historical delivery roadmap (superseded by V1-COMPLETION.md)
 
 1. Test search and known-paper retrieval with students and clinicians; consider a more expressive, transparent search builder based on observed needs.
 2. Validate account loading, import/recovery and refreshed cross-device records on physical iPhone/Safari and Mac. Review storage regions, retention, deletion and account export before wider distribution.
@@ -186,3 +190,9 @@ See BETA-READINESS.md for launch gates, docs/beta-test-script.md for independent
 Backup files now validate envelope versions and supported record types, with a 4 MB file allowance and a separate 2 MB canonical workspace limit. This accommodates formatted JSON overhead without widening account storage. Explicit imports preserve current valid pending edits as well as remote/imported data. An invalid device edit can be exported, corrected and explicitly imported; a newer edit arriving during recovery still blocks a stale replacement. Unrelated backup imports do not acknowledge unimported legacy browser records. Unsupported/future content is rejected rather than silently discarded.
 
 The Worker adds CSP limiting executable code to this origin and network requests to existing app/Europe PMC paths, while permitting the existing Google Fonts styles/fonts. Object embedding and unused camera, microphone, location and payment capabilities are disabled. API status, private cache controls and account scoping are preserved. These are defensive controls, not a penetration-test certification.
+
+## Fixed completion scope and first supplied FCP pack
+
+The in-app V1 completion panel now uses stable criteria V1-R/A/S/C/P/F/D/U. The fixed content floor is seven MSK anatomical regions with licensed bones/major-muscle 3D and joint/key-nerve learning; five student units with at least 20 source-linked reviewed questions; and six reviewed FCP teaching packs. Built workflows retain separate final-device/content-review gates. Whole-product recruitment follows completion rather than standing in for unfinished content. Native Apple distribution remains explicit and separate from the web implementation.
+
+The first knee OA source-led pack is a prepared draft with a 30-minute agenda, fictional case, facilitator checkpoints, learner questions, source map and take-home activity. It can be read/exported and copied into an independent editable saved session. The copied source map/version/review limitation persists; changes to the supplied pack do not rewrite personal copies. Planned teaching time does not populate CPD. Clinical review is pending; this is not one of six reviewed packs. See docs/content-review-register.md for source-access and review limitations.
