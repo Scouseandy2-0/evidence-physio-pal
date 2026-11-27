@@ -25,7 +25,7 @@ export const nerveNotes=[
  note('roots','Spinal roots and rami','Dorsal roots convey sensory fibres; ventral roots convey motor fibres. Mixed spinal nerves then divide into rami. Peripheral nerve territories and root territories differ.','brachial','Embryology: dorsal and ventral roots; spinal nerves and rami'),
 ];
 export const regionalGuides=[
- {id:'shoulder',title:'Shoulder',bonePattern:'clavicle|scapula|humerus',muscles:['deltoid','supraspinatus','infraspinatus','teres-minor','subscapularis','teres-major'],nerves:['axillary','suprascapular'],
+ {id:'shoulder',title:'Shoulder',bonePattern:'clavicle|scapula|humerus',muscles:['trapezius','latissimus-dorsi','levator-scapulae','rhomboid-major','rhomboid-minor','deltoid','supraspinatus','infraspinatus','teres-minor','subscapularis','teres-major'],nerves:['axillary','suprascapular'],
   joint:note('glenohumeral','Glenohumeral joint','The humeral head meets the scapular glenoid. The rotator cuff contributes dynamic support; the labrum and capsule are not rendered here.','joints','Shoulder Joint'),
   action:note('cuff-actions','Movement checkpoint','Supraspinatus contributes to abduction; infraspinatus and teres minor to external rotation; subscapularis to internal rotation. Muscle actions depend on position and task.','upperMuscles','Muscles That Move the Humerus'),
   task:'Identify the scapula and humerus, then inspect the cuff muscles in the muscle model. Explain which surrounding tissues you still cannot inspect.'},

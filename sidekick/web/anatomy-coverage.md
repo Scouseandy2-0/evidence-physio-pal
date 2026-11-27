@@ -8,7 +8,7 @@ Two separate pinned BodyParts3D 3.0 / OrganUI assets: the skeleton has 242 sourc
 
 | Region | Skeletal source structures | Muscle source groups | Key nerve notes | Independent review |
 |---|---:|---:|---|---|
-| Shoulder | 6 | 6 | Axillary nerve; Suprascapular nerve | Pending |
+| Shoulder | 6 | 11 | Axillary nerve; Suprascapular nerve | Pending |
 | Elbow | 6 | 7 | Musculocutaneous nerve; Radial nerve; Ulnar nerve | Pending |
 | Wrist & hand | 58 | 11 | Median nerve; Ulnar nerve; Radial nerve | Pending |
 | Hip | 5 | 9 | Femoral nerve; Obturator nerve; Sciatic nerve | Pending |
@@ -30,3 +30,5 @@ Nerve coverage is navigable source-linked text, with no nerve mesh or 3D nerve p
 - Required credit: BodyParts3D, © The Database Center for Life Science licensed under CC Attribution-Share Alike 2.1 Japan.
 
 The model geometry is unchanged from these pinned assets. PhysioSidekick adds selection, regional groupings, accessible lists and original learning notes. No anatomical mesh was generated. Hash checks and ID mappings verify the imported files; they do not constitute expert review.
+
+The model is a partial preview, not the required comprehensive human musculoskeletal atlas. Reference notes currently cover 46 muscle groups and 50 skeletal structures; missing notes remain explicitly identified. Source meshes, paired sides, heads and selectable groups are different units and must not be used interchangeably as a muscle count.

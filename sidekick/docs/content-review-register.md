@@ -36,3 +36,5 @@ Student unit version 2026-11-27.2 updates the anatomy-scope question and model-c
 | Item | Version | Content | Source evidence | Review state |
 |---|---|---|---|---|
 | Tap-to-inspect reference notes | 2026-11-27.1 | 41 muscle and 25 bone-family profiles (50 paired skeletal structures); other selections explicitly catalogue-only | Original factual summaries and section links mapped in docs/anatomy-inspector-review.md; no mesh attachment coordinates inferred | Prepared drafts; independent anatomical review pending |
+
+Inspector reference version 2026-11-27.2 adds five scapular/back profiles (46 muscle groups now populated; 50 skeletal structures unchanged). Source links and unresolved coverage are recorded in anatomy-inspector-review.md. The V1-A acceptance requirement now explicitly demands comprehensive MSK coverage and per-structure reference content; current partial counts do not satisfy it.

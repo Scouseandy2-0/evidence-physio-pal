@@ -85,3 +85,13 @@ button{min-height:44px}
  .anatomy-workbench.is-expanded.details-hidden { grid-template-columns:1fr; }
 }
 .sr-only { position:absolute!important; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+/* Selection opens a viewport-contained workbench on compact screens. */
+.anatomy-inspector-header { flex:0 0 auto; }
+.anatomy-inspector-body { flex:1 1 0%; -webkit-overflow-scrolling:touch; }
+@media(max-width:700px) and (min-height:501px) {
+ .anatomy-workbench.is-expanded { grid-template-rows:auto minmax(120px,.6fr) minmax(0,1.4fr); }
+ .anatomy-workbench.is-expanded.details-hidden { grid-template-rows:auto minmax(0,1fr); }
+ .anatomy-inspector-header { padding:8px 12px; }
+ .anatomy-inspector-header .eyebrow { letter-spacing:.04em; }
+}

@@ -1,6 +1,6 @@
 # Anatomy inspector build and source record
 
-27 November 2026 · version 2026-11-27.1 · independent anatomical review pending.
+27 November 2026 · version 2026-11-27.2 · independent anatomical review pending.
 
 ## Delivered interaction
 
@@ -8,7 +8,7 @@ Selecting a mesh or either accessible picker updates a docked information panel 
 
 ## Supplied coverage
 
-41/177 selectable muscle groups have draft origin, insertion, action and nerve-supply notes. 50/242 skeletal source structures map to 25 bone-family draft profiles. Paired bone profiles share main anatomy but preserve each selected source ID/laterality; muscle groups still combine sides and sometimes heads. The count is not a percentage of clinical completeness or reviewed material. Source identity, catalogue-only state and missing reference content are explicit for other selections.
+46/177 selectable muscle groups have draft origin, insertion, action and nerve-supply notes. 50/242 skeletal source structures map to 25 bone-family draft profiles. Paired bone profiles share main anatomy but preserve each selected source ID/laterality; muscle groups still combine sides and sometimes heads. The count is not a percentage of clinical completeness or reviewed material. Source identity, catalogue-only state and missing reference content are explicit for other selections.
 
 Notes are short original factual summaries of selected main anatomy, not copied textbook tables/figures. They are not exhaustive attachment maps, clinical assessment tools or approved teaching material. No 3D attachment coordinates/pins were inferred from the prose. The two meshes remain separate reference models.
 
@@ -326,11 +326,6 @@ Do not transfer a profile using substring similarity: biceps brachii/femoris, FD
 | muscles | longus-capitis | Longus capitis | Catalogue identity only; detailed reference not supplied |
 | muscles | rectus-capitis-anterior | Rectus capitis anterior | Catalogue identity only; detailed reference not supplied |
 | muscles | rectus-capitis-lateralis | Rectus capitis lateralis | Catalogue identity only; detailed reference not supplied |
-| muscles | trapezius | Trapezius | Catalogue identity only; detailed reference not supplied |
-| muscles | latissimus-dorsi | Latissimus dorsi | Catalogue identity only; detailed reference not supplied |
-| muscles | levator-scapulae | Levator scapulae | Catalogue identity only; detailed reference not supplied |
-| muscles | rhomboid-major | Rhomboid major | Catalogue identity only; detailed reference not supplied |
-| muscles | rhomboid-minor | Rhomboid minor | Catalogue identity only; detailed reference not supplied |
 | muscles | serratus-posterior-superior | Serratus posterior superior | Catalogue identity only; detailed reference not supplied |
 | muscles | serratus-posterior-inferior | Serratus posterior inferior | Catalogue identity only; detailed reference not supplied |
 | muscles | splenius-capitis | Splenius capitis | Catalogue identity only; detailed reference not supplied |
@@ -425,3 +420,17 @@ Do not transfer a profile using substring similarity: biceps brachii/femoris, FD
 ## Review and verification still required
 
 A reviewer must check every populated field, citation/section, aliases/laterality and head/part grouping, record name/scope/version/date/corrections, and leave unresolved items open. Browser interaction, iPhone portrait/landscape, pinch/rotation, large text, safe-area layout, focus restoration and VoiceOver must be tested on the actual build. Developer tests are not anatomical approval or a device pass.
+
+## Selection repair — version 2026-11-27.2
+
+A DOM/event reproduction confirmed populated deltoid data renders, while previously uncovered trapezius rendered catalogue-only. Five scapular/back profiles were added; complete atlas coverage remains missing. Both pickers now label missing notes instead of leaving users to discover the gap after selection. Compact-screen selections open the expanded workbench automatically; the fact body has an explicit flex allocation. No source structure was hidden to make coverage appear complete.
+
+| Added profile | Source | Location | Review |
+|---|---|---|---|
+| trapezius | [University of Washington Radiology · Trapezius](https://www.rad.washington.edu/muscle-atlas/trapezius) | Origin, insertion, action and innervation | Pending |
+| latissimus-dorsi | [StatPearls · Extrinsic back muscles](https://www.ncbi.nlm.nih.gov/sites/books/NBK537216/) | Extrinsic Back Muscles table | Pending |
+| levator-scapulae | [StatPearls · Extrinsic back muscles](https://www.ncbi.nlm.nih.gov/sites/books/NBK537216/) | Extrinsic Back Muscles table | Pending |
+| rhomboid-major | [StatPearls · Extrinsic back muscles](https://www.ncbi.nlm.nih.gov/sites/books/NBK537216/) | Extrinsic Back Muscles table | Pending |
+| rhomboid-minor | [StatPearls · Extrinsic back muscles](https://www.ncbi.nlm.nih.gov/sites/books/NBK537216/) | Extrinsic Back Muscles table | Pending |
+
+The extrinsic-back table contains an apparent C7–C12 typo in its trapezius row; that wording was not imported. The trapezius attachment summary is based on the UW reference with C7–T12. No illustrations or original source table were copied. New DOM tests use a documented select-value/focus shim because Linkedom is not a rendering browser; physical iPhone and WebGL interaction remain unverified.

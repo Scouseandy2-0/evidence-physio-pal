@@ -2,6 +2,8 @@ import {anatomySystems} from './anatomy.js';
 const ncbi=(title,id,location='Muscles; Nerves')=>({title:`StatPearls · ${title}`,url:`https://www.ncbi.nlm.nih.gov/sites/books/${id}/`,location,locatedAt:'2026-11-27'});
 const os=(title,page,location)=>({title:`OpenStax A&P 2e · ${title}`,url:`https://openstax.org/books/anatomy-and-physiology-2e/pages/${page}`,location,locatedAt:'2026-11-27'});
 export const detailSources={
+ trapezius:{title:'University of Washington Radiology · Trapezius',url:'https://www.rad.washington.edu/muscle-atlas/trapezius',location:'Origin, insertion, action and innervation',locatedAt:'2026-11-27'},
+ extrinsic:ncbi('Extrinsic back muscles','NBK537216','Extrinsic Back Muscles table'),
  cuff:ncbi('Rotator cuff','NBK441844'),shoulder:ncbi('Shoulder','NBK536933'),upper:ncbi('Shoulder and upper-limb muscles','NBK482410'),forearm:ncbi('Forearm muscles','NBK536975'),
  hip:ncbi('Hip','NBK526019'),minimus:ncbi('Gluteus minimus','NBK556144','Structure and Function; Nerves'),thigh:ncbi('Thigh muscles','NBK482445','Anterior compartment; quadriceps'),hamstrings:ncbi('Hamstring muscle','NBK546688','Structure and Function table; Nerves'),
  anterior:ncbi('Leg anterior compartment','NBK539725','Structure and Function; Nerves'),tibial:ncbi('Tibial nerve','NBK537028','Muscles: posterior leg'),back:ncbi('Back muscles','NBK537074','Muscles: transversospinalis group; Nerves'),
@@ -14,6 +16,11 @@ export const detailSources={
 const m=(origin,insertion,action,innervation,source)=>({fields:[['Origin',origin],['Insertion',insertion],['Actions',action],['Nerve supply',innervation]],source});
 // Concise original factual reference notes. No source figures or assessment items copied.
 export const muscleDetails={
+ 'trapezius':m('Occipital/nuchal attachments and C7–T12 spinous processes.','Lateral clavicle, acromion and scapular spine.','Scapular elevation, retraction, depression and upward rotation; fibre-dependent.','Spinal accessory nerve for motor supply; cervical sensory/proprioceptive contribution.','trapezius'),
+ 'latissimus-dorsi':m('Lower thoracic spine, thoracolumbar fascia, iliac crest and lower ribs.','Floor of humeral intertubercular groove.','Shoulder extension, adduction and internal rotation.','Thoracodorsal nerve.','extrinsic'),
+ 'levator-scapulae':m('C1–C4 transverse processes.','Upper medial scapular border.','Scapular elevation and downward rotation.','Dorsal scapular nerve and cervical branches.','extrinsic'),
+ 'rhomboid-major':m('T2–T5 spinous processes.','Medial scapular border below spine.','Scapular retraction and downward rotation.','Dorsal scapular nerve.','extrinsic'),
+ 'rhomboid-minor':m('Nuchal ligament and C7–T1 spinous processes.','Medial scapular border at root of spine.','Scapular retraction and downward rotation.','Dorsal scapular nerve.','extrinsic'),
  'supraspinatus':m('Scapular supraspinous fossa.','Superior greater humeral tubercle.','Contributes to shoulder abduction and joint stability.','Suprascapular nerve.','cuff'),
  'infraspinatus':m('Scapular infraspinous fossa.','Greater humeral tubercle, below supraspinatus.','Shoulder external rotation and stabilisation.','Suprascapular nerve.','cuff'),
  'teres-minor':m('Lateral scapular border.','Greater humeral tubercle, below infraspinatus.','Shoulder external rotation and stabilisation.','Axillary nerve.','cuff'),
@@ -84,7 +91,7 @@ export const boneDetails={
  'intermediate cuneiform':b('Middle distal tarsal row.','Navicular and second metatarsal.','Full attachment list not supplied.','lowerBones'),
  'lateral cuneiform':b('Lateral distal tarsal row.','Navicular and third metatarsal.','Full attachment list not supplied.','lowerBones'),
 };
-export const detailReview={version:'2026-11-27.1',state:'pending',reviewer:'',reviewedAt:''};
+export const detailReview={version:'2026-11-27.2',state:'pending',reviewer:'',reviewedAt:''};
 export function boneDetailKey(name){
  if(name==='navicular bone of right foot'||name==='navicular bone of left foot')return 'navicular';
  const key=name.replace(/^(left|right)\s+/i,'');return boneDetails[key]?key:key.replace(/ bone$/,'');

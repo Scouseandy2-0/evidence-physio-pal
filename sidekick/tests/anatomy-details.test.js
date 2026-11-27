@@ -6,7 +6,7 @@ import {muscleDetails,boneDetails,boneDetailKey,structureDetails,detailCoverage,
 test('every authored profile maps to genuine model identities and traceable draft reference notes',()=>{
  for(const id of Object.keys(muscleDetails)){const d=structureDetails('muscles',id);assert.ok(d?.hasProfile);assert.deepEqual(d.fields.map(f=>f.label),['Origin','Insertion','Actions','Nerve supply']);assert.ok(d.fields.every(f=>f.value.trim()));assert.equal(d.review.state,'pending');assert.equal(d.review.reviewer,'');assert.equal(d.review.reviewedAt,'');assert.equal(d.groupedSides,true);assert.ok(d.sources.every(s=>s.url.startsWith('https://')&&s.location&&s.locatedAt==='2026-11-27'));}
  for(const key of Object.keys(boneDetails)){const matches=anatomySystems.skeleton.catalog.filter(s=>boneDetailKey(s.sourceName)===key);assert.ok(matches.length>0,key);for(const s of matches){const d=structureDetails('skeleton',s.id);assert.ok(d.hasProfile);assert.equal(d.name,s.name);assert.equal(d.sourceId,s.fma);assert.equal(d.groupedSides,false);assert.deepEqual(d.fields.map(f=>f.label),['Key landmarks','Articulations','Selected attachments']);}}
- assert.deepEqual(detailCoverage('muscles'),{detailed:41,total:177});assert.deepEqual(detailCoverage('skeleton'),{detailed:50,total:242});
+ assert.deepEqual(detailCoverage('muscles'),{detailed:46,total:177});assert.deepEqual(detailCoverage('skeleton'),{detailed:50,total:242});
 });
 test('missing profiles and invalid identities never receive inferred origins or insertions',()=>{
  const d=structureDetails('muscles','frontalis');assert.equal(d.name,'Frontalis');assert.equal(d.hasProfile,false);assert.deepEqual(d.fields,[]);assert.deepEqual(d.sources,[]);assert.match(d.modelSource,/organui\/muscles-3d/);
