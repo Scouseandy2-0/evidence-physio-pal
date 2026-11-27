@@ -32,6 +32,12 @@ export async function workspaceAPI(request, env) {
     if (!Array.isArray(body.workspace.appraisals) && prior?.appraisals?.length) return json({ error: 'This app tab is out of date. Export pending changes, then reload before saving appraisal records.' }, 409);
     if (!Array.isArray(body.workspace.teachingPlans) && prior?.teachingPlans?.length) return json({ error: 'This app tab is out of date. Export pending changes, then reload before saving teaching plans.' }, 409);
     if (!Array.isArray(body.workspace.studySets) && prior?.studySets?.length) return json({ error: 'This app tab is out of date. Export pending changes, then reload before saving revision cards.' }, 409);
+    for (const reflection of workspace.reflections) {
+      const raw = body.workspace.reflections.find(r => r.id === reflection.id);
+      const old = prior?.reflections?.find(r => r.id === reflection.id);
+      if (old?.followUpDate && !Object.hasOwn(raw,'followUpDate') && old.followUpDate < reflection.date) return json({ error: 'This activity has a newer follow-up record. Reload the app before changing its date.' }, 409);
+      if (old) for (const key of ['outcome','followUpDate']) if (!Object.hasOwn(raw,key)) reflection[key] = old[key] || '';
+    }
     for (const paper of workspace.saved) {
       const old = prior?.saved?.find(p => p.id === paper.id);
       if (!paper.abstractSource && old?.abstractSource && paper.abstract === old.abstract) {

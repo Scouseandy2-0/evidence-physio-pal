@@ -88,3 +88,9 @@ Rendered local-browser QA verified creating a framework-based session, editing t
 58 automated tests pass. New checks cover user-note draft creation without generated facts, canonical source references and declared reading/retraction labels, rating persistence, stale-rating reset after edits, conflict version retention, old-workspace compatibility, invalid/oversized/source-less card rejection, account reload and old-client write protection.
 
 Rendered local-browser QA used explicitly fictional software-QA notes and genuine PMID 31316228. Verified My revision entry, set creation, a source-linked card seeded from existing appraisal notes, hidden/revealed answers, Again rating, account save/reload, again-only practice, Recalled rating, editing an answer resetting it to unrated, and a study-set export download. Notes and ratings are QA fixtures in the fictional local account and are excluded from production. Physical iPhone and hosted-account checks remain separate.
+
+## CPD portfolio update
+
+65 automated tests pass. New coverage checks inclusive date/activity/text/outcome filters, invalid ranges, selected-only totals, source-linked evidence scope, current-versus-historical appraisal provenance, missing-appraisal handling, escaped script-free printable exports, follow-up validation/conflicts and preservation during old-client writes.
+
+Rendered local-browser QA added a clearly labelled software-test outcome and review date to the existing fictional reflection, saved and reloaded it, filtered to the activity’s exact date with an outcome recorded, and triggered both printable HTML and Markdown downloads. An inverted date range showed an actionable error with export disabled; a no-match text search showed the empty state; Show all restored the record. These are local-preview checks, not physical iPhone printing or proof of hosted account behaviour. No QA fixtures are included in production.

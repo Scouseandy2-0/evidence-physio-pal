@@ -150,3 +150,12 @@ test('study cards and recall ratings reload from accounts and old tabs cannot om
  const old={...workspace};delete old.studySets;assert.equal((await workspaceAPI(req('a','PUT',{revision:1,workspace:old}),env)).status,409);
  assert.equal((await(await workspaceAPI(req('a'),env)).json()).workspace.studySets.length,1);
 });
+
+test('follow-up outcomes survive account reload and older tabs without the new fields',async()=>{
+ const env={DB:database()};const record={...reflection(),outcome:'Software test follow-up',followUpDate:'2026-12-01'};
+ assert.equal((await workspaceAPI(req('a','PUT',{revision:0,workspace:{...emptyWorkspace(),reflections:[record]}}),env)).status,200);
+ const old={...record};delete old.outcome;delete old.followUpDate;
+ assert.equal((await workspaceAPI(req('a','PUT',{revision:1,workspace:{...emptyWorkspace(),reflections:[old]}}),env)).status,200);
+ const data=await(await workspaceAPI(req('a'),env)).json();assert.equal(data.workspace.reflections[0].outcome,'Software test follow-up');assert.equal(data.workspace.reflections[0].followUpDate,'2026-12-01');
+ assert.equal((await workspaceAPI(req('a','PUT',{revision:2,workspace:{...emptyWorkspace(),reflections:[{...old,date:'2026-12-02'}]}}),env)).status,409);
+});

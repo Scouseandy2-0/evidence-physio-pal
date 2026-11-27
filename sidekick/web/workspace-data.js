@@ -40,9 +40,10 @@ export function validateWorkspace(input) {
   const reflections = list(input.reflections, 1000, 'reflections').map(r => {
     if (!r || !/^[a-zA-Z0-9_-]{1,100}$/.test(r.id)) fail('Invalid reflection identifier.');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(r.date) || !Number.isFinite(Date.parse(r.date)) || new Date(r.date).toISOString().slice(0, 10) !== r.date) fail('Invalid reflection date.');
+    if (r.followUpDate && (!/^\d{4}-\d{2}-\d{2}$/.test(r.followUpDate) || !Number.isFinite(Date.parse(r.followUpDate)) || new Date(r.followUpDate).toISOString().slice(0,10) !== r.followUpDate || r.followUpDate < r.date)) fail('Choose a valid review date on or after the activity date.');
     if (!Number.isInteger(r.minutes) || r.minutes < 1 || r.minutes > 1440) fail('Invalid learning time.');
     if (r.appraisalId && (!/^[a-zA-Z0-9_-]{1,100}$/.test(r.appraisalId) || !/^MED:\d{1,9}$/.test(r.paperId) || !['abstract', 'fullText'].includes(r.basis))) fail('Invalid linked appraisal reflection.');
-    return { id: r.id, date: r.date, minutes: r.minutes, title: str(r.title, 180, 'reflection title', true), kind: str(r.kind, 100, 'activity', true), learning: str(r.learning, 10000, 'learning', true), action: str(r.action, 10000, 'next step', true), source: str(r.source, 1000, 'source'), ...(r.appraisalId ? { appraisalId: str(r.appraisalId, 100, 'linked appraisal'), paperId: str(r.paperId, 100, 'linked paper'), basis: str(r.basis, 30, 'reflection reading basis') } : {}) };
+    return { id: r.id, date: r.date, minutes: r.minutes, title: str(r.title, 180, 'reflection title', true), kind: str(r.kind, 100, 'activity', true), learning: str(r.learning, 10000, 'learning', true), action: str(r.action, 10000, 'next step', true), source: str(r.source, 1000, 'source'), outcome: str(r.outcome, 6000, 'follow-up outcome'), followUpDate: str(r.followUpDate, 10, 'follow-up date'), ...(r.appraisalId ? { appraisalId: str(r.appraisalId, 100, 'linked appraisal'), paperId: str(r.paperId, 100, 'linked paper'), basis: str(r.basis, 30, 'reflection reading basis') } : {}) };
   });
   const appraisals = list(input.appraisals || [], 1000, 'appraisals').map(a => {
     if (!a || !/^[a-zA-Z0-9_-]{1,100}$/.test(a.id) || !/^\d{1,9}$/.test(a.pmid) || a.paperId !== `MED:${a.pmid}`) fail('Invalid appraisal identifier.');
