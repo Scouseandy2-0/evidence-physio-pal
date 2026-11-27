@@ -19,6 +19,7 @@ Use fictional notes. Observe the first attempt before explaining a feature. Reco
 | Anatomy | Find a scaphoid and femur, rotate/focus and follow the research link | Are side/orientation/selection clear? Does the user understand missing systems and pending expert review? |
 | Devices | Save on one device, load/refresh the same account on the other | Did work persist? Is the account-save badge truthful? |
 | Recovery | In a controlled test account, interrupt a save; make conflicting edits; review and combine | Is each version recoverable? Does combining restore previously removed records as disclosed? |
+| Clear / discard | In a disposable test account, export a backup, review clearing, cancel once, then clear; try a stale-device save; choose discard-to-account after exporting its pending copy | Does confirmation show scope and counts? Does the stale write conflict? Are cleared records absent on refresh? Are logs/backup/device limits clear? Never use a real portfolio for this test |
 | Backup | Export, retain the original file, preview an import and confirm a merge in a test account | Are counts, limitations and effects clear? Are current pending edits preserved? |
 | Access | Use keyboard only, largest text, zoom and VoiceOver | Can they perceive/focus/operate controls and dismiss dialogs? Any horizontal scrolling or content obscured by navigation? |
 | Feedback | Prepare a fictional problem report, review it and copy it | Do they understand that it is not automatically sent? Is unnecessary private information absent? |

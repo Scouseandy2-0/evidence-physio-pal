@@ -53,6 +53,7 @@ let workspace = emptyWorkspace();
 let sync;
 let route = location.hash.slice(1) || 'home';
 let paperMap = new Map(workspace.saved.map(p => [p.id, p]));
+let workspaceEpoch = 0;
 let filters = { ...defaultFilters };
 let searchState = { term: '', papers: [], total: 0, nextCursor: '*', error: '', searched: false, loading: false };
 let controller;
@@ -85,7 +86,7 @@ function toast(message) {
   clearTimeout(toastTimer); const el = document.querySelector('#toast'); el.textContent = message; el.classList.add('toast-show');
   toastTimer = setTimeout(() => el.classList.remove('toast-show'), 4500);
 }
-function openDialog(html) { dialog.dataset.paperId = '';  document.querySelector('#dialog-content').innerHTML = `<div class="dialog-body">${html}</div>`; if (!dialog.open) { dialog.showModal(); const heading=dialog.querySelector('#dialog-title'); if(heading){heading.tabIndex=-1;heading.focus();} } }
+function openDialog(html) { dialog.dataset.paperId = ''; document.querySelector('#dialog-content').innerHTML = `<div class="dialog-body">${html}</div>`; if (!dialog.open) dialog.showModal(); const heading=dialog.querySelector('#dialog-title'); if(heading){heading.tabIndex=-1;heading.focus();} }
 function navigate(next) { if (location.hash === `#${next}`) render(); else location.hash = next; }
 function updateNav() {
   document.querySelector('#desktop-nav').innerHTML = nav.map(([id, label]) => `<a href="#${id}" class="nav-item ${route === id ? 'active' : ''}" ${route === id ? 'aria-current="page"' : ''}>${icon(id)}<span>${label}</span>${id === 'fcp' ? '<span class="premium">PREVIEW</span>' : ''}${id === 'library' ? `<span class="count">${workspace.saved.length}</span>` : ''}</a>`).join('');
@@ -280,9 +281,11 @@ function paperDetail(id) {
 async function retrieveAbstract(id) {
   const p = workspace.saved.find(p => p.id === id) || paperMap.get(id); if (!p || abstractRequests.has(id)) return;
   abstractErrors.delete(id);
+  const epoch = workspaceEpoch;
   const request = loadOriginalAbstract(p.pmid); abstractRequests.set(id, request); paperDetail(id);
   try {
     const record = await request;
+    if (workspaceEpoch !== epoch) return;
     // Apply only abstract metadata to the latest saved paper, preserving notes edited while loading.
     const latest = workspace.saved.find(paper => paper.id === id) || paperMap.get(id) || p;
     const updated = applyOriginalAbstract(latest, record); paperMap.set(id, updated);
@@ -649,6 +652,10 @@ async function copyCitation(id) {
 function privacy() {
   openDialog(`<span class="eyebrow">YOUR ACCOUNT WORKSPACE</span><h2 id="dialog-title">Your data & privacy</h2><p>Your papers, notes, saved searches, appraisals, teaching plans, revision sets and reflections are stored in the app’s account database, tied to your signed-in identity. The app keeps an account-specific device copy of pending changes so interrupted saves can be recovered.</p><p>Open the same private app on your iPhone or Mac and sign in with the same account. Data loads when you open the app; “Refresh from account” fetches newer changes. This is not live simultaneous editing.</p><p>Research keywords pass through the app server to Europe PMC, with PubMed (NCBI) as a backup. If the hosted connection fails, your browser can request Europe PMC directly without account cookies or identity. Problem-report text is prepared on this device for you to review and copy or download; it is not automatically submitted or stored in the account database. Publication metadata may be cached for five minutes. Opening a missing abstract can request that paper’s PMID from PubMed; a retrieved abstract and its source are kept when you save the paper. Your account identity is not forwarded to either research service. External resources use their own privacy policies, and fonts load from Google Fonts. Keep identifiable patient information out of this educational prototype.</p><div class="button-row"><button class="button" id="export-workspace">${icon('download')}Export workspace backup</button><button class="button secondary" id="choose-backup" type="button">Import a backup</button><input id="import-workspace" type="file" accept="application/json,.json" class="file-input"></div><p class="subtle" style="margin-top:15px">Import accepts a backup file up to 4 MB and a validated workspace up to the 2 MB account limit. It shows a summary before combining records, including pending device edits. It does not replace the account workspace. Conflicting notes are kept together and conflicting reflections become separate entries.</p>${sync?.pending ? '<div class="notice">This device has changes not yet confirmed by the account server. The export includes your current version.</div>' : ''}<p><a href="/signout-with-chatgpt?return_to=%2F" target="_top">Sign out of this app</a></p>`);
   document.querySelector('#export-workspace').onclick = () => download('physiosidekick-workspace.json', workspaceBackup(sync.invalidPending || sync.pending || workspace), 'application/json');
+  const section = document.createElement('section');
+  section.innerHTML = `<h3>Clear saved learning records</h3><p>Remove all papers, notes, searches, appraisals, CPD reflections, teaching plans and revision sets from the active account workspace. Export a backup first if you want to keep a copy.</p><p>This does not close your ChatGPT account or erase platform logs, provider backups, downloaded files or copies on other devices. A revision marker remains to prevent older tabs silently restoring cleared records. Full account-erasure and retention arrangements remain unfinished.</p><button class="danger-button" id="clear-records" ${!sync?.account || sync.status !== 'saved' || sync.pending || sync.invalidPending ? 'disabled' : ''}>Review clearing all records</button><p class="subtle">Wait for Account saved and save or cancel open drafts before clearing. Close older tabs and refresh other devices afterwards. An explicit backup import or conflict merge can restore removed records.</p>`;
+  document.querySelector('.dialog-body').append(section);
+  document.querySelector('#clear-records').onclick = reviewClearRecords;
   document.querySelector('#choose-backup').onclick=()=>document.querySelector('#import-workspace').click();
   document.querySelector('#import-workspace').onchange = async e => {
     const file = e.target.files[0]; if (!file) return;
@@ -656,8 +663,33 @@ function privacy() {
     catch (error) { toast(`Import not started: ${error.message}`); }
   };
 }
+function resetOpenRecords() {
+  activeAppraisal = null; activeTeaching = null; activeStudy = null; studyDraft = null; studyPractice = null;
+  reflectionDraft = null; reflectionEditing = null; cpdFormOpen = false; workspaceFocus = null; workspaceMatches = [];
+}
+function hasOpenDraft() { return cpdFormOpen || studyDraft?.dirty; }
+function reviewClearRecords() {
+  if (studyDraft?.dirty || cpdFormOpen) { toast('Save or cancel your open draft before clearing records.'); return; }
+  if (!sync?.account || sync.status !== 'saved' || sync.pending || sync.invalidPending) { toast('Wait for Account saved before clearing records.'); return; }
+  const confirmation = { revision: sync.revision, sequence: sync.sequence };
+  openDialog(`<h2 id="dialog-title">Clear all saved learning records?</h2><p>This clears <strong>${workspace.saved.length} papers, ${workspace.searches.length} searches, ${workspace.appraisals.length} appraisals, ${workspace.reflections.length} reflections, ${workspace.teachingPlans.length} teaching plans and ${workspace.studySets.length} revision sets</strong>, including their notes and cards.</p><p>There is no undo button. Download a workspace backup before proceeding if you may need these records again. Other devices and downloaded backups need separate attention.</p><div class="field"><label for="clear-confirmation">Type CLEAR to confirm</label><input id="clear-confirmation" autocomplete="off" spellcheck="false"></div><p id="clear-status" role="status"></p><div class="button-row"><button class="danger-button" id="confirm-clear" disabled>Clear all records</button><button class="button secondary" id="cancel-clear">Keep my records</button></div>`);
+  const input = document.querySelector('#clear-confirmation'), button = document.querySelector('#confirm-clear');
+  input.oninput = () => { button.disabled = input.value !== 'CLEAR'; };
+  document.querySelector('#cancel-clear').onclick = privacy;
+  button.onclick = async () => {
+    if (input.value !== 'CLEAR') return;
+    button.disabled = true; input.disabled = true; document.querySelector('#cancel-clear').disabled = true;
+    document.querySelector('#clear-status').textContent = 'Clearing account records…';
+    const ok = await sync.replaceRecords('clear', confirmation);
+    if (!ok) { if (document.querySelector('#clear-status')) document.querySelector('#clear-status').textContent = 'Clearing was not confirmed. Close this window and refresh your account before reviewing again. Your device version has been kept.'; return; }
+    resetOpenRecords(); legacyWorkspace = null;
+    controller?.abort(); requestNumber++; searchState = {term:'',papers:[],total:0,nextCursor:'*',error:'',searched:false,loading:false};
+    paperMap.clear(); abstractErrors.clear(); dialog.close(); navigate('home');
+    toast(sync.cacheFailed ? 'Account records cleared. This browser could not confirm local cleanup; clear its site data separately.' : 'Saved learning records cleared. Refresh your other devices.');
+  };
+}
 function reviewImport(data, legacy = false) {
-  if (cpdFormOpen) { toast('Save or cancel your reflection before importing records.'); return; }
+  if (hasOpenDraft()) { toast('Save or cancel your reflection or revision-card draft before importing records.'); return; }
   openDialog(`<span class="eyebrow">REVIEW IMPORT</span><h2 id="dialog-title">Bring your records into your account</h2><p>This ${legacy ? 'browser' : 'backup'} contains <strong>${data.saved.length} papers, ${data.reflections.length} reflections and ${data.searches.length} searches and ${data.appraisals.length} appraisals and ${data.teachingPlans.length} teaching plans and ${data.studySets.length} study sets</strong>.</p><p>These will be combined with your account records. Duplicate papers stay as one paper; different notes are kept together. Conflicting reflections, appraisals, teaching plans and study sets become separate entries. Different collection names are recorded in the paper’s notes.</p><p>The original ${legacy ? 'browser records' : 'backup file'} will remain intact. Imports may restore a record you previously removed from the account.</p><button class="button" id="confirm-import" ${!sync?.account || sync?.inflight ? 'disabled' : ''}>Combine with my account records</button>`);
   document.querySelector('#confirm-import').onclick = async () => { dialog.close(); await sync.combine(data, true, legacy);  };
 }
@@ -680,12 +712,26 @@ function syncStatus(state) {
 }
 function conflictDialog() {
   openDialog(`<h2 id="dialog-title">Keep both versions safe</h2><p>Your device has pending changes and the account has a newer version. No automatic overwrite has taken place.</p><p>You can combine both sets of records. Different notes are kept together and different versions of reflections, appraisals, teaching plans and study sets become separate entries. Removed records may return during a merge.</p><div class="button-row"><button class="button" id="merge-conflict">Combine both versions</button><button class="button secondary" id="export-pending">Export this device’s version</button></div>`);
-  document.querySelector('#merge-conflict').onclick = async () => { dialog.close(); await sync.combine(); };
-  document.querySelector('#export-pending').onclick = () => download('physiosidekick-pending-changes.json', JSON.stringify({ version: 7, workspace: sync.pending || workspace }, null, 2), 'application/json');
+  document.querySelector('#merge-conflict').onclick = async () => { if (hasOpenDraft()) { toast('Save or cancel your open draft before combining records.'); return; } dialog.close(); await sync.combine(); };
+  document.querySelector('#export-pending').onclick = () => download('physiosidekick-pending-changes.json', JSON.stringify({ version: 7, workspace: sync.invalidPending || sync.pending || workspace }, null, 2), 'application/json');
+  const button = document.createElement('button'); button.className = 'danger-button'; button.textContent = 'Review discarding this device’s changes';
+  document.querySelector('.dialog-body').append(button);
+  button.onclick = () => {
+    const confirmation = {revision:sync.revision,sequence:sync.sequence};
+    if (hasOpenDraft()) { toast('Save or cancel your open draft before discarding device changes.'); return; }
+    openDialog('<h2 id="dialog-title">Use the account version instead?</h2><p>This discards this device’s pending or invalid changes after the account version loads successfully. Export this device’s version first if you want to keep it. The account records will not be overwritten.</p><button class="button secondary" id="cancel-discard">Keep reviewing</button><button class="danger-button" id="confirm-discard">Discard device changes and load account</button><p id="discard-status" role="status"></p>');
+    document.querySelector('#cancel-discard').onclick = conflictDialog;
+    document.querySelector('#confirm-discard').onclick = async e => {
+      e.currentTarget.disabled = true;
+      const ok = await sync.replaceRecords('account',confirmation);
+      if(ok){resetOpenRecords();dialog.close();render();toast('Account version loaded. Device changes discarded.');}
+      else if(document.querySelector('#discard-status')) document.querySelector('#discard-status').textContent = 'The account version was not loaded. Your device changes remain; close this window and review recovery again.';
+    };
+  };
 }
 function accountDialog() {
   openDialog(`<h2 id="dialog-title">Account saving</h2><p><strong>${esc(document.querySelector('#sync-status').textContent)}</strong>${sync.updatedAt ? ` · last confirmed ${esc(new Date(sync.updatedAt).toLocaleString('en-GB'))}` : ''}</p><p>Changes save automatically after a short pause. Open this same private app with the same account on another device, then refresh its account copy.</p><div class="button-row"><button class="button" id="refresh-account" ${!sync.account || sync.inflight ? 'disabled' : ''}>${sync.pending ? 'Retry pending save' : 'Refresh from account'}</button><button class="button secondary" id="account-privacy">Backups & privacy</button></div>`);
-  document.querySelector('#refresh-account').onclick = async () => { dialog.close(); if (sync.status === 'conflict') conflictDialog(); else if (sync.pending) await sync.flush(); else if (!cpdFormOpen) await sync.refresh(); else toast('Save or cancel your reflection before refreshing account records.'); };
+  document.querySelector('#refresh-account').onclick = async () => { dialog.close(); if (sync.status === 'conflict') conflictDialog(); else if (sync.pending) await sync.flush(); else if (!hasOpenDraft()) await sync.refresh(); else toast('Save or cancel your reflection or revision-card draft before refreshing account records.'); };
   document.querySelector('#account-privacy').onclick = privacy;
 }
 function about() { openDialog('<span class="eyebrow">FROM STUDY TO PRACTICE</span><h2 id="dialog-title">A first chapter for PhysioSidekick.</h2><p>This is a private working prototype of a career companion for physiotherapists and students.</p><h3>Working now</h3><ul><li>Live publication search from Europe PMC’s indexed PubMed records.</li><li>Original paper links, indexed abstracts and source access information.</li><li>Saved papers, notes, collections and reference exports.</li><li>Separate BodyParts3D-derived skeleton and muscle viewers, seven regional guide drafts, source-linked joint/nerve notes and learning/research links.</li><li>Five source-linked student starter units with 25 questions and explanations (independent review pending), plus personal revision cards with self-test practice and saved recall ratings.</li><li>Saved teaching sessions with attached paper references and editable exports.</li><li>Structured paper appraisals linked to editable CPD reflections.</li><li>Filtered CPD portfolios with follow-up outcomes, printable exports and linked evidence appendices.</li><li>Personal learning reflections and editable FCP teaching outlines.</li><li>Account saving across devices, backup import and conflict recovery.</li></ul><h3>Still to build and validate</h3><p>Independent anatomical review and real-device checks, reviewed clinical tools, independent learning-content review, a premium FCP curriculum and the signed iPhone app.</p><p>PhysioSidekick is a working name pending trademark clearance. This prototype is for product testing, not patient-specific decision support.</p>'); }
@@ -783,11 +829,11 @@ document.querySelector('#sync-status').onclick = accountDialog;
 render();
 sync = new WorkspaceSync({
   legacy: legacyWorkspace,
-  onData: data => { workspace = data; workspace.saved.forEach(p => paperMap.set(p.id, p)); render(); },
+  onData: data => { workspaceEpoch++; if (sync && !sync.account) { resetOpenRecords(); dialog.close(); } workspace = data; paperMap = new Map([...searchState.papers, ...workspace.saved].map(p => [p.id,p])); render(); },
   onStatus: syncStatus
 });
 syncStatus(sync);
 sync.init();
 window.addEventListener('online', () => { if (sync.account && sync.pending && sync.status !== 'conflict') sync.flush(); });
 
-window.addEventListener('beforeunload', e => { if (sync?.pending || sync?.invalidPending || studyDraft?.dirty || (cpdFormOpen && reflectionDraft)) { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('beforeunload', e => { if (sync?.pending || sync?.invalidPending || sync?.replacing || studyDraft?.dirty || (cpdFormOpen && reflectionDraft)) { e.preventDefault(); e.returnValue = ''; } });

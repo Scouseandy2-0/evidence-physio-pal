@@ -13,7 +13,8 @@ This is a factual implementation inventory and a list of unresolved launch detai
 - Fonts load from Google Fonts. External original-paper/resource sites have their own handling and access arrangements.
 - Problem reports are generated locally with entered text and minimal app context. Nothing is automatically submitted; users choose whether to copy/download/share. The form warns against private information.
 - JSON exports can contain personal learning notes. Import validates the file and previews an explicit merge. Different record versions may be kept and previously removed records may return. Keep original backups intact.
-- Individual records can be removed through existing controls; this is not an implemented account-erasure service or a verified retention/deletion policy.
+- Individual records can be removed through existing controls. Backups & privacy also offers confirmed clearing of the entire active learning workspace after all saves complete. This writes an empty workspace with a higher revision, preventing stale tabs from silently re-creating records. A newer account save blocks clearing until reviewed again. This device’s account recovery/legacy copies are cleaned after confirmation; blocked storage is disclosed. Other devices, downloaded backups, platform logs and provider backups are outside this control. This is not an account-erasure service or a verified retention/deletion policy.
+- Conflict recovery can explicitly discard this device’s pending/invalid changes and load a verified same-account copy. Failed reads preserve the device version; no merge or account write is performed. Drafts must be saved or cancelled before refresh/import/recovery replaces the displayed workspace.
 
 ## Must be resolved before inviting a wider audience or charging
 

@@ -188,3 +188,12 @@ The previous deployment was confirmed succeeded. A functional DOM reproduction o
 128 tests passed, including a new DOM/event regression importing the actual application and driving both real picker handlers, all supplied muscle-note selections, hide/reopen, missing content, compact-screen expansion, bone details and cleanup. Linkedom was added solely as a development dependency; its missing native select-value/focus/layout behaviour is documented in the harness. These are functional DOM checks, not visual rendering, iPhone, WebGL picking or VoiceOver evidence. Production build and exact-route/module smoke checks passed. No physical-device pass is claimed.
 
 The revised V1-A criterion records Andrew’s requirement for comprehensive whole-body musculoskeletal coverage and per-structure anatomical reference content. The grouped model count is not described as a complete individual-muscle inventory. The current preview remains incomplete and no missing item was hidden to improve the apparent coverage. Official Z-Anatomy source/licence material was assessed without importing assets/definitions; no vendor contact, paid licence or component integration occurred.
+
+
+## Record controls — 27 November 2026
+
+Node tests exercise confirmed clear with monotonic revisions, independent stale-device conflicts, local recovery/legacy cleanup without removing other-account caches, unsaved/stale confirmation refusal, newer-save/account-switch refusal, lost clear acknowledgement, read-only discard-to-account, failed/invalid-copy recovery and overlapping operations. Linkedom runs actual app click/input flows for typed confirmation, successful clear and explicit conflict discard. All record deletion in automated tests uses isolated fictional/in-memory fixtures; no owner production records were cleared.
+
+Chrome local preview verified privacy wording, count/confirmation screen, disabled button until exact CLEAR entry, focus moving to each new dialog heading and cancellation back to privacy. The destructive browser action was not executed. This is desktop browser evidence; physical iPhone/Mac sync, mobile layout/WebGL and VoiceOver remain open.
+
+Validation for this change: syntax checks and full automated suite (139 tests) passed before packaging; production build is validated by the packaging workflow. No independent clinical review or physical-device result is implied.

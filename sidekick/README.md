@@ -228,3 +228,12 @@ Both the 3D mesh selection and an in-workbench accessible picker update the same
 The supplied atlas remains incomplete. All source structures stay available; picker options now distinguish reference notes from missing reference content. The muscle-model notice separates 177 selectable groups, 428 input meshes and the smaller reference-note coverage; none is presented as a complete individual-muscle count. Supported default selections (femur/deltoid) show their notes immediately. Explicit compact-screen selection opens the viewport-contained workbench so the detail panel does not sit below the visible page. Five common scapular/back references (trapezius, latissimus dorsi, levator scapulae and both rhomboids) were added as drafts.
 
 A new Linkedom DOM regression test imports the actual app and drives both registered picker change handlers, all supplied muscle-reference selections, missing entries, hide/reopen, compact-view expansion, bone details and cleanup. This tests application DOM/event behaviour; it is not a WebGL, CSS-layout, real-browser or iPhone pass. V1-A was deliberately expanded following Andrew’s clarification: comprehensive musculoskeletal coverage and per-structure reference content are required, rather than treating a selected-muscle preview as complete.
+
+
+## Record controls — 27 November 2026
+
+Backups & privacy now provides a separately confirmed clear-all-learning-records action. It requires Account saved, no open drafts and typing CLEAR; it uses the existing same-account optimistic write, keeps a monotonic revision barrier and removes current-device recovery/legacy copies after confirmed success. A stale tab or newer remote save causes conflict instead of silently restoring/deleting records. Full account erasure, other-device cleanup and platform retention are not implemented by this control.
+
+Conflict recovery can export the actual invalid/pending copy, then explicitly discard it and load verified account records without an account write. Failed/mismatched reads preserve recovery copies. Revision-card drafts now receive the same refresh/import protection as CPD forms; replaced dialogs focus their new heading. Account refresh rebuilds the paper map and invalidates delayed abstract requests to avoid retaining removed notes. Save status and destructive buttons have larger readable/touch targets.
+
+BioDigital integration enquiry sent with Andrew’s authorisation; see docs/anatomy-commercial-options.md. No anatomy contract or purchase is implied.

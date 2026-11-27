@@ -12,6 +12,7 @@ Reviewed: 27 November 2026. Working name; no claim of trademark clearance.
 - Exact publication identity validation; coherent counts and provider-stable pages; original abstract retrieval with attribution, copyright and unavailable-vs-not-indexed states.
 - Account-scoped storage with optimistic revisions, pending-device recovery, conflict review and expected-account checks for new clients.
 - Backup validation, explicit merge preview, preservation of pending edits during import and corrected-invalid-edit recovery.
+- Confirmed clearing of active learning records with stale-tab revision protection and local cleanup, plus explicit discard-to-account recovery. This is not full account erasure. Open revision/CPD drafts block refresh/import/recovery replacement.
 - Saved papers/notes/collections, appraisals, CPD follow-up portfolios, source-linked teaching sessions and self-rated revision cards.
 - Licensed skeletal anatomy preview, source checksum/catalogue and visible limitations. Expanded systems are absent.
 - First-use guide, device reading preferences, Home Screen instructions, workspace search and local reviewable problem reports.

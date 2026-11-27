@@ -1,4 +1,4 @@
-import { validateWorkspace, mergeWorkspaces, hasRecords } from './workspace-data.js';
+import { validateWorkspace, mergeWorkspaces, hasRecords, emptyWorkspace } from './workspace-data.js';
 
 export class WorkspaceSync {
   constructor({ onData, onStatus, storage = globalThis.localStorage, fetcher = (...args) => globalThis.fetch(...args), legacy = null, delay = 600 }) {
@@ -47,7 +47,7 @@ export class WorkspaceSync {
     this.onStatus(this);
   }
   queue(workspace) {
-    if (!this.account) return false;
+    if (!this.account || this.replacing) return false;
     try {
       this.pending = validateWorkspace(workspace); this.invalidPending = null; this.sequence++;
       this.cache();
@@ -62,7 +62,7 @@ export class WorkspaceSync {
   async flush() {
     clearTimeout(this.timer);
     if (this.inflight) return this.inflight;
-    if (this.refreshing || this.combining) return;
+    if (this.refreshing || this.combining || this.replacing) return;
     if (!this.pending || !this.account || this.invalidPending || this.status === 'conflict') return;
     const sequence = this.sequence, snapshot = this.pending, revision = this.revision;
     this.emit('saving');
@@ -81,6 +81,7 @@ export class WorkspaceSync {
     if (this.pending && this.status === 'pending') return this.flush();
   }
   refresh() {
+    if (this.replacing) return Promise.resolve();
     if (this.refreshTask) return this.refreshTask;
     if (this.combining) return Promise.resolve();
     this.refreshTask = this.refreshAccount().finally(() => { this.refreshTask = null; });
@@ -93,7 +94,7 @@ export class WorkspaceSync {
     this.refreshing = true; this.emit('loading');
     try {
       const data = await this.request();
-      if (data.account?.id !== this.account?.id) { this.emit('unavailable', 'The signed-in account changed. Reload to continue.'); this.account = null; return; }
+      if (data.account?.id !== this.account?.id) { this.account = null; this.onData(emptyWorkspace()); this.emit('unavailable', 'The signed-in account changed. Reload to continue.'); return; }
       if (!Number.isSafeInteger(data.revision) || data.revision < revision) throw new Error('The account refresh could not be verified. Your device version is unchanged.');
       const remote = validateWorkspace(data.workspace);
       if (this.invalidPending) { this.emit('error', 'This device has an invalid edit. Export it from Backups & privacy before correcting it.'); return; }
@@ -109,7 +110,7 @@ export class WorkspaceSync {
     if (this.pending && this.status === 'pending') await this.flush();
   }
   async combine(device = this.pending, importing = false, acknowledgeLegacy = importing) {
-    if (!this.account || !device || this.inflight || this.refreshTask || this.combining) return;
+    if (!this.account || !device || this.inflight || this.refreshTask || this.combining || this.replacing) return;
     const sequence = this.sequence, invalidBefore = this.invalidPending;
     this.combining = true;
     this.emit('loading');
@@ -125,5 +126,38 @@ export class WorkspaceSync {
       if (acknowledgeLegacy && importing && this.status === 'saved' && !this.pending && !this.invalidPending) { this.needsImport = false; this.write(`${this.key}.imported`, JSON.stringify(this.legacy)); this.onStatus(this); }
     } catch (e) { this.emit('conflict', e.message); }
     finally { this.combining = false; this.onStatus(this); }
+  }
+  async replaceRecords(mode, confirmation) {
+    if (!['clear', 'account'].includes(mode)) return false;
+    if (!this.account || this.replacing || this.inflight || this.refreshTask || this.combining || this.refreshing) return false;
+    // The confirmation belongs to a particular device version, not a later edit.
+    if (confirmation?.revision !== this.revision || confirmation?.sequence !== this.sequence) return false;
+    if (mode === 'clear' && (this.status !== 'saved' || this.pending || this.invalidPending)) return false;
+    const accountId = this.account.id, revision = this.revision, oldStatus = this.status;
+    this.replacing = true; clearTimeout(this.timer); this.emit('loading');
+    try {
+      let data, records;
+      if (mode === 'clear') {
+        // Keep a monotonically increasing revision so stale devices cannot re-create records.
+        data = await this.request('PUT', { accountId, revision, workspace: emptyWorkspace() });
+        if (data.revision !== revision + 1 || !Number.isFinite(Date.parse(data.updatedAt))) throw new Error('Clearing was not confirmed. Refresh the account to check its current records before trying again.');
+        records = emptyWorkspace();
+      } else {
+        data = await this.request();
+        if (data.account?.id !== accountId || !Number.isSafeInteger(data.revision) || data.revision < revision) throw new Error('The account version could not be verified. Your device version is kept.');
+        records = validateWorkspace(data.workspace);
+      }
+      this.revision = data.revision; this.updatedAt = data.updatedAt;
+      this.pending = null; this.invalidPending = null; this.sequence++;
+      if (mode === 'clear') {
+        this.legacy = null; this.needsImport = false;
+        try { this.storage.removeItem(this.key); this.storage.removeItem(`${this.key}.imported`); this.storage.removeItem('physiosidekick.workspace.v1'); }
+        catch { this.cacheFailed = true; }
+      }
+      this.cache(); this.onData(records); this.emit('saved'); return true;
+    } catch (error) {
+      this.emit(error.status === 409 || oldStatus === 'conflict' ? 'conflict' : 'offline', error.message);
+      return false;
+    } finally { this.replacing = false; this.onStatus(this); }
   }
 }

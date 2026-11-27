@@ -95,3 +95,8 @@ button{min-height:44px}
  .anatomy-inspector-header { padding:8px 12px; }
  .anatomy-inspector-header .eyebrow { letter-spacing:.04em; }
 }
+
+/* Saving state and destructive actions must remain readable and touchable on phones. */
+#sync-status { font-size:.875rem; min-height:44px; }
+.dialog-body .danger-button { min-height:44px; padding:10px 12px; font-size:.9375rem; text-align:left; }
+#clear-confirmation { font-size:1rem; min-height:44px; }

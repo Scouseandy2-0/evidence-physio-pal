@@ -47,7 +47,7 @@ test('imports canonicalise paper URLs, reject executable links and preserve conf
   assert.equal(merged.saved[0].recordURL, 'https://pubmed.ncbi.nlm.nih.gov/123/');
   assert.throws(() => validateWorkspace({ ...emptyWorkspace(), saved: [{ ...paper(), fullText: 'javascript:alert(1)' }] }), /Invalid full-text/);
 });
-const memory = () => { const data = new Map(); return { getItem: k => data.get(k) ?? null, setItem: (k, v) => data.set(k, v) }; };
+const memory = () => { const data = new Map(); return { getItem: k => data.get(k) ?? null, setItem: (k, v) => data.set(k, v), removeItem: k => data.delete(k) }; };
 function syncEnvironment() {
   const env = { DB: database() }, storage = memory();
   const fetcher = async (url, options = {}) => workspaceAPI(new Request('https://app.example/api/workspace', { ...options, headers: { ...options.headers, 'origin': 'https://app.example', 'oai-authenticated-user-id': 'a', 'oai-authenticated-user-email': 'a@example.invalid' } }), env);
@@ -264,4 +264,68 @@ test('all six supplied pack copies save, reload and preserve their own source an
  const loaded=await(await workspaceAPI(req('pack-reader'),env)).json();assert.deepEqual(loaded.workspace.teachingPlans,plans);
  assert.equal((await(await workspaceAPI(req('different-reader'),env)).json()).workspace.teachingPlans.length,0);
  for(const plan of loaded.workspace.teachingPlans){assert.match(plan.guidance,/clinical review pending/);assert.equal(plan.minutes,30);}
+});
+
+const confirmation = sync => ({revision:sync.revision,sequence:sync.sequence});
+test('clearing retains a revision barrier and stale independent devices cannot restore removed records',async()=>{
+ const {create}=syncEnvironment();const a=create();await a.sync.init();
+ a.sync.queue({...emptyWorkspace(),saved:[paper('Private note')],reflections:[reflection('clear-me')]});await a.sync.flush();
+ const stale=create({storage:memory()});await stale.sync.init();
+ assert.equal(await a.sync.replaceRecords('clear',confirmation(a.sync)),true);
+ assert.deepEqual(a.data,emptyWorkspace());assert.equal(a.sync.revision,2);
+ stale.sync.queue({...emptyWorkspace(),reflections:[reflection('stale-record')]});await stale.sync.flush();assert.equal(stale.sync.status,'conflict');
+ const fresh=create({storage:memory()});await fresh.sync.init();assert.deepEqual(fresh.data,emptyWorkspace());assert.equal(fresh.sync.revision,2);
+});
+test('clearing removes this device recovery and legacy copies but preserves other-account storage',async()=>{
+ const {create,storage}=syncEnvironment();const a=create();await a.sync.init();
+ storage.setItem('physiosidekick.workspace.v1','private legacy');storage.setItem('physiosidekick.account.a.imported','private fingerprint');storage.setItem('physiosidekick.account.b','other owner');
+ assert.equal(await a.sync.replaceRecords('clear',confirmation(a.sync)),true);
+ assert.equal(storage.getItem('physiosidekick.workspace.v1'),null);assert.equal(storage.getItem('physiosidekick.account.a.imported'),null);assert.equal(storage.getItem('physiosidekick.account.b'),'other owner');
+ assert.deepEqual(JSON.parse(storage.getItem('physiosidekick.account.a')),{revision:1,pending:null,invalidPending:null});
+});
+test('clear refuses unsaved edits and an outdated confirmation without issuing a write',async()=>{
+ const {create,fetcher}=syncEnvironment();const a=create();await a.sync.init();const token=confirmation(a.sync);let writes=0;
+ a.sync.fetcher=async(u,o)=>{if(o.method==='PUT')writes++;return fetcher(u,o);};
+ a.sync.queue({...emptyWorkspace(),reflections:[reflection()]});clearTimeout(a.sync.timer);
+ assert.equal(await a.sync.replaceRecords('clear',confirmation(a.sync)),false);
+ await a.sync.flush();assert.equal(writes,1);assert.equal(await a.sync.replaceRecords('clear',token),false);assert.equal(writes,1);
+});
+test('clear cannot overwrite a newer account save or a different signed-in account',async()=>{
+ const {create,fetcher}=syncEnvironment();const a=create(),b=create();await a.sync.init();await b.sync.init();
+ b.sync.queue({...emptyWorkspace(),reflections:[reflection('newer')]});await b.sync.flush();
+ assert.equal(await a.sync.replaceRecords('clear',confirmation(a.sync)),false);assert.equal(a.sync.status,'conflict');
+ const fresh=create({storage:memory()});await fresh.sync.init();assert.equal(fresh.data.reflections[0].id,'newer');
+ fresh.sync.fetcher=async(u,o)=>workspaceAPI(req('different-account',o.method,JSON.parse(o.body)),{DB:database()});
+ assert.equal(await fresh.sync.replaceRecords('clear',confirmation(fresh.sync)),false);assert.equal(fresh.data.reflections[0].id,'newer');
+});
+test('failed or unacknowledged clear preserves the device version until explicit account refresh',async()=>{
+ const {create,fetcher}=syncEnvironment();const a=create();await a.sync.init();a.sync.queue({...emptyWorkspace(),reflections:[reflection('keep-local')]});await a.sync.flush();await a.sync.refresh();
+ a.sync.fetcher=async(u,o)=>{if(o.method==='PUT'){await fetcher(u,o);throw Error('Lost response');}return fetcher(u,o);};
+ assert.equal(await a.sync.replaceRecords('clear',confirmation(a.sync)),false);assert.equal(a.data.reflections[0].id,'keep-local');assert.equal(a.sync.revision,1);
+ a.sync.fetcher=fetcher;await a.sync.refresh();assert.deepEqual(a.data,emptyWorkspace());assert.equal(a.sync.revision,2);
+});
+test('discard loads verified account records without writing or combining the pending device copy',async()=>{
+ const {create,fetcher}=syncEnvironment();const a=create(),b=create();await a.sync.init();await b.sync.init();
+ b.sync.queue({...emptyWorkspace(),reflections:[reflection('account-record')]});await b.sync.flush();
+ a.sync.queue({...emptyWorkspace(),reflections:[reflection('discard-me')]});await a.sync.flush();assert.equal(a.sync.status,'conflict');let writes=0;
+ a.sync.fetcher=async(u,o)=>{if(o.method==='PUT')writes++;return fetcher(u,o);};
+ assert.equal(await a.sync.replaceRecords('account',confirmation(a.sync)),true);assert.equal(writes,0);assert.equal(a.sync.pending,null);assert.equal(a.data.reflections[0].id,'account-record');
+ const reloaded=create();await reloaded.sync.init();assert.equal(reloaded.data.reflections[0].id,'account-record');
+});
+test('failed discard preserves invalid recovery copies and account switching does not discard them',async()=>{
+ const {create}=syncEnvironment();const a=create();await a.sync.init();const invalid={...emptyWorkspace(),reflections:[{...reflection(),date:'bad'}]};a.sync.queue(invalid);
+ a.sync.fetcher=async()=>{throw Error('Offline');};assert.equal(await a.sync.replaceRecords('account',confirmation(a.sync)),false);assert.deepEqual(a.sync.invalidPending,invalid);
+ a.sync.fetcher=async()=>Response.json({account:{id:'another-owner'},revision:0,workspace:emptyWorkspace()});assert.equal(await a.sync.replaceRecords('account',confirmation(a.sync)),false);assert.deepEqual(a.sync.invalidPending,invalid);
+});
+test('record replacement blocks overlapping edits, refreshes and recovery requests',async()=>{
+ const {create,fetcher}=syncEnvironment();const a=create();await a.sync.init();const held=holdNextRead(fetcher);a.sync.fetcher=held.fetcher;
+ const replacement=a.sync.replaceRecords('account',confirmation(a.sync));await held.started;
+ assert.equal(a.sync.queue({...emptyWorkspace(),reflections:[reflection('blocked')]}),false);
+ assert.equal(await a.sync.replaceRecords('clear',confirmation(a.sync)),false);await a.sync.refresh();await a.sync.combine(emptyWorkspace(),true);held.release();assert.equal(await replacement,true);assert.deepEqual(a.data,emptyWorkspace());
+});
+
+test('refresh under a changed identity removes previously displayed account records',async()=>{
+ const {create}=syncEnvironment();const a=create();await a.sync.init();a.sync.queue({...emptyWorkspace(),reflections:[reflection('original-owner')]});await a.sync.flush();await a.sync.refresh();assert.equal(a.data.reflections.length,1);
+ a.sync.fetcher=async()=>Response.json({account:{id:'other-owner'},revision:0,workspace:emptyWorkspace()});
+ await a.sync.refresh();assert.equal(a.sync.account,null);assert.equal(a.sync.status,'unavailable');assert.deepEqual(a.data,emptyWorkspace());
 });
