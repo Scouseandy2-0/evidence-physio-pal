@@ -1,4 +1,4 @@
-import { searchPapers, citation, toRIS } from './research.js';
+import { searchPapers, citation, toRIS, defaultFilters } from './research.js';
 import { resources, questions, teachingTopics } from './content.js';
 
 const icons = {
@@ -27,9 +27,10 @@ try {
   const stored = JSON.parse(localStorage.getItem(KEY));
   if (stored && Array.isArray(stored.saved) && Array.isArray(stored.reflections)) workspace = stored;
 } catch { storageFailed = true; }
+if (!Array.isArray(workspace.searches)) workspace.searches = [];
 let route = location.hash.slice(1) || 'home';
 let paperMap = new Map(workspace.saved.map(p => [p.id, p]));
-let filters = { type: 'all', years: '', openAccess: false, sort: 'relevance' };
+let filters = { ...defaultFilters };
 let searchState = { term: '', papers: [], total: 0, nextCursor: '*', error: '', searched: false, loading: false };
 let controller;
 let requestNumber = 0;
@@ -61,7 +62,7 @@ function intro(eyebrow, title, description, action = '') {
   return `<div class="page-intro"><span class="eyebrow">${eyebrow}</span><div class="title-row"><h1>${title}</h1>${action}</div><p>${description}</p></div>`;
 }
 function searchForm(id, value = '', hero = false) {
-  return `<form id="${id}" class="${hero ? '' : 'searchbox research-search'}">${hero ? '<div class="searchbox">' : ''}${icon('research')}<input type="search" name="topic" aria-label="Search research papers" placeholder="${hero ? 'What are you curious about?' : 'Topic, author or DOI…'}" value="${esc(value)}" maxlength="250" required><button class="button ${hero ? 'light' : ''}" type="submit">Search</button>${hero ? '</div>' : ''}</form>`;
+  return `<form id="${id}" class="${hero ? '' : 'searchbox research-search'}">${hero ? '<div class="searchbox">' : ''}${icon('research')}<input type="search" name="topic" aria-label="Search research papers" placeholder="${hero ? 'What are you curious about?' : 'Topic, author or DOI…'}" value="${esc(value)}" maxlength="250" ${hero ? 'required' : ''}><button class="button ${hero ? 'light' : ''}" type="submit">Search</button>${hero ? '</div>' : ''}</form>`;
 }
 function home() {
   const minutes = workspace.reflections.reduce((sum, r) => sum + Number(r.minutes || 0), 0);
@@ -78,52 +79,80 @@ function home() {
   document.querySelector('#home-search').addEventListener('submit', e => { e.preventDefault(); startSearch(new FormData(e.currentTarget).get('topic')); });
 }
 function research() {
-  main.innerHTML = `${intro('FOLLOW THE SOURCE', 'Real papers. Clear starting points.', 'Search PubMed-indexed publications through Europe PMC. No generated references or automatic quality scores.')}${searchForm('research-search', searchState.term)}
+  main.innerHTML = `${intro('FOLLOW THE SOURCE', 'Real papers. Clear starting points.', 'Find a paper by topic, title, author, DOI or PMID. Follow the source and decide what the evidence means.')}${searchForm('research-search', searchState.term)}
+  <details class="search-options" ${filters.author || filters.match !== 'all' || filters.field !== 'titleAbstract' ? 'open' : ''}><summary>Search options · words, phrases & authors</summary><div class="search-option-fields"><div class="field"><label for="match-mode">Match</label><select id="match-mode"><option value="all">All words</option><option value="any">Any word</option><option value="phrase">Exact phrase</option></select></div><div class="field"><label for="search-field">Search within</label><select id="search-field"><option value="titleAbstract">Title & abstract</option><option value="title">Title only</option><option value="all">All indexed fields</option></select></div><div class="field"><label for="author-filter">Author (optional)</label><input id="author-filter" maxlength="100" value="${esc(filters.author)}" placeholder="e.g. Hopewell S"></div></div><p class="subtle">Paste a DOI, PMID or PubMed link for an exact paper lookup. Discovery filters are ignored for exact lookups. Use “Search” after entering an author.</p></details>
+  <div id="saved-searches"></div>
   <div class="research-layout"><aside class="card filter-panel" aria-label="Research filters"><h2>Refine your search</h2>
   <div class="field"><label for="study-type">Publication type</label><select id="study-type"><option value="all">All publications</option><option value="review">Systematic reviews</option><option value="trial">Randomised trials</option></select></div>
-  <div class="field"><label for="year-filter">Publication date</label><select id="year-filter"><option value="">Any date</option><option value="5">Past 5 calendar years</option><option value="2">Past 2 calendar years</option></select></div>
+  <div class="field"><label for="year-filter">Publication date</label><select id="year-filter"><option value="">Any date</option><option value="5">Last 5 years</option><option value="2">Last 2 years</option></select></div>
   <div class="field"><label for="sort-filter">Sort results</label><select id="sort-filter"><option value="relevance">Relevance</option><option value="newest">Newest first</option></select></div>
-  <label class="check-field"><input type="checkbox" id="open-access"> Open access only</label><p class="subtle">Publication type and access labels come from the index. They do not establish study quality.</p></aside><section aria-label="Search results"><div id="results" aria-live="polite"></div></section></div>`;
-  document.querySelector('#study-type').value = filters.type;
-  document.querySelector('#year-filter').value = filters.years;
-  document.querySelector('#sort-filter').value = filters.sort;
+  <label class="check-field"><input type="checkbox" id="open-access"> Open access only</label><button class="text-button" id="reset-filters">Reset search options</button><p class="subtle">Publication type and access labels come from the index. They do not establish study quality.</p></aside><section aria-label="Search results"><div id="results" aria-live="polite"></div></section></div>`;
+  [['study-type', 'type'], ['year-filter', 'years'], ['sort-filter', 'sort'], ['match-mode', 'match'], ['search-field', 'field']].forEach(([id, key]) => {
+    document.getElementById(id).value = filters[key];
+    document.getElementById(id).addEventListener('change', e => { filters[key] = e.target.value; if (searchState.searched) runSearch(document.querySelector('#research-search input').value); });
+  });
+  document.querySelector('#author-filter').addEventListener('input', e => { filters.author = e.target.value; });
+  document.querySelector('#author-filter').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); runSearch(document.querySelector('#research-search input').value); } });
   document.querySelector('#open-access').checked = filters.openAccess;
+  document.querySelector('#open-access').addEventListener('change', e => { filters.openAccess = e.target.checked; if (searchState.searched) runSearch(document.querySelector('#research-search input').value); });
   document.querySelector('#research-search').addEventListener('submit', e => { e.preventDefault(); runSearch(String(new FormData(e.currentTarget).get('topic'))); });
-  [['study-type', 'type'], ['year-filter', 'years'], ['sort-filter', 'sort'], ['open-access', 'openAccess']].forEach(([id, key]) => document.getElementById(id).addEventListener('change', e => { filters[key] = key === 'openAccess' ? e.target.checked : e.target.value; if (searchState.searched) runSearch(searchState.term); }));
-  renderResults();
+  document.querySelector('#reset-filters').onclick = () => { const term = document.querySelector('#research-search input').value; filters = { ...defaultFilters }; searchState.term = term; research(); if (searchState.searched) runSearch(term); };
+  renderSavedSearches(); renderResults();
 }
-function startSearch(term) { searchState.term = term; navigate('research'); runSearch(term); }
+function renderSavedSearches() {
+  const area = document.querySelector('#saved-searches'); if (!area) return;
+  area.innerHTML = workspace.searches.length ? `<div class="saved-search-bar"><span class="field-label">Your saved searches</span><div class="saved-search-list">${workspace.searches.map((s, i) => `<span class="saved-search-chip"><button data-run-search="${i}" title="${esc(searchDescription(s.filters))}">${esc(s.term || s.filters.author)}</button><button data-remove-search="${i}" aria-label="Remove saved search: ${esc(s.term || s.filters.author)}">×</button></span>`).join('')}</div></div>` : '';
+}
+function searchDescription(f) {
+  return `${f.match === 'phrase' ? 'Exact phrase' : f.match === 'any' ? 'Any word' : 'All words'} · ${f.field === 'title' ? 'title only' : f.field === 'all' ? 'all indexed fields' : 'title & abstract'}${f.author ? ` · author: ${f.author}` : ''}${f.type !== 'all' ? ` · ${f.type === 'review' ? 'systematic reviews' : 'randomised trials'}` : ''}${f.years ? ` · last ${f.years} years` : ''}${f.openAccess ? ' · open access' : ''}`;
+}
+function startSearch(term) { filters = { ...defaultFilters }; searchState.term = term; navigate('research'); if (route === 'research') research(); runSearch(term); }
 async function runSearch(term, more = false) {
-  term = term.trim(); if (!term) return;
+  term = term.trim();
   controller?.abort(); controller = new AbortController(); const current = ++requestNumber;
-  searchState = { ...searchState, term, loading: true, searched: true, error: '', ...(more ? {} : { papers: [], total: 0, nextCursor: '*' }) };
+  const usedFilters = { ...(more ? searchState.usedFilters : filters) };
+  searchState = { ...searchState, term, loading: true, searched: true, error: '', usedFilters, ...(more ? {} : { papers: [], total: 0, nextCursor: '*', query: '', identifier: null }) };
   if (route === 'research') { const input = document.querySelector('#research-search input'); if (input) input.value = term; renderResults(); }
   try {
-    const data = await searchPapers(term, filters, more ? searchState.nextCursor : '*', controller.signal);
+    const data = await searchPapers(term, usedFilters, more ? searchState.nextCursor : '*', controller.signal);
     if (current !== requestNumber) return;
     const all = more ? [...searchState.papers, ...data.papers] : data.papers;
-    searchState = { ...searchState, papers: [...new Map(all.map(p => [p.id, p])).values()], total: data.total, nextCursor: data.nextCursor, loading: false };
+    searchState = { ...searchState, papers: [...new Map(all.map(p => [p.id, p])).values()], total: data.total, nextCursor: data.papers.length ? data.nextCursor : null, loading: false, query: data.query, identifier: data.identifier, searchedAt: new Date().toISOString() };
     data.papers.forEach(p => paperMap.set(p.id, p));
   } catch (e) { if (current !== requestNumber || e.name === 'AbortError') return; searchState.loading = false; searchState.error = e.message || 'Search failed. Please try again.'; }
   if (route === 'research') renderResults();
 }
 function renderResults() {
   const el = document.querySelector('#results'); if (!el) return;
-  if (!searchState.searched) { el.innerHTML = `<div class="empty">${icon('research')}<h3>Your next discovery starts here</h3><p>Search a condition, intervention, author or DOI. Open a record to read the indexed abstract and find the original paper.</p><button class="button secondary" data-search="Knee osteoarthritis exercise">Try knee osteoarthritis</button></div>`; return; }
+  if (!searchState.searched) { el.innerHTML = `<div class="empty">${icon('research')}<h3>Your next discovery starts here</h3><p>Search a topic or paper title, or paste a DOI, PMID or PubMed link. Use search options to narrow the words and author.</p><button class="button secondary" data-search="Knee osteoarthritis exercise">Try knee osteoarthritis</button></div>`; return; }
   if (searchState.loading && !searchState.papers.length) { el.innerHTML = '<div class="loading"><span class="spinner"></span>Searching real publication records…</div>'; return; }
-  el.innerHTML = `${searchState.error ? `<div class="notice error">${esc(searchState.error)} <button class="text-button" id="retry-search">Retry search</button></div>` : ''}<div class="result-toolbar"><strong>${searchState.total.toLocaleString()} indexed results</strong><span>Source: Europe PMC / PubMed<br>Relevance is not evidence quality</span></div>
-  ${!searchState.papers.length && !searchState.error ? `<div class="empty">${icon('research')}<h3>No matching papers found</h3><p>Try fewer keywords or remove a filter. An empty result is better than an invented reference.</p></div>` : ''}<div class="paper-list">${searchState.papers.map(p => paperCard(p)).join('')}</div>
+  const exact = searchState.identifier;
+  const f = searchState.usedFilters || filters;
+  el.innerHTML = `${searchState.error ? `<div class="notice error">${esc(searchState.error)} <button class="text-button" id="retry-search">Retry search</button></div>` : ''}
+  ${exact ? `<div class="notice">Exact ${exact.kind} lookup: <strong>${esc(exact.value)}</strong>. Keyword, author, date, publication-type and access filters were ignored so they cannot hide this paper.</div>` : ''}
+  <div class="result-toolbar"><strong>${searchState.total.toLocaleString()} indexed ${searchState.total === 1 ? 'result' : 'results'}</strong><span>Europe PMC / PubMed<br>Relevance is not evidence quality</span></div>
+  ${searchState.query ? `<div class="search-tools"><button class="button secondary" id="save-search">${icon('library')}Save this search</button><button class="text-button" id="export-search">Export search record</button></div><details class="query-details"><summary>How this search was run</summary><p>${exact ? `Exact ${exact.kind} lookup` : esc(searchDescription(f))}. Sorted by ${f.sort === 'newest' && !exact ? 'newest first' : 'relevance'}.</p><code>${esc(searchState.query)}</code><p>Run ${esc(new Date(searchState.searchedAt).toLocaleString('en-GB'))}. This is a discovery search, not a comprehensive systematic-review strategy.</p></details>` : ''}
+  ${!searchState.papers.length && !searchState.error ? `<div class="empty">${icon('research')}<h3>${exact ? 'No indexed record found for this identifier' : 'No matching papers found'}</h3><p>${exact ? 'Check the identifier and try PubMed directly. This does not prove that the paper does not exist.' : 'Try fewer words, “Any word”, all indexed fields or reset the filters.'}</p>${exact ? `<a class="button secondary" href="https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(exact.value)}" target="_blank" rel="noopener noreferrer">Check PubMed</a>` : '<button class="button secondary" id="broaden-search">Broaden this search</button>'}</div>` : ''}
+  <div class="paper-list">${searchState.papers.map(p => paperCard(p)).join('')}</div>
   ${searchState.nextCursor && searchState.papers.length < searchState.total && searchState.papers.length ? `<button id="load-more" class="button secondary" style="margin-top:20px" ${searchState.loading ? 'disabled' : ''}>${searchState.loading ? 'Loading…' : 'Load more papers'}</button>` : ''}`;
   document.querySelector('#retry-search')?.addEventListener('click', () => runSearch(searchState.term));
   document.querySelector('#load-more')?.addEventListener('click', () => runSearch(searchState.term, true));
+  document.querySelector('#broaden-search')?.addEventListener('click', () => { filters = { ...defaultFilters, match: 'any', field: 'all' }; research(); runSearch(searchState.term); });
+  document.querySelector('#save-search')?.addEventListener('click', () => {
+    const entry = { term: searchState.term, filters: { ...searchState.usedFilters }, savedAt: new Date().toISOString() };
+    if (workspace.searches.some(s => s.term === entry.term && JSON.stringify(s.filters) === JSON.stringify(entry.filters))) { toast('This search is already saved'); return; }
+    if (workspace.searches.length >= 20) { toast('You have 20 saved searches. Remove one before adding another.'); return; }
+    workspace.searches.unshift(entry); if (persist()) toast('Search saved in this browser'); renderSavedSearches();
+  });
+  document.querySelector('#export-search')?.addEventListener('click', () => download('physiosidekick-search-record.txt', `PhysioSidekick research search\nSource: Europe PMC REST API, PubMed-indexed records\nRun: ${searchState.searchedAt}\nEntered search: ${searchState.term || '[author only]'}\nOptions: ${exact ? 'Exact identifier lookup; discovery filters ignored' : searchDescription(f)}\nQuery: ${searchState.query}\nResults reported at search time: ${searchState.total}\n\nDiscovery search only; not a comprehensive systematic-review strategy.\n`, 'text/plain'));
 }
 function paperCard(p, savedView = false) {
   const saved = workspace.saved.some(s => s.id === p.id);
   const type = p.types?.find(t => /systematic review|meta-analysis|randomized controlled trial/i.test(t)) || p.types?.[0] || 'Indexed publication';
-  return `<article class="card paper-card" data-paper="${esc(p.id)}"><div class="paper-tags"><span class="badge neutral">${esc(type)}</span><span class="badge ${p.openAccess ? 'oa' : ''}">${p.openAccess ? 'Open access indexed' : 'Access may require subscription'}</span>${p.retracted ? '<span class="badge" style="background:#ffe9e2;color:#a03f28">Retracted publication</span>' : ''}</div>
+  return `<article class="card paper-card" data-paper="${esc(p.id)}"><div class="paper-tags"><span class="badge neutral">${esc(type)}</span><span class="badge ${p.openAccess ? 'oa' : ''}">${p.fullText ? 'Free full-text link indexed' : p.openAccess ? 'Open access indexed · link unavailable' : 'Free access not confirmed'}</span>${p.retracted ? '<span class="badge" style="background:#ffe9e2;color:#a03f28">Retracted publication</span>' : ''}</div>
   <h3><button class="paper-title" data-detail="${esc(p.id)}">${esc(p.title)}</button></h3><div class="paper-meta">${esc(p.authors || 'Authors not supplied')}<br>${esc(p.journal || 'Journal not supplied')} · ${esc(p.year || 'Date not supplied')}</div>
   <p class="paper-abstract">${esc(p.abstract || 'No abstract is available in this index record. Open the original source to investigate further.')}</p>
-  <div class="paper-actions"><button class="text-button" data-detail="${esc(p.id)}">Read record</button><a href="${esc(p.recordURL)}" target="_blank" rel="noopener noreferrer">PubMed</a>${p.doi ? `<a href="https://doi.org/${esc(p.doi)}" target="_blank" rel="noopener noreferrer">Publisher / DOI</a>` : ''}<button class="save-button ${saved ? 'saved' : ''}" data-save="${esc(p.id)}" aria-label="${saved ? 'Remove saved paper' : 'Save paper'}: ${esc(p.title)}">${icon('library')}${saved ? 'Saved' : 'Save'}</button></div>
+  <div class="paper-actions"><button class="text-button" data-detail="${esc(p.id)}">Read record</button><a href="${esc(p.recordURL)}" target="_blank" rel="noopener noreferrer">PubMed</a>${p.fullText ? `<a class="full-text-link" href="${esc(p.fullText)}" target="_blank" rel="noopener noreferrer">Read free full text</a>` : ''}${p.doi ? `<a href="https://doi.org/${esc(p.doi)}" target="_blank" rel="noopener noreferrer">Publisher / DOI</a>` : ''}<button class="save-button ${saved ? 'saved' : ''}" data-save="${esc(p.id)}" aria-label="${saved ? 'Remove saved paper' : 'Save paper'}: ${esc(p.title)}">${icon('library')}${saved ? 'Saved' : 'Save'}</button></div>
   ${savedView ? `<div class="saved-extra"><div class="saved-grid"><div class="field"><label for="collection-${p.pmid}">Collection</label><input id="collection-${p.pmid}" value="${esc(p.collection || '')}" data-collection="${esc(p.id)}" placeholder="e.g. Shoulder assignment" maxlength="80" list="collection-options"></div><div class="field"><label>Reference</label><button class="button secondary" data-copy="${esc(p.id)}">Copy citation</button></div></div><div class="field"><label for="note-${p.pmid}">Your notes</label><textarea id="note-${p.pmid}" data-note="${esc(p.id)}" maxlength="10000" placeholder="What did you learn? No identifiable patient information.">${esc(p.notes || '')}</textarea></div><button class="button secondary" data-save-notes="${esc(p.id)}">Save collection & notes</button></div>` : ''}</article>`;
 }
 function paperDetail(id) {
@@ -131,7 +160,7 @@ function paperDetail(id) {
   openDialog(`<span class="eyebrow">ORIGINAL PUBLICATION RECORD</span><h2 id="dialog-title">${esc(p.title)}</h2><p class="paper-meta">${esc(p.authors)}<br>${esc(p.journal)} · ${esc(p.year)}</p>
   ${p.retracted ? '<div class="notice error">This record is marked as a retracted publication. Investigate the retraction notice before using its findings.</div>' : ''}
   <div class="identifier">PMID: ${esc(p.pmid)}${p.doi ? `<br>DOI: ${esc(p.doi)}` : ''}</div><div class="button-row"><a class="button" href="${esc(p.recordURL)}" target="_blank" rel="noopener noreferrer">Open PubMed record</a>${p.fullText ? `<a class="button secondary" href="${esc(p.fullText)}" target="_blank" rel="noopener noreferrer">Open free full text</a>` : p.doi ? `<a class="button secondary" href="https://doi.org/${esc(p.doi)}" target="_blank" rel="noopener noreferrer">Check publisher access</a>` : ''}</div>
-  <h3>Indexed abstract</h3><p class="abstract-full">${esc(p.abstract || 'The index does not provide an abstract for this paper.')}</p><div class="notice">This is publication metadata and an indexed abstract, not an AI summary or a quality assessment. Full text may contain important methods, results and limitations omitted here.</div>
+  <section class="access-panel"><h3>Get the full paper</h3>${p.fullText ? `<p>A free full-text link is listed by the index. The provider controls access and the version available.</p><div class="button-row">${(p.fullTextLinks?.length ? p.fullTextLinks : [{ url: p.fullText, style: 'full text', provider: 'Indexed source' }]).map(l => `<a class="button secondary" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.style === 'pdf' ? 'PDF' : l.style === 'html' ? 'Full text' : l.style)} · ${esc(l.provider.replaceAll('_', ' '))}</a>`).join('')}</div>` : `<p>A free full-text link is not confirmed here. That does not necessarily mean the paper is paywalled.</p><ol><li>Open the publisher/DOI or PubMed record and check its full-text links.</li><li>If asked to pay, try your university, NHS or employer library’s institutional sign-in.</li><li>Ask your library about document supply or an authorised author manuscript.</li></ol>`}</section><h3>Indexed abstract</h3><p class="abstract-full">${esc(p.abstract || 'The index does not provide an abstract for this paper.')}</p><div class="notice">This is publication metadata and an indexed abstract, not an AI summary or a quality assessment. Full text may contain important methods, results and limitations omitted here.</div>
   <h3>Before applying the findings</h3><ul><li>Does the population and setting match your question?</li><li>How was the study designed, and what could bias its findings?</li><li>How large and uncertain are the effects, and were harms reported?</li><li>Have you read the full text, or only the abstract?</li></ul>
   <div class="button-row"><button class="button secondary" data-save="${esc(p.id)}">${icon('library')}${workspace.saved.some(s => s.id === id) ? 'Remove from saved papers' : 'Save to my papers'}</button><button class="button secondary" data-copy="${esc(p.id)}">Copy citation</button></div><p class="subtle" style="margin-top:20px">Record retrieved ${esc(new Date(p.retrievedAt).toLocaleDateString('en-GB'))}. <a href="${esc(p.indexedURL)}" target="_blank" rel="noopener noreferrer">View Europe PMC record</a>. Bibliographic details may be updated by the source.</p>`);
 }
@@ -230,6 +259,13 @@ function render() {
 document.addEventListener('click', e => {
   const target = e.target.closest('button'); if (!target) return;
   if (target.dataset.search) startSearch(target.dataset.search);
+  if ('runSearch' in target.dataset) {
+    const entry = workspace.searches[Number(target.dataset.runSearch)];
+    if (entry) { filters = { ...defaultFilters, ...entry.filters }; searchState.term = entry.term; research(); runSearch(entry.term); }
+  }
+  if ('removeSearch' in target.dataset) {
+    workspace.searches.splice(Number(target.dataset.removeSearch), 1); persist(); renderSavedSearches();
+  }
   if (target.dataset.detail) paperDetail(target.dataset.detail);
   if (target.dataset.save) toggleSave(target.dataset.save);
   if (target.dataset.copy) copyCitation(target.dataset.copy);

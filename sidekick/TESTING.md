@@ -24,6 +24,22 @@ Tested through the rendered interface with live Europe PMC responses:
 
 Desktop browser QA is not equivalent to physical iPhone or native iOS testing.
 
+## Research workflow update
+
+15 automated tests now pass. New coverage includes all/any and phrase matching, author-only search, exact identifiers and PubMed URLs, discovery-filter bypass for identifiers, date boundaries, malformed input, multiple source-labelled free links, cursor propagation, request cancellation and stalled-provider timeouts.
+
+Browser checks with live publication responses verified:
+
+- PMID 43060446 retrieves one matching record even with a conflicting trial filter enabled.
+- DOI 10.3389/fphys.2026.1970396 retrieves the same record while an unrelated author filter is retained in the controls but ignored for the lookup.
+- Exact phrase `rotator cuff` with author `Hopewell S` returns 14 indexed records. Loading the second page produces 14 unique cards.
+- Saving a search persists its query/options through reload and reruns from the saved-search chip.
+- Search-record export triggers a text download.
+- The paper dialog exposes separate provider-supplied HTML/PDF links; the result card exposes a direct free-full-text link.
+- Changing a search option uses the text currently entered, rather than replacing an in-progress edit with the previous query.
+
+Europe PMC's numeric EXT_ID field requires an unquoted number: quoting a known PMID returned zero results during integration testing. The implementation and regression tests now use numeric syntax. Provider responses were occasionally slow; the app now provides a 25-second timeout and retry message instead of indefinite loading. Provider links are indexed access indications, not a guarantee of live publisher availability.
+
 ## Remaining release checks
 
 Physical iPhone/Safari tests; native storage/download/external-link handling; account sync; licensed 3D anatomy; clinical editorial review; provider terms and text reuse; complete accessibility audit; trademark clearance; signed iOS build and App Store review. No public or clinical launch is implied.

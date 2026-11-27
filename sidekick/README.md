@@ -9,9 +9,11 @@ A connected career companion for physiotherapists and students: learning and ana
 ## This version
 
 - Responsive desktop and iPhone layouts with seven working navigation areas.
-- Live keyword/DOI search of Europe PMC's PubMed-indexed records, publication/date/access filters and cursor pagination.
+- Live keyword, exact-phrase, author, DOI and PMID search of Europe PMC's PubMed-indexed records, title/abstract scope, publication/date/access filters and cursor pagination.
 - Indexed abstracts, publication-type metadata, retraction warnings when supplied, PubMed records, DOI links and free-full-text links when indexed.
 - Saved papers, named collections, notes and citation/RIS exports.
+- Up to 20 browser-local saved searches, rerun with their options; downloadable search records with the actual query, run time and reported result count.
+- Direct indexed free-full-text links on results, separate text/PDF source choices and institutional-access guidance where free access is unconfirmed.
 - Personal CPD reflections with editing and Markdown export.
 - Original-source resource shelf, three introductory critical-appraisal learning checks.
 - Editable FCP teaching outlines that download as Markdown. These are frameworks, not clinical teaching packs or an accredited curriculum.
@@ -43,7 +45,7 @@ Documentation: https://dev.europepmc.org/RestfulWebService
 
 All titles, authors, abstracts, identifiers and publication types come from that response. Missing information is shown as missing. There is no paper generator, synthetic fallback, fake DOI, inferred PEDro score or automatic evidence-quality grade. Publication indexing is not clinical appraisal. Publisher access labels are cautious: no indexed open-access indicator does not prove a paywall.
 
-The app sends search terms to Europe PMC from the browser, without credentials. No patient information should be entered. Search currently supports simple keyword intersection and exact DOI lookups, not Boolean or systematic-review search syntax. It does not claim comprehensive literature coverage.
+The app sends search terms to Europe PMC from the browser, without credentials. No patient information should be entered. Search supports all/any words, exact phrases, title/abstract or title-only scope, an author field and DOI/PMID/PubMed-link lookups. Exact identifiers bypass discovery filters so they cannot be hidden by date or publication-type settings. A visible query and search-record export make the options inspectable; unrestricted Boolean syntax is not supported. It does not claim comprehensive literature coverage.
 
 For abstracts, formatting tags are removed while comparison symbols and text are retained; all displayed text is escaped. Follow original sources for interpretation and critical appraisal. Records may be incomplete, misclassified or updated by the provider.
 
@@ -61,7 +63,7 @@ The library stores publication metadata and indexed abstracts for personal proto
 
 ## Delivery roadmap
 
-1. Improve search with phrases, author fields and a transparent advanced query builder; test known-paper retrieval with students and clinicians.
+1. Test search and known-paper retrieval with students and clinicians; consider a more expressive, transparent search builder based on observed needs.
 2. Add validated workspace import, durable owner accounts and cross-device collections/reflections; migrate browser data only with an explicit import flow.
 3. Add structured appraisal notes and cautiously evaluated source-grounded explanations. Keep claims traceable to actual text and distinguish abstracts from full-text review.
 4. Select and license accurate 3D anatomy. Evaluate usability, offline assets and mobile GPU performance before committing.
