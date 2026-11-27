@@ -8,3 +8,7 @@ dist/
 
 # Rebuilt from src/anatomy-viewer.js
 web/anatomy-viewer.js
+
+# Rebuilt portfolio document bundle and dependency notices
+web/portfolio-exports.js
+web/export-third-party.txt

@@ -237,3 +237,12 @@ Backups & privacy now provides a separately confirmed clear-all-learning-records
 Conflict recovery can export the actual invalid/pending copy, then explicitly discard it and load verified account records without an account write. Failed/mismatched reads preserve recovery copies. Revision-card drafts now receive the same refresh/import protection as CPD forms; replaced dialogs focus their new heading. Account refresh rebuilds the paper map and invalidates delayed abstract requests to avoid retaining removed notes. Save status and destructive buttons have larger readable/touch targets.
 
 BioDigital integration enquiry sent with Andrew’s authorisation; see docs/anatomy-commercial-options.md. No anatomy contract or purchase is implied.
+
+
+## PDF and Word portfolio exports — 27 November 2026
+
+The CPD portfolio now presents PDF (.pdf) and editable Word (.docx) as its main export actions. Markdown and printable HTML are retained under Additional export formats. Both binary formats are generated entirely in the browser from a captured workspace/filter snapshot and share a section model that retains dates, recorded minutes, reflection/action/outcome, source links, declared reading basis, linked appraisal notes, design, provenance, missing-evidence states and retraction warnings. No conversion service receives learning records.
+
+A self-hosted export bundle and bundled Roboto fonts load only when requested. PDF uses pdfmake 0.3.15; Word uses docx 9.16.1. Software and font notices are included at /export-third-party.txt, regenerated during builds. The downloaded document is a genuine PDF or OOXML DOCX, not HTML renamed with another extension.
+
+Choose a format, wait for preparation, then tap the explicit Save file link. That second tap avoids relying on a popup or an asynchronous download gesture on iPhone. Filenames include a UTC export timestamp. Empty/invalid selections disable the controls; open reflection drafts must be saved or cancelled. Preparation failures offer retry/alternative formats, and account refresh or navigation prevents stale export links being attached to a replaced page. Browser save/open behaviour on Andrew’s physical iPhone remains to be confirmed.

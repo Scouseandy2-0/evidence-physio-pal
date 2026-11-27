@@ -197,3 +197,12 @@ Node tests exercise confirmed clear with monotonic revisions, independent stale-
 Chrome local preview verified privacy wording, count/confirmation screen, disabled button until exact CLEAR entry, focus moving to each new dialog heading and cancellation back to privacy. The destructive browser action was not executed. This is desktop browser evidence; physical iPhone/Mac sync, mobile layout/WebGL and VoiceOver remain open.
 
 Validation for this change: syntax checks and full automated suite (139 tests) passed before packaging; production build is validated by the packaging workflow. No independent clinical review or physical-device result is implied.
+
+
+## PDF and Word portfolio exports — 27 November 2026
+
+143 automated tests passed, including four new checks covering the shared selected-content model, immutable snapshots, filter rejection, real OOXML ZIP/relationship content, Unicode/XML escaping, missing appraisal states, and a long multipage PDF with embedded fonts and evidence links. Syntax checks and the production build passed.
+
+In Chrome local preview, empty controls were confirmed disabled with an explanation; PDF/Word were prominent and legacy formats collapsed. A fictional local-only reflection was created via the real form, then both formats generated and were downloaded through their Save file links. The downloaded PDF was extracted and rendered: text/Unicode, margins, headings and page footer were inspected. The browser-downloaded DOCX passed ZIP integrity and its editable WordprocessingML preserved the fictional record and Unicode. Node fixtures additionally cover filtered evidence, appraisal design/reading basis, retraction warnings and multipage output. No owner production records were created or altered for these tests.
+
+Andrew’s real iPhone screenshot confirmed that the preceding HTML/Markdown export options were displayed and disabled with zero selected reflections; that is real-device evidence of the previous UI. This change addresses the requested formats. A successful PDF/DOCX save and open on the physical iPhone is not yet recorded. No desktop result is presented as iPhone verification.

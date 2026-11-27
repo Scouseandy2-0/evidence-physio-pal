@@ -100,3 +100,11 @@ button{min-height:44px}
 #sync-status { font-size:.875rem; min-height:44px; }
 .dialog-body .danger-button { min-height:44px; padding:10px 12px; font-size:.9375rem; text-align:left; }
 #clear-confirmation { font-size:1rem; min-height:44px; }
+
+.portfolio-main-exports { margin-top:20px; }
+.portfolio-main-exports .button { font-size:1rem; min-height:48px; }
+.portfolio-additional { border-top:1px solid var(--line); padding-top:18px; margin-top:22px; }
+.portfolio-additional summary { color:var(--deep); cursor:pointer; font-size:.9375rem; font-weight:700; }
+.portfolio-additional .button-row { margin-top:16px; }
+#portfolio-download:not(:empty) { padding:12px 0; }
+@media(max-width:650px) { .portfolio-main-exports .button { flex:1 1 180px; } }

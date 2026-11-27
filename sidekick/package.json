@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "check": "node --check web/anatomy-details.js && node --check web/regional-anatomy.js && node --check web/muscles-catalog.js && node --check web/student-units.js && node --check web/learning-packs.js && node --check web/backup.js && node --check web/readiness.js && node --check worker/security.js && node --check web/help.js && node --check web/app.js && node --check web/anatomy.js && node --check src/anatomy-viewer.js && node --check web/reading.js && node --check web/workspace-search.js && node --check web/portfolio.js && node --check web/study.js && node --check web/teaching.js && node --check web/paper-details.js && node --check worker/paper.js && node --check web/appraisal.js && node --check web/workspace-data.js && node --check web/research.js && node --check web/sync.js && node --check worker/api.js && node --check worker/research.js",
+    "check": "node --check src/portfolio-exports.js && node --check scripts/export-notices.mjs && node --check web/anatomy-details.js && node --check web/regional-anatomy.js && node --check web/muscles-catalog.js && node --check web/student-units.js && node --check web/learning-packs.js && node --check web/backup.js && node --check web/readiness.js && node --check worker/security.js && node --check web/help.js && node --check web/app.js && node --check web/anatomy.js && node --check src/anatomy-viewer.js && node --check web/reading.js && node --check web/workspace-search.js && node --check web/portfolio.js && node --check web/study.js && node --check web/teaching.js && node --check web/paper-details.js && node --check worker/paper.js && node --check web/appraisal.js && node --check web/workspace-data.js && node --check web/research.js && node --check web/sync.js && node --check worker/api.js && node --check worker/research.js",
     "dev": "node scripts/dev.mjs",
     "build": "node scripts/build.mjs",
     "db:generate": "drizzle-kit generate",
@@ -13,10 +13,13 @@
     "anatomy:fetch": "node scripts/fetch-anatomy-model.mjs"
   },
   "devDependencies": {
+    "docx": "9.16.1",
     "drizzle-kit": "0.31.11",
     "drizzle-orm": "0.45.4",
     "esbuild": "0.28.2",
-    "three": "0.186.0",
-    "linkedom": "0.18.15"
+    "fflate": "0.8.3",
+    "linkedom": "0.18.15",
+    "pdfmake": "0.3.15",
+    "three": "0.186.0"
   }
 }
