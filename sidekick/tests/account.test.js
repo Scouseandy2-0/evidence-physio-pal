@@ -256,3 +256,12 @@ test('a new invalid edit arriving during corrected-backup recovery blocks the ol
  const held=holdNextRead(fetcher);a.sync.fetcher=held.fetcher;const importing=a.sync.combine({...emptyWorkspace(),reflections:[reflection('corrected')]},true,false);await held.started;
  const latest={...emptyWorkspace(),reflections:[{...reflection('latest'),date:'bad'}]};a.sync.queue(latest);held.release();await importing;assert.deepEqual(a.sync.invalidPending,latest);assert.equal(a.sync.status,'conflict');
 });
+
+test('all six supplied pack copies save, reload and preserve their own source and review snapshots',async()=>{
+ const {learningPacks,teachingFromPack}=await import('../web/learning-packs.js');const env={DB:database()};
+ const plans=learningPacks.map(pack=>teachingFromPack(pack,`source-${pack.id}`));assert.equal(plans.length,6);
+ assert.equal((await workspaceAPI(req('pack-reader','PUT',{revision:0,workspace:{...emptyWorkspace(),teachingPlans:plans}}),env)).status,200);
+ const loaded=await(await workspaceAPI(req('pack-reader'),env)).json();assert.deepEqual(loaded.workspace.teachingPlans,plans);
+ assert.equal((await(await workspaceAPI(req('different-reader'),env)).json()).workspace.teachingPlans.length,0);
+ for(const plan of loaded.workspace.teachingPlans){assert.match(plan.guidance,/clinical review pending/);assert.equal(plan.minutes,30);}
+});

@@ -28,3 +28,5 @@ button{min-height:44px}
 .readiness-list section{padding:18px 0;border-top:1px solid var(--line)}.readiness-list strong{display:block;color:var(--muted);margin:4px 0 10px}
 
 .pack-section{padding-top:18px;border-top:1px solid var(--line);margin-top:18px}.pack-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7}
+
+.pack-check{padding:12px 0;border-bottom:1px solid var(--line)}.pack-check summary{min-height:44px;cursor:pointer;font-weight:600;line-height:1.6}.pack-check p{margin-top:12px}
