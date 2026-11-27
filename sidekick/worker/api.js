@@ -25,6 +25,7 @@ export async function workspaceAPI(request, env) {
     const buffer = new Uint8Array(bytes); let at = 0; for (const chunk of chunks) { buffer.set(chunk, at); at += chunk.byteLength; }
     let body, workspace;
     try { body = JSON.parse(new TextDecoder().decode(buffer)); workspace = validateWorkspace(body.workspace); } catch (e) { return json({ error: e.message || 'Invalid workspace.' }, 400); }
+    if (body.accountId !== undefined && body.accountId !== owner) return json({ error: 'The signed-in account changed. Reload before saving. Your pending changes remain on the original device.' }, 409);
     if (!Number.isSafeInteger(body.revision) || body.revision < 0) return json({ error: 'Invalid workspace revision.' }, 400);
     // Older tabs must not silently remove newer appraisal or abstract provenance.
     const current = await env.DB.prepare('SELECT data FROM workspaces WHERE owner_id = ?').bind(owner).first();

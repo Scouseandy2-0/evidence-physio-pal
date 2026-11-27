@@ -708,4 +708,4 @@ syncStatus(sync);
 sync.init();
 window.addEventListener('online', () => { if (sync.account && sync.pending && sync.status !== 'conflict') sync.flush(); });
 
-window.addEventListener('beforeunload', e => { if (studyDraft?.dirty || (cpdFormOpen && reflectionDraft)) { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('beforeunload', e => { if (sync?.pending || sync?.invalidPending || studyDraft?.dirty || (cpdFormOpen && reflectionDraft)) { e.preventDefault(); e.returnValue = ''; } });

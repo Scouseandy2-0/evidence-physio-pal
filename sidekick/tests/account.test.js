@@ -159,3 +159,76 @@ test('follow-up outcomes survive account reload and older tabs without the new f
  const data=await(await workspaceAPI(req('a'),env)).json();assert.equal(data.workspace.reflections[0].outcome,'Software test follow-up');assert.equal(data.workspace.reflections[0].followUpDate,'2026-12-01');
  assert.equal((await workspaceAPI(req('a','PUT',{revision:2,workspace:{...emptyWorkspace(),reflections:[{...old,date:'2026-12-02'}]}}),env)).status,409);
 });
+
+function holdNextRead(fetcher) {
+  let release, start, holding=true; const gate=new Promise(r=>release=r), started=new Promise(r=>start=r);
+  return {release,started,fetcher:async(url,options={})=>{
+    const response=await fetcher(url,options);
+    if((options.method||'GET')==='GET' && holding){holding=false;start();await gate;}
+    return response;
+  }};
+}
+test('edits made during a delayed refresh are retained and saved after that read finishes',async()=>{
+ const {create,fetcher}=syncEnvironment(); const a=create();await a.sync.init();
+ const held=holdNextRead(fetcher);a.sync.fetcher=held.fetcher;
+ const refreshing=a.sync.refresh();await held.started;
+ a.sync.queue({...emptyWorkspace(),reflections:[reflection('during-refresh')]});await a.sync.flush();
+ assert.equal(a.sync.revision,0);assert.ok(a.sync.pending);
+ held.release();await refreshing;
+ assert.equal(a.sync.status,'saved');const b=create();await b.sync.init();assert.equal(b.data.reflections[0].id,'during-refresh');
+});
+test('a newer other-device version arriving during editing produces a conflict without replacing either version',async()=>{
+ const {create,fetcher}=syncEnvironment();const a=create(),b=create();await a.sync.init();await b.sync.init();
+ b.sync.queue({...emptyWorkspace(),reflections:[reflection('mac-version')]});await b.sync.flush();
+ const held=holdNextRead(fetcher);a.sync.fetcher=held.fetcher;
+ const refreshing=a.sync.refresh();await held.started;
+ a.sync.queue({...emptyWorkspace(),reflections:[reflection('phone-version')]});held.release();await refreshing;
+ assert.equal(a.sync.status,'conflict');assert.equal(a.sync.pending.reflections[0].id,'phone-version');
+ await b.sync.refresh();assert.equal(b.data.reflections[0].id,'mac-version');
+ await a.sync.combine();await b.sync.refresh();assert.deepEqual(b.data.reflections.map(r=>r.id).sort(),['mac-version','phone-version']);
+});
+test('overlapping refreshes share a single read and invalid edits cannot be replaced by it',async()=>{
+ const {create,fetcher}=syncEnvironment();const a=create();await a.sync.init();let reads=0;
+ const held=holdNextRead(async(...args)=>{reads++;return fetcher(...args);});a.sync.fetcher=held.fetcher;
+ const first=a.sync.refresh();await held.started;const second=a.sync.refresh();assert.equal(first,second);
+ const invalid={...emptyWorkspace(),reflections:[{...reflection(),date:'2026-02-31'}]};a.sync.queue(invalid);
+ held.release();await first;assert.equal(reads,1);assert.equal(a.sync.status,'error');assert.deepEqual(a.sync.invalidPending,invalid);
+});
+test('unverified save acknowledgements keep a recoverable pending snapshot',async()=>{
+ const {create,fetcher,storage}=syncEnvironment();const a=create();await a.sync.init();
+ a.sync.fetcher=async(url,options)=>options.method==='PUT'?Response.json({revision:99}):fetcher(url,options);
+ a.sync.queue({...emptyWorkspace(),reflections:[reflection('not-confirmed')]});await a.sync.flush();
+ assert.equal(a.sync.status,'offline');assert.equal(a.sync.revision,0);assert.equal(a.sync.pending.reflections[0].id,'not-confirmed');
+ assert.equal(JSON.parse(storage.getItem('physiosidekick.account.a')).pending.reflections[0].id,'not-confirmed');
+});
+test('an account switch rejects the original tab snapshot before writing to the new owner',async()=>{
+ const env={DB:database()},workspace={...emptyWorkspace(),reflections:[reflection('private-a')]};
+ const response=await workspaceAPI(req('b','PUT',{accountId:'a',revision:0,workspace}),env);
+ assert.equal(response.status,409);assert.equal((await(await workspaceAPI(req('b'),env)).json()).workspace.reflections.length,0);
+});
+test('an edit arriving during combination remains pending rather than being replaced by an earlier snapshot',async()=>{
+ const {create,fetcher}=syncEnvironment();const a=create();await a.sync.init();
+ a.sync.queue({...emptyWorkspace(),reflections:[reflection('earlier')]});clearTimeout(a.sync.timer);
+ const held=holdNextRead(fetcher);a.sync.fetcher=held.fetcher;const combining=a.sync.combine();await held.started;
+ a.sync.queue({...emptyWorkspace(),reflections:[reflection('latest')]});await a.sync.flush();held.release();await combining;
+ assert.equal(a.sync.status,'conflict');assert.equal(a.sync.pending.reflections[0].id,'latest');
+ const b=create({storage:memory()});await b.sync.init();assert.equal(b.data.reflections.length,0);
+});
+test('all learning record types recover after a failed save and reload on a second independent device',async()=>{
+ const {create,fetcher}=syncEnvironment();const {newAppraisal}=await import('../web/appraisal.js');const {newTeachingPlan,teachingSource}=await import('../web/teaching.js');const {newStudySet,saveStudyCard}=await import('../web/study.js');
+ const saved=paper('Software recovery notes');const appraisal={...newAppraisal(saved,'appraisal-recovery'),findings:'Software recovery fixture only'};
+ const teaching=newTeachingPlan({},'teaching-recovery');teaching.sources=[teachingSource(saved)];
+ const study=newStudySet('study-recovery');study.cards=[saveStudyCard({question:'Software QA question',answer:'Software QA answer',paper:saved,id:'card-recovery'})];
+ const workspace=validateWorkspace({...emptyWorkspace(),saved:[saved],appraisals:[appraisal],reflections:[reflection('cpd-recovery')],teachingPlans:[teaching],studySets:[study]});
+ const a=create();await a.sync.init();a.sync.fetcher=async(url,options)=>options.method==='PUT'?Promise.reject(new Error('Simulated offline device')):fetcher(url,options);
+ a.sync.queue(workspace);await a.sync.flush();assert.equal(a.sync.status,'offline');
+ const restored=create();await restored.sync.init();assert.equal(restored.sync.status,'saved');
+ const second=create({storage:memory()});await second.sync.init();assert.deepEqual(second.data,workspace);
+ const backup=JSON.stringify({version:7,workspace:second.data});assert.deepEqual(validateWorkspace(JSON.parse(backup).workspace),workspace);
+});
+test('malformed initial records do not enable editing under an unverified account snapshot',async()=>{
+ for(const response of [{account:{id:'a'},revision:-1,workspace:emptyWorkspace()},{account:{id:'a'},revision:0,workspace:{saved:[{id:'bad'}]}}]){
+  const sync=new WorkspaceSync({storage:memory(),fetcher:async()=>Response.json(response),onData:()=>assert.fail('Invalid records were shown'),onStatus:()=>{}});
+  await sync.init();assert.equal(sync.account,null);assert.equal(sync.status,'unavailable');
+ }
+});
