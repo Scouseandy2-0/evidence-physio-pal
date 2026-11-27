@@ -1,3 +1,4 @@
+import { guideProgress, guideHidden, setGuideHidden, reportCategories, buildProblemReport } from './help.js';
 import { anatomyCatalog, anatomyRegions, anatomyModel, filterAnatomy, anatomyResearchTerm, anatomyLearningDraft } from './anatomy.js';
 import { searchWorkspace, workspaceTypes } from './workspace-search.js';
 import { readingDefaults, loadReading, saveReading, applyReading } from './reading.js';
@@ -30,6 +31,7 @@ const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const main = document.querySelector('main');
 const dialog = document.querySelector('dialog');
+let guideHiddenForVisit=null;
 let readingSettings = {...readingDefaults};
 try { readingSettings = loadReading(localStorage); } catch {}
 applyReading(readingSettings,document.documentElement);
@@ -75,7 +77,7 @@ function toast(message) {
   clearTimeout(toastTimer); const el = document.querySelector('#toast'); el.textContent = message; el.classList.add('toast-show');
   toastTimer = setTimeout(() => el.classList.remove('toast-show'), 4500);
 }
-function openDialog(html) { dialog.dataset.paperId = '';  document.querySelector('#dialog-content').innerHTML = `<div class="dialog-body">${html}</div>`; if (!dialog.open) dialog.showModal(); }
+function openDialog(html) { dialog.dataset.paperId = '';  document.querySelector('#dialog-content').innerHTML = `<div class="dialog-body">${html}</div>`; if (!dialog.open) { dialog.showModal(); const heading=dialog.querySelector('#dialog-title'); if(heading){heading.tabIndex=-1;heading.focus();} } }
 function navigate(next) { if (location.hash === `#${next}`) render(); else location.hash = next; }
 function updateNav() {
   document.querySelector('#desktop-nav').innerHTML = nav.map(([id, label]) => `<a href="#${id}" class="nav-item ${route === id ? 'active' : ''}" ${route === id ? 'aria-current="page"' : ''}>${icon(id)}<span>${label}</span>${id === 'fcp' ? '<span class="premium">PREVIEW</span>' : ''}${id === 'library' ? `<span class="count">${workspace.saved.length}</span>` : ''}</a>`).join('');
@@ -135,11 +137,32 @@ function readingAndInstall() {
   document.querySelector('#reset-reading').onclick = () => { readingSettings = {...readingDefaults}; fill(); save(); };
 }
 
+function gettingStarted() {
+  const steps=guideProgress(workspace);
+  openDialog(`<span class="eyebrow">START HERE</span><h2 id="dialog-title">Make PhysioSidekick useful to you.</h2><p>Start with a question, follow a real source, then keep your own learning record.</p><ol class="guide-steps">${steps.map(step=>`<li><h3>${esc(step.title)}</h3><p>${esc(step.detail)}</p><a class="button secondary" href="#${step.route}">Open ${step.route==='appraisal'?'paper appraisals':step.route==='cpd'?'My CPD':'Research'}</a></li>`).join('')}</ol><h3>Keep your work safe</h3><p>Wait for “Account saved” before switching devices. On another device, use the same account and choose Refresh from account. If two versions conflict, review recovery options before combining.</p><p>Use Your data & privacy to export a backup. Your progress here records saved items, not evidence of reading, competence or accredited CPD. Keep identifiable patient information out of notes and reports.</p><div class="button-row"><button class="button secondary" id="guide-reading">Reading & iPhone setup</button><button class="text-button" id="guide-privacy">Backups & privacy</button><button class="text-button" id="show-guide-card">Show guide on Overview</button></div>`);
+  document.querySelector('#guide-reading').onclick=readingAndInstall;
+  document.querySelector('#guide-privacy').onclick=privacy;
+  document.querySelector('#show-guide-card').onclick=()=>{guideHiddenForVisit=false;let ok=false;try{ok=setGuideHidden(localStorage,false);}catch{}dialog.close();navigate('home');toast(ok?'Getting-started guide restored.':'Guide shown for this visit.');};
+}
+function guideCard() {
+  if(guideHiddenForVisit)return '';
+  if(guideHiddenForVisit===null)try {if(guideHidden(localStorage))return '';}catch{}
+  const steps=guideProgress(workspace),done=steps.filter(step=>step.done).length;
+  return `<section class="card start-guide" aria-labelledby="guide-heading"><div class="section-heading"><h2 id="guide-heading">Your first useful steps</h2><button class="text-button" id="hide-guide">Hide guide</button></div><p>${done} of 3 saved-record steps completed. This is a setup guide, not a reading or competency score.</p><ol class="guide-steps">${steps.map(step=>`<li><strong>${step.done?'Saved record present · ':''}${esc(step.title)}</strong><p>${esc(step.detail)}</p></li>`).join('')}</ol><button class="button secondary" data-start-guide>Open getting-started guide</button></section>`;
+}
+function problemReport() {
+  openDialog(`<span class="eyebrow">HELP IMPROVE YOUR SIDEKICK</span><h2 id="dialog-title">Report a problem</h2><p>Create a report to copy into this chat or share with your tester. Reports are prepared on this device; nothing is sent automatically.</p><p class="subtle">Do not include patient information, passwords or private account details. The report adds only the app release, page name, saving status and whether changes are pending.</p><form id="problem-form"><div class="field"><label for="problem-area">Problem area</label><select id="problem-area" name="category">${Object.entries(reportCategories).map(([value,label])=>`<option value="${value}">${esc(label)}</option>`).join('')}</select></div><div class="field"><label for="problem-device">Device (optional)</label><select id="problem-device" name="device">${['Not specified','iPhone or iPad','Mac','Other'].map(value=>`<option>${value}</option>`).join('')}</select></div><div class="field"><label for="problem-description">What happened? Include the steps to repeat it.</label><textarea id="problem-description" name="description" required minlength="10" maxlength="2000"></textarea></div><div class="field"><label for="problem-expected">What did you expect? (optional)</label><textarea id="problem-expected" name="expected" maxlength="1000"></textarea></div><p id="problem-status" role="status"></p><button class="button" type="submit">Preview report</button></form><section id="problem-preview" hidden><h3>Review before sharing</h3><div class="field"><label for="problem-text">Report preview</label><textarea id="problem-text" rows="12" readonly></textarea></div><div class="button-row"><button class="button secondary" id="copy-problem">Copy report</button><button class="button secondary" id="download-problem">Download report (.txt)</button></div><p class="subtle">The report has not been submitted. Paste the copied text into this chat when you want me to investigate.</p></section>`);
+  let report='';const form=document.querySelector('#problem-form'),status=document.querySelector('#problem-status');
+  form.oninput=()=>{report='';document.querySelector('#problem-preview').hidden=true;status.textContent='Details changed. Preview again to update the report.';};
+  form.onsubmit=e=>{e.preventDefault();try{report=buildProblemReport(Object.fromEntries(new FormData(form)),{route,syncStatus:sync?.status,pending:!!(sync?.pending||sync?.invalidPending)});document.querySelector('#problem-text').value=report;document.querySelector('#problem-preview').hidden=false;status.textContent='Preview ready. Nothing has been sent.';document.querySelector('#problem-text').focus();}catch(error){status.textContent=error.message;}};
+  document.querySelector('#copy-problem').onclick=async()=>{if(!report)return;try{await navigator.clipboard.writeText(report);status.textContent='Report copied. It has not been sent.';}catch{const text=document.querySelector('#problem-text');text.focus();text.select();status.textContent='Select and copy the preview text. Nothing has been sent.';}};
+  document.querySelector('#download-problem').onclick=()=>{if(report)download('physiosidekick-problem-report.txt',report,'text/plain');};
+}
 function home() {
   const minutes = workspace.reflections.reduce((sum, r) => sum + Number(r.minutes || 0), 0);
   main.innerHTML = `${intro('YOUR KNOWLEDGE, CONNECTED', 'A little curiosity. A lot of possibility.', 'Your space to learn, explore the evidence and grow as a physio.', `<span class="date-pill">${icon('calendar')}${new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long' }).format(new Date())}</span>`)}
 <div class="workspace-quick-actions"><button class="button secondary" data-workspace-search>Search my saved workspace</button><button class="text-button" data-reading-setup>Reading & iPhone setup</button></div>
-  <section class="hero" aria-labelledby="hero-title"><div><span class="eyebrow">START WITH A QUESTION</span><h2 id="hero-title">Good practice starts<br>with better questions.</h2><p>Find real research. Follow the original paper. Build your own understanding.</p>${searchForm('home-search', '', true)}<div class="suggestions"><span>Explore a topic</span>${['Rotator cuff exercise', 'Knee osteoarthritis', 'Low back pain'].map(t => `<button data-search="${t}">${t}</button>`).join('')}</div></div><div class="hero-icon">${icon('book')}</div></section>
+  ${guideCard()}<section class="hero" aria-labelledby="hero-title"><div><span class="eyebrow">START WITH A QUESTION</span><h2 id="hero-title">Good practice starts<br>with better questions.</h2><p>Find real research. Follow the original paper. Build your own understanding.</p>${searchForm('home-search', '', true)}<div class="suggestions"><span>Explore a topic</span>${['Rotator cuff exercise', 'Knee osteoarthritis', 'Low back pain'].map(t => `<button data-search="${t}">${t}</button>`).join('')}</div></div><div class="hero-icon">${icon('book')}</div></section>
   <div class="section-heading"><h2>Make it your sidekick</h2><span class="subtle">From study to practice</span></div>
   <section class="cards" aria-label="Explore your workspace">
   <a href="#learn" class="card feature-card"><span class="tile-icon">${icon('learn')}</span><h3>Build your understanding</h3><p>Critical appraisal, learning checks and anatomy resources.</p><span class="mini-label">LEARN SOMETHING NEW</span></a>
@@ -148,6 +171,7 @@ function home() {
   <div class="two-col"><section><div class="section-heading"><h2>Follow your curiosity</h2><a href="#research" class="text-button">Explore research</a></div><div class="card topic-list">${[['Shoulder & upper limb', 'Rotator cuff rehabilitation', 'Rotator cuff exercise'], ['Knee & lower limb', 'Exercise and osteoarthritis', 'Knee osteoarthritis exercise'], ['Spine & pain', 'Understanding low back pain', 'Low back pain physiotherapy']].map(([title, sub, query]) => `<div class="topic-item"><span class="topic-symbol">${icon('research')}</span><div><strong>${title}</strong><small>${sub}</small></div><button class="text-button" data-search="${query}">Find papers</button></div>`).join('')}</div></section>
   <section class="card fcp-card" style="margin-top:30px"><span class="eyebrow">FOR FIRST CONTACT PHYSIOS</span><h3>A space for your<br>next teaching session.</h3><p>Turn a learning question into a structured team discussion.</p><a href="#fcp" class="button secondary">Explore the FCP workspace</a></section></div>
   ${storageFailed ? '<div class="notice error">Browser storage could not be read. Use “Your data & privacy” to export changes before closing this page.</div>' : ''}`;
+  document.querySelector('#hide-guide')?.addEventListener('click',()=>{guideHiddenForVisit=true;let ok=false;try{ok=setGuideHidden(localStorage,true);}catch{}document.querySelector('.start-guide')?.remove();if(!ok)toast('Guide hidden for this visit.');});
   document.querySelector('#home-search').addEventListener('submit', e => { e.preventDefault(); startSearch(new FormData(e.currentTarget).get('topic')); });
 }
 function research() {
@@ -158,7 +182,7 @@ function research() {
   <div class="field"><label for="study-type">Publication type</label><select id="study-type"><option value="all">All publications</option><option value="review">Systematic reviews</option><option value="trial">Randomised trials</option></select></div>
   <div class="field"><label for="year-filter">Publication date</label><select id="year-filter"><option value="">Any date</option><option value="5">Last 5 years</option><option value="2">Last 2 years</option></select></div>
   <div class="field"><label for="sort-filter">Sort results</label><select id="sort-filter"><option value="relevance">Relevance</option><option value="newest">Newest first</option></select></div>
-  <label class="check-field"><input type="checkbox" id="open-access"> Open access only</label><button class="text-button" id="reset-filters">Reset search options</button><p class="subtle">Publication type and access labels come from the index. They do not establish study quality.</p></aside><section aria-label="Search results"><div id="results" aria-live="polite"></div></section></div>`;
+  <label class="check-field"><input type="checkbox" id="open-access"> Open access only</label><button class="text-button" id="reset-filters">Reset search options</button><p class="subtle">Publication type and access labels come from the index. They do not establish study quality.</p></aside><section aria-label="Search results"><p id="results-announcement" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></p><div id="results"></div></section></div>`;
   [['study-type', 'type'], ['year-filter', 'years'], ['sort-filter', 'sort'], ['match-mode', 'match'], ['search-field', 'field']].forEach(([id, key]) => {
     document.getElementById(id).value = filters[key];
     document.getElementById(id).addEventListener('change', e => { filters[key] = e.target.value; if (searchState.searched) runSearch(document.querySelector('#research-search input').value); });
@@ -196,6 +220,8 @@ async function runSearch(term, more = false) {
 }
 function renderResults() {
   const el = document.querySelector('#results'); if (!el) return;
+  el.setAttribute('aria-busy',String(searchState.loading));
+  const announcement=document.querySelector('#results-announcement');if(announcement)announcement.textContent=!searchState.searched?'':searchState.loading?'Searching publication records.':searchState.error?searchState.error:`${searchState.total.toLocaleString()} indexed results. ${searchState.papers.length} papers shown.`;
   if (!searchState.searched) { el.innerHTML = `<div class="empty">${icon('research')}<h3>Your next discovery starts here</h3><p>Search a topic or paper title, or paste a DOI, PMID or PubMed link. Use search options to narrow the words and author.</p><button class="button secondary" data-search="Knee osteoarthritis exercise">Try knee osteoarthritis</button></div>`; return; }
   const f = searchState.usedFilters || filters;
   let sourceLink=''; try { sourceLink=externalResearchLinks(searchState.term,f).europePMC; } catch {}
@@ -336,7 +362,9 @@ function renderAnatomy(area) {
 
 function learn() {
   disposeAnatomy(); anatomyReady=false;
-  main.innerHTML = `${intro('LEARN WITH INTENTION', 'Understand more. Keep questioning.', 'Build the habits that connect anatomy, evidence and thoughtful practice.')}<div class="tabs" role="tablist" aria-label="Learning areas">${[['revision', 'My revision'], ['appraisal', 'Critical appraisal'], ['anatomy', 'Anatomy'], ['sources', 'Research sources']].map(([id, label]) => `<button class="tab ${learnTab === id ? 'active' : ''}" role="tab" aria-selected="${learnTab === id}" data-learn-tab="${id}" id="tab-${id}" aria-controls="learning-content">${label}</button>`).join('')}</div><section id="learning-content" role="tabpanel" aria-labelledby="tab-${learnTab}"></section>`;
+  main.innerHTML = `${intro('LEARN WITH INTENTION', 'Understand more. Keep questioning.', 'Build the habits that connect anatomy, evidence and thoughtful practice.')}<div class="tabs" role="tablist" aria-label="Learning areas">${[['revision', 'My revision'], ['appraisal', 'Critical appraisal'], ['anatomy', 'Anatomy'], ['sources', 'Research sources']].map(([id, label]) => `<button class="tab ${learnTab === id ? 'active' : ''}" role="tab" tabindex="${learnTab===id?0:-1}" aria-selected="${learnTab === id}" data-learn-tab="${id}" id="tab-${id}" aria-controls="learning-content">${label}</button>`).join('')}</div><section id="learning-content" role="tabpanel" aria-labelledby="tab-${learnTab}"></section>`;
+  const tabs=document.querySelector('[role=tablist]');
+  tabs.onkeydown=e=>{const ids=['revision','appraisal','anatomy','sources'],index=ids.indexOf(learnTab);let next;if(e.key==='ArrowRight')next=(index+1)%ids.length;else if(e.key==='ArrowLeft')next=(index+ids.length-1)%ids.length;else if(e.key==='Home')next=0;else if(e.key==='End')next=ids.length-1;else return;e.preventDefault();learnTab=ids[next];learn();document.querySelector(`#tab-${learnTab}`).focus();};
   const area = document.querySelector('#learning-content');
   if (learnTab === 'revision') { renderStudySets(area); }
   else if (learnTab === 'anatomy') renderAnatomy(area);
@@ -571,7 +599,7 @@ async function copyCitation(id) {
   catch { openDialog(`<h2 id="dialog-title">Copy this citation</h2><p>${esc(citation(p))}</p><p class="subtle">Check against your university or publisher’s required referencing style.</p>`); }
 }
 function privacy() {
-  openDialog(`<span class="eyebrow">YOUR ACCOUNT WORKSPACE</span><h2 id="dialog-title">Your data & privacy</h2><p>Your papers, notes, saved searches, appraisals, teaching plans, revision sets and reflections are stored in the app’s account database, tied to your signed-in identity. The app keeps an account-specific device copy of pending changes so interrupted saves can be recovered.</p><p>Open the same private app on your iPhone or Mac and sign in with the same account. Data loads when you open the app; “Refresh from account” fetches newer changes. This is not live simultaneous editing.</p><p>Research keywords pass through the app server to Europe PMC, with PubMed (NCBI) as a backup. Publication metadata may be cached for five minutes. Opening a missing abstract can request that paper’s PMID from PubMed; a retrieved abstract and its source are kept when you save the paper. Your account identity is not forwarded to either research service. External resources use their own privacy policies, and fonts load from Google Fonts. Keep identifiable patient information out of this educational prototype.</p><div class="button-row"><button class="button" id="export-workspace">${icon('download')}Export workspace backup</button><label class="button secondary" for="import-workspace">Import a backup</label><input id="import-workspace" type="file" accept="application/json,.json" class="file-input"></div><p class="subtle" style="margin-top:15px">Import shows a summary before combining records. It does not replace the account workspace. Conflicting notes are kept together and conflicting reflections become separate entries.</p>${sync?.pending ? '<div class="notice">This device has changes not yet confirmed by the account server. The export includes your current version.</div>' : ''}<p><a href="/signout-with-chatgpt?return_to=%2F" target="_top">Sign out of this app</a></p>`);
+  openDialog(`<span class="eyebrow">YOUR ACCOUNT WORKSPACE</span><h2 id="dialog-title">Your data & privacy</h2><p>Your papers, notes, saved searches, appraisals, teaching plans, revision sets and reflections are stored in the app’s account database, tied to your signed-in identity. The app keeps an account-specific device copy of pending changes so interrupted saves can be recovered.</p><p>Open the same private app on your iPhone or Mac and sign in with the same account. Data loads when you open the app; “Refresh from account” fetches newer changes. This is not live simultaneous editing.</p><p>Research keywords pass through the app server to Europe PMC, with PubMed (NCBI) as a backup. If the hosted connection fails, your browser can request Europe PMC directly without account cookies or identity. Problem-report text is prepared on this device for you to review and copy or download; it is not automatically submitted or stored in the account database. Publication metadata may be cached for five minutes. Opening a missing abstract can request that paper’s PMID from PubMed; a retrieved abstract and its source are kept when you save the paper. Your account identity is not forwarded to either research service. External resources use their own privacy policies, and fonts load from Google Fonts. Keep identifiable patient information out of this educational prototype.</p><div class="button-row"><button class="button" id="export-workspace">${icon('download')}Export workspace backup</button><label class="button secondary" for="import-workspace">Import a backup</label><input id="import-workspace" type="file" accept="application/json,.json" class="file-input"></div><p class="subtle" style="margin-top:15px">Import shows a summary before combining records. It does not replace the account workspace. Conflicting notes are kept together and conflicting reflections become separate entries.</p>${sync?.pending ? '<div class="notice">This device has changes not yet confirmed by the account server. The export includes your current version.</div>' : ''}<p><a href="/signout-with-chatgpt?return_to=%2F" target="_top">Sign out of this app</a></p>`);
   document.querySelector('#export-workspace').onclick = () => download('physiosidekick-workspace.json', JSON.stringify({ version: 7, exportedAt: new Date().toISOString(), workspace: sync.invalidPending || sync.pending || workspace }, null, 2), 'application/json');
   document.querySelector('#import-workspace').onchange = async e => {
     const file = e.target.files[0]; if (!file) return;
@@ -631,6 +659,7 @@ document.addEventListener('click', e => {
   const target = e.target.closest('button'); if (!target) return;
   if ((('newStudy' in target.dataset) || target.dataset.openStudy) && studyDraft?.dirty) { activeStudy = studyDraft.setId; navigate('study'); toast('Save or cancel the current card first.'); return; }
   if ('workspaceSearch' in target.dataset) navigate('workspace-search');
+  if ('startGuide' in target.dataset) gettingStarted();
   if ('readingSetup' in target.dataset) readingAndInstall();
   if ('newStudy' in target.dataset) { const set = newStudySet(); workspace.studySets.unshift(set); activeStudy = set.id; studyPractice = null; studyDraft = null; persist(); navigate('study'); }
   if (target.dataset.openStudy) { activeStudy = target.dataset.openStudy; studyPractice = null; studyDraft = null; navigate('study'); }
@@ -689,6 +718,8 @@ document.addEventListener('input', e => {
 });
 document.querySelector('.dialog-close').onclick = () => dialog.close();
 dialog.addEventListener('click', e => { if (e.target === dialog) { const r = dialog.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dialog.close(); } });
+document.querySelector('#guide-button').onclick=gettingStarted;
+document.querySelector('#report-button').onclick=problemReport;
 document.querySelector('#about-button').onclick = about;
 document.querySelector('#data-button').onclick = privacy;
 document.querySelector('#reading-button').onclick = readingAndInstall;

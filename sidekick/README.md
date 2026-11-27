@@ -170,3 +170,11 @@ Delayed account refreshes are serialized and pause outgoing saves. Edits arrivin
 ## Research integrity checks
 
 Both hosted and direct search paths validate coherent counts, page size, unique positive PMIDs and exact PMID/DOI matches. Different-paper responses are rejected rather than presented as an exact lookup success. Repeated terminal cursors cannot create endless Load more requests. DOI publisher/citation links encode reserved characters while RIS retains the original DOI value. Indexed abstracts that have not been freshly checked can now be compared with the original PubMed abstract even if search metadata already supplied text; original-detail responses must match the requested PMID, canonical source URL and a nonempty source title.
+
+## Getting started, accessibility and problem reports
+
+Overview includes a dismissible/restorable first-use guide with three saved-record milestones: paper, appraisal and reflection. These are not reading/competency claims. A permanent Getting started action explains source checking, actual CPD time, cross-device refresh, conflict recovery and backups. Guide visibility is a device preference, not an account learning record.
+
+Task buttons are at least 44 px tall; normal controls use 16 px text and secondary/footer text 14 px. Muted text and mobile navigation colours have stronger contrast. Learning tabs now use roving tab stops with Left/Right/Home/End activation; dialogs initially focus their headings; search announcements are concise rather than rereading every abstract. This is an accessibility improvement pass, not a WCAG compliance certification or a screen-reader/physical iPhone sign-off.
+
+Report a problem creates a local preview with user-entered steps, expected behaviour, a manually chosen device, app release, allowlisted page/save status and whether changes are pending. It never automatically adds identity, search terms, saved notes, paper content or full browser fingerprints. Users can copy or download the reviewed report and paste it into the project chat. Reports are not automatically submitted or saved in the account database; a managed support delivery channel is still a future beta decision.
