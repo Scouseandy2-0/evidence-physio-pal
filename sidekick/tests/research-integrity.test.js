@@ -48,3 +48,8 @@ test('original-abstract responses require a matching canonical source link and s
  for(const patch of [{title:''},{abstractURL:'https://example.org/wrong'},{abstractURL:'https://pubmed.ncbi.nlm.nih.gov/999/'}])await assert.rejects(loadOriginalAbstract('31316228',{fetcher:async()=>Response.json({...record,...patch})}),/unexpected/);
  assert.equal((await loadOriginalAbstract('31316228',{fetcher:async()=>Response.json(record)})).title,'Source title');
 });
+
+test('collective authors survive index normalization and RIS export alongside named authors',()=>{
+ const paper=normalizePaper({...raw,authorString:'Example A, Example Trial Group.',authorList:{author:[{fullName:'Example A'},{collectiveName:'Example Trial Group'}]}});
+ assert.deepEqual(paper.authorList,['Example A','Example Trial Group']);const ris=toRIS([paper]);assert.match(ris,/AU  - Example Trial Group/);assert.match(ris,/AU  - Example A/);
+});

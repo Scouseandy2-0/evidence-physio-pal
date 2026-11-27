@@ -108,3 +108,6 @@ button{min-height:44px}
 .portfolio-additional .button-row { margin-top:16px; }
 #portfolio-download:not(:empty) { padding:12px 0; }
 @media(max-width:650px) { .portfolio-main-exports .button { flex:1 1 180px; } }
+
+.indexed-types { margin:22px 0; padding:14px 16px; background:#eef4fc; border-radius:8px; }
+.indexed-types summary { cursor:pointer; font-weight:700; }

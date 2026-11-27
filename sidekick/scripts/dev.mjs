@@ -27,7 +27,7 @@ createServer(async (req, res) => {
       const response = await (url.pathname === '/api/paper' ? paperAPI : url.pathname === '/api/research' ? researchAPI : workspaceAPI)(new Request(url, { method: req.method, headers, ...(['PUT', 'POST'].includes(req.method) ? { body: Buffer.concat(chunks) } : {}) }), { DB: adapter });
       res.writeHead(response.status, {...securityHeaders,...Object.fromEntries(response.headers)}); res.end(await response.text()); return;
     }
-    const path = url.pathname === '/' ? '/index.html' : url.pathname;
+    const path = ({'/':'/index.html','/apple-touch-icon.png':'/icon-180.png','/apple-touch-icon-precomposed.png':'/icon-180.png','/favicon.ico':'/icon.svg'})[url.pathname] || url.pathname;
     if (!/^\/[a-zA-Z0-9.-]+$/.test(path)) { res.writeHead(404); res.end(); return; }
     const content = readFileSync(`web${path}`); res.writeHead(200, { ...securityHeaders, 'content-type': types[path.split('.').at(-1)] || 'text/plain', 'cache-control': 'no-store' }); res.end(content);
   } catch { res.writeHead(404); res.end('Not found'); }

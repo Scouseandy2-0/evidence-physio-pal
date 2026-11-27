@@ -246,3 +246,12 @@ The CPD portfolio now presents PDF (.pdf) and editable Word (.docx) as its main 
 A self-hosted export bundle and bundled Roboto fonts load only when requested. PDF uses pdfmake 0.3.15; Word uses docx 9.16.1. Software and font notices are included at /export-third-party.txt, regenerated during builds. The downloaded document is a genuine PDF or OOXML DOCX, not HTML renamed with another extension.
 
 Choose a format, wait for preparation, then tap the explicit Save file link. That second tap avoids relying on a popup or an asynchronous download gesture on iPhone. Filenames include a UTC export timestamp. Empty/invalid selections disable the controls; open reflection drafts must be saved or cancelled. Preparation failures offer retry/alternative formats, and account refresh or navigation prevents stale export links being attached to a replaced page. Browser save/open behaviour on Andrew’s physical iPhone remains to be confirmed.
+
+
+## Research audit and iPhone evidence — 27 November 2026
+
+The PDF/Word deployment was confirmed succeeded. Andrew then supplied real iPhone evidence for reflection creation/account-save acknowledgement, repeat PDF downloads, Word download and opening/layout in Pages. These observations are recorded in docs/device-evidence.md and reflected in the V1 checklist; reload/Mac sync and other device scenarios remain separate open checks.
+
+The live source audit compared four records against NCBI tagged records, checked DOI, paging, combined filters, OA/date filtering, empty results and live PubMed backup under a simulated primary outage. It found that collectiveName author entries were dropped from normalized authorList and therefore RIS exports. Newly retrieved records now preserve group authors; a regression check protects that source shape. Existing previously saved metadata is not silently rewritten. Indexed publication labels and filter omissions are now explained in the interface. See docs/research-audit-2026-11-27.md and its machine-readable before/after reports. npm run audit:research performs an on-demand public-record audit; it is separate from offline npm test.
+
+Recent production logs also exposed Safari’s conventional icon requests returning 404. Both apple-touch-icon aliases now serve the existing 180px PNG and favicon.ico serves the existing SVG with the correct response content type. No new image or user-data operation is introduced.

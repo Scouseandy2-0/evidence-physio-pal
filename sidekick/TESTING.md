@@ -206,3 +206,12 @@ Validation for this change: syntax checks and full automated suite (139 tests) p
 In Chrome local preview, empty controls were confirmed disabled with an explanation; PDF/Word were prominent and legacy formats collapsed. A fictional local-only reflection was created via the real form, then both formats generated and were downloaded through their Save file links. The downloaded PDF was extracted and rendered: text/Unicode, margins, headings and page footer were inspected. The browser-downloaded DOCX passed ZIP integrity and its editable WordprocessingML preserved the fictional record and Unicode. Node fixtures additionally cover filtered evidence, appraisal design/reading basis, retraction warnings and multipage output. No owner production records were created or altered for these tests.
 
 Andrew’s real iPhone screenshot confirmed that the preceding HTML/Markdown export options were displayed and disabled with zero selected reflections; that is real-device evidence of the previous UI. This change addresses the requested formats. A successful PDF/DOCX save and open on the physical iPhone is not yet recorded. No desktop result is presented as iPhone verification.
+
+
+## Research audit / actual-device record — 27 November 2026
+
+144 offline automated tests passed after a collective-author normalization/RIS regression check was added. A separate live audit passed 10 scenarios, including four source comparisons, DOI lookup, topic paging, combined author/title/type filters, OA/date filtering, valid zero-result state and simulated-primary-failure recovery using actual NCBI responses. The first audit report is retained: it exposed the collective-author omission and an incorrect audit assumption that a known trial must have the expected indexed type. The latter was corrected only after inspecting its actual labels; the app does not infer a trial classification. See docs/research-audit-2026-11-27.md.
+
+Chrome local preview searched live sources for PMID 34265255, displayed the matching title/authors/year/DOI/full-text links, and fetched the original NCBI abstract with source/time/copyright attribution. No owner production records were changed. This does not close Andrew’s earlier hosted iPhone search failure.
+
+Andrew’s uploaded files/screenshots establish iPhone PDF/DOCX downloads and Pages opening/layout; docs/device-evidence.md records exact observations and their limits. Prior historical “not tested on iPhone” notes must be read together with this later evidence. The PDF/Word production deployment was separately confirmed succeeded.

@@ -24,7 +24,7 @@ Reviewed: 27 November 2026. Working name; no claim of trademark clearance.
 
 | Gate | Required evidence | Current state |
 |---|---|---|
-| Real devices | Same account on physical iPhone and Mac: save/reload/refresh, interrupted save and conflict recovery | Not verified |
+| Real devices | Same account on physical iPhone and Mac: save/reload/refresh, interrupted save and conflict recovery | iPhone reflection creation/account-save acknowledgement, repeat PDF download, DOCX download and opening/layout in Pages verified from Andrew’s screenshots/files. Reload, Mac sync and interruption/conflict scenarios remain open; see docs/device-evidence.md |
 | Mobile anatomy | iPhone WebGL loading, rotation, structure selection, memory and lifecycle behaviour | Not verified |
 | Independent anatomy review | Reviewer checks orientation, labels, missing structures and educational limitations against authoritative references | Not done |
 | Physio/student review | Observe the test tasks in docs/beta-test-script.md; capture actual completion, confusion and return use | Not done |

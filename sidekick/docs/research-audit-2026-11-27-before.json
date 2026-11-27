@@ -1,0 +1,227 @@
+{
+  "checkedAt": "2026-11-27T20:33:18.657Z",
+  "environment": "Source implementation in Node with live Europe PMC and NCBI requests; not a hosted iPhone search test",
+  "records": [
+    {
+      "pmid": "31316228",
+      "title": "A 51-Year-Old Woman with Right Dorsal Foot Pain.",
+      "authors": [
+        "Cheng SH",
+        "Wang TG"
+      ],
+      "year": "2019",
+      "doi": "10.4103/jmu.jmu_109_18",
+      "provider": "Europe PMC / PubMed",
+      "sourceURL": "https://pubmed.ncbi.nlm.nih.gov/31316228/",
+      "checks": {
+        "pmid": true,
+        "title": true,
+        "authors": true,
+        "year": true,
+        "doi": true,
+        "ris": true
+      },
+      "abstract": {
+        "state": "notIndexed",
+        "indexLength": 0,
+        "pubmedLength": 0,
+        "indexHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pubmedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "note": "Text hashes can differ due to heading, whitespace, symbols or index updates. No semantic-equivalence claim is made."
+      }
+    },
+    {
+      "pmid": "25569281",
+      "title": "Exercise for osteoarthritis of the knee.",
+      "authors": [
+        "Fransen M",
+        "McConnell S",
+        "Harmer AR",
+        "Van der Esch M",
+        "Simic M",
+        "Bennell KL"
+      ],
+      "year": "2015",
+      "doi": "10.1002/14651858.cd004376.pub3",
+      "provider": "Europe PMC / PubMed",
+      "sourceURL": "https://pubmed.ncbi.nlm.nih.gov/25569281/",
+      "checks": {
+        "pmid": true,
+        "title": true,
+        "authors": true,
+        "year": true,
+        "doi": true,
+        "ris": true
+      },
+      "abstract": {
+        "state": "available",
+        "indexLength": 5917,
+        "pubmedLength": 5999,
+        "indexHash": "5bf7a4fa919036d4408ff0cf84aa73be82aaeeb4a937c64c12e90760f4e6a08a",
+        "pubmedHash": "7ab0d67bf1f087e7af6a6c3ad00432b1902bb919dcd2d809de01a6142e0c4aa9",
+        "note": "Text hashes can differ due to heading, whitespace, symbols or index updates. No semantic-equivalence claim is made."
+      }
+    },
+    {
+      "pmid": "34265255",
+      "title": "Progressive exercise compared with best practice advice, with or without corticosteroid injection, for the treatment of patients with rotator cuff disorders (GRASP): a multicentre, pragmatic, 2 × 2 factorial, randomised controlled trial.",
+      "authors": [
+        "Hopewell S",
+        "Keene DJ",
+        "Marian IR",
+        "Dritsaki M",
+        "Heine P",
+        "Cureton L",
+        "Dutton SJ",
+        "Dakin H",
+        "Carr A",
+        "Hamilton W",
+        "Hansen Z",
+        "Jaggi A",
+        "Littlewood C",
+        "Barker KL",
+        "Gray A",
+        "Lamb SE"
+      ],
+      "year": "2021",
+      "doi": "10.1016/s0140-6736(21)00846-1",
+      "provider": "Europe PMC / PubMed",
+      "sourceURL": "https://pubmed.ncbi.nlm.nih.gov/34265255/",
+      "checks": {
+        "pmid": true,
+        "title": true,
+        "authors": false,
+        "year": true,
+        "doi": true,
+        "ris": true
+      },
+      "abstract": {
+        "state": "available",
+        "indexLength": 3031,
+        "pubmedLength": 3076,
+        "indexHash": "d6dc6d9dc4cb49a071514297026adb14b0aa6c6e0f31bb9d149487a7297b93da",
+        "pubmedHash": "c43c3356ab365f89c44874145e6afeadb303d50242318387c365243f784b388d",
+        "note": "Text hashes can differ due to heading, whitespace, symbols or index updates. No semantic-equivalence claim is made."
+      }
+    },
+    {
+      "pmid": "42750457",
+      "title": "Association of Bisphosphonate Use With Risks of Knee Osteoarthritis and Total Knee Replacement: Population-Based Cohort Study.",
+      "authors": [
+        "Wang J",
+        "Xing X",
+        "Aitken D",
+        "Wang M",
+        "Cai G"
+      ],
+      "year": "2026",
+      "doi": "10.1111/1756-185x.70872",
+      "provider": "Europe PMC / PubMed",
+      "sourceURL": "https://pubmed.ncbi.nlm.nih.gov/42750457/",
+      "checks": {
+        "pmid": true,
+        "title": true,
+        "authors": true,
+        "year": true,
+        "doi": true,
+        "ris": true
+      },
+      "abstract": {
+        "state": "notIndexed",
+        "indexLength": 0,
+        "pubmedLength": 0,
+        "indexHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pubmedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "note": "Text hashes can differ due to heading, whitespace, symbols or index updates. No semantic-equivalence claim is made."
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "name": "Exact record 31316228",
+      "passed": true,
+      "provider": "Europe PMC / PubMed"
+    },
+    {
+      "name": "Exact record 25569281",
+      "passed": true,
+      "provider": "Europe PMC / PubMed"
+    },
+    {
+      "name": "Exact record 34265255",
+      "passed": false,
+      "error": "Metadata mismatch; inspect the recorded checks."
+    },
+    {
+      "name": "Exact record 42750457",
+      "passed": true,
+      "provider": "Europe PMC / PubMed"
+    },
+    {
+      "name": "Exact DOI resolves to expected PMID",
+      "passed": true,
+      "pmid": "25569281",
+      "provider": "Europe PMC / PubMed"
+    },
+    {
+      "name": "Topic paging remains within Europe PMC with distinct records",
+      "passed": true,
+      "provider": "Europe PMC / PubMed",
+      "total": 48867,
+      "first": [
+        "42910073",
+        "43039707",
+        "42798306",
+        "42968461",
+        "42920683",
+        "43067383",
+        "42997011",
+        "42750457"
+      ],
+      "second": [
+        "42898858",
+        "42802289",
+        "43064381",
+        "42985315",
+        "42759090",
+        "42769154",
+        "42685385",
+        "42562370"
+      ]
+    },
+    {
+      "name": "Author, title phrase and trial filter find GRASP",
+      "passed": false,
+      "error": "Expected trial missing"
+    },
+    {
+      "name": "Open-access and publication-date filters",
+      "passed": true,
+      "provider": "Europe PMC / PubMed",
+      "total": 4928,
+      "ids": [
+        "43085994",
+        "43084142",
+        "43079134",
+        "43079008",
+        "43075539",
+        "43071322",
+        "43069469",
+        "43092815"
+      ]
+    },
+    {
+      "name": "Valid empty search stays an empty result",
+      "passed": true,
+      "count": 0
+    },
+    {
+      "name": "Primary-outage simulation uses live PubMed backup",
+      "passed": true,
+      "provider": "PubMed (NCBI backup)",
+      "pmid": "34265255",
+      "note": "Primary outage simulated; NCBI responses were live."
+    }
+  ],
+  "passed": false
+}

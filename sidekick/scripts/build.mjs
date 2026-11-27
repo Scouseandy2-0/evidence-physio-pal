@@ -19,7 +19,8 @@ async function handleRequest(request, env) {
   if (url.pathname === '/api/research') return researchAPI(request);
   if (url.pathname.startsWith('/api/')) return workspaceAPI(request,env);
   if (!['GET','HEAD'].includes(request.method)) return new Response('Method not allowed',{status:405});
-  const asset=assets[url.pathname==='/'?'/index.html':url.pathname];
+  const assetPath=({'/':'/index.html','/apple-touch-icon.png':'/icon-180.png','/apple-touch-icon-precomposed.png':'/icon-180.png','/favicon.ico':'/icon.svg'})[url.pathname] || url.pathname;
+  const asset=assets[assetPath];
   if(!asset)return new Response('Not found',{status:404});
   return new Response(request.method==='HEAD'?null:asset.binary?Uint8Array.from(atob(asset.body),c=>c.charCodeAt(0)):asset.body,{headers:{'content-type':asset.type+(asset.binary?'':'; charset=utf-8'),'cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'strict-origin-when-cross-origin'}});
 }

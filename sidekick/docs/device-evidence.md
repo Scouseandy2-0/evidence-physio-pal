@@ -1,0 +1,22 @@
+# Physical-device evidence — 27 November 2026
+
+Andrew explicitly confirmed that his reports and screenshots throughout this conversation were from his iPhone. They are actual-device observations. Desktop/Linkedom/Node checks must not supersede or dismiss reported iPhone defects.
+
+| Observation | Evidence | Conclusion and boundary |
+|---|---|---|
+| Reflection creation and save acknowledgement | IMG_7252.png / IMG_7253.png, shown at 20:20; reflection “Hello”, learning “Hello test”, action “Test”; Account saved; 1 reflection / 15 recorded minutes | Real iPhone creation/display and app-reported account-save acknowledgement. Independent reload/persistence and Mac sync are not established by these images |
+| PDF export and repeat export | physiosidekick-cpd-portfolio-2026-11-27T20-26-15-520Z.pdf and ...20-27-23-293Z.pdf | Both actual iPhone downloads were supplied and text-extracted. Correct reflection, next step, 15 minutes and distinct timestamps retained. Does not verify multi-record filtering, complex evidence appendices or every PDF viewer |
+| Word export | physiosidekick-cpd-portfolio-2026-11-27T20-28-18-464Z.docx | Actual iPhone download supplied; OOXML ZIP integrity and content checked. Correct reflection, next step, minutes and export time retained |
+| Opening Word export in Pages | IMG_7254.png at 20:30; Andrew identified Pages | Real iPhone opening and visible layout: title, headings, reflection text, spacing and footer intact. Editing/re-saving and Microsoft Word are not yet evidenced |
+| Earlier publication connection errors | Earlier iPhone screenshots in the conversation | Confirmed reported defects on the then-current hosted releases. Remain unresolved on iPhone until a successful hosted search/recovery is demonstrated; a source/desktop audit cannot close this |
+| Earlier missing anatomy reference details | Andrew’s iPhone reports in the conversation | Confirmed missing-content/interaction reports. Partial inspector work and automated checks do not establish complete atlas/reference coverage or an iPhone fix |
+
+The filenames above identify evidence already supplied in the conversation; copies containing personal notes have not been committed to the repository. The harmless test text quoted here was provided expressly to demonstrate the workflow. No user records were edited/deleted to gather this evidence.
+
+## Next device checks
+
+- Reload the hosted app and confirm the same reflection remains, then load the same account on Mac.
+- Export a filtered selection containing several fictional records and a linked appraisal; check that unselected records stay out and the evidence appendix remains complete.
+- Test hosted topic/exact research search, source links and original abstracts on iPhone; record failures and recovery separately.
+- Test iPhone portrait/landscape anatomy selection, detail panel, load/memory, and VoiceOver.
+- Test interrupted account save/conflict recovery in a designated disposable workspace with backups.

@@ -55,7 +55,7 @@ export function normalizePaper(p) {
   const fullText = uniqueLinks.find(l => l.style === 'html') || uniqueLinks[0];
   return {
     id: `MED:${p.id}`, pmid: String(p.id), title: plain(p.title), authors: plain(p.authorString || ''),
-    authorList: (p.authorList?.author || []).map(a => plain(a.fullName)).filter(Boolean),
+    authorList: (p.authorList?.author || []).map(a => plain(a.fullName || a.collectiveName)).filter(Boolean),
     journal: plain(p.journalInfo?.journal?.title || p.journalTitle || ''),
     year: plain(p.pubYear || ''), date: plain(p.firstPublicationDate || ''),
     volume: plain(p.journalInfo?.volume || ''), issue: plain(p.journalInfo?.issue || ''), pages: plain(p.pageInfo || ''),
