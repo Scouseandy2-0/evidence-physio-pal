@@ -166,3 +166,7 @@ Hosted Europe PMC requests allow 15 seconds (previously 7 seconds), followed by 
 ## Account recovery hardening
 
 Delayed account refreshes are serialized and pause outgoing saves. Edits arriving while a refresh is in flight stay pending: an unchanged remote revision allows saving, while a newer account revision requires an explicit recovery choice. Combination also preserves edits that arrive during its read instead of replacing them with an earlier snapshot. Save confirmations must contain the next revision and a valid timestamp before pending recovery data is cleared. New clients include the expected account ID so an account switch cannot save an old tab’s snapshot into another owner’s workspace. Older deployed clients remain compatible. Pending saves and invalid edits now participate in the existing unload warning, though mobile browsers cannot guarantee unload events.
+
+## Research integrity checks
+
+Both hosted and direct search paths validate coherent counts, page size, unique positive PMIDs and exact PMID/DOI matches. Different-paper responses are rejected rather than presented as an exact lookup success. Repeated terminal cursors cannot create endless Load more requests. DOI publisher/citation links encode reserved characters while RIS retains the original DOI value. Indexed abstracts that have not been freshly checked can now be compared with the original PubMed abstract even if search metadata already supplied text; original-detail responses must match the requested PMID, canonical source URL and a nonempty source title.

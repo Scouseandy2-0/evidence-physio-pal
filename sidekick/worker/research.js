@@ -39,7 +39,7 @@ export async function lookupPublications({ term, filters = {}, cursor = '*' }, {
     try {
       const url = europePMCSearchURL(term, filters, cursor);
       const data = await upstream(url, fetcher, primaryTimeout);
-      if (!validPublicationData(data)) throw new Error('Invalid publication response');
+      if (!validPublicationData(data, term)) throw new Error('Invalid publication response');
       return { ...data, executedQuery: query, provider: 'Europe PMC / PubMed' };
     } catch {
       // Never mix provider pages, or substitute free-to-read for an OA licence filter.
@@ -55,7 +55,7 @@ export async function lookupPublications({ term, filters = {}, cursor = '*' }, {
   Object.entries({ db: 'pubmed', term: executedQuery, retmode: 'json', retmax: String(PAGE_SIZE), retstart: String(offset), sort: filters.sort === 'newest' && !exact ? 'pub date' : 'relevance', tool: 'PhysioSidekick' }).forEach(([k, v]) => searchURL.searchParams.set(k, v));
   const data = await upstream(searchURL, fetcher, backupTimeout);
   const result = data.esearchresult;
-  if (data.error || result?.ERROR || result?.errorlist || !/^\d+$/.test(String(result?.count)) || !Array.isArray(result?.idlist) || result.idlist.some(id => !/^\d+$/.test(id))) throw new Error('Invalid PubMed search response');
+  if (data.error || result?.ERROR || result?.errorlist || !/^\d+$/.test(String(result?.count)) || !Array.isArray(result?.idlist) || result.idlist.length > PAGE_SIZE || new Set(result.idlist).size !== result.idlist.length || result.idlist.some(id => !/^[1-9]\d{0,8}$/.test(id))) throw new Error('Invalid PubMed search response');
   const count = Number(result.count), ids = result.idlist;
   if (count > offset && !ids.length) throw new Error('PubMed did not return the requested records');
   let records = [];
@@ -69,6 +69,7 @@ export async function lookupPublications({ term, filters = {}, cursor = '*' }, {
       return { source: 'MED', id, title: p.title, authorString: (p.authors || []).map(a => a.name).join(', '), authorList: { author: (p.authors || []).map(a => ({ fullName: a.name })) }, journalTitle: p.fulljournalname || p.source, pubYear: p.pubdate?.match(/\d{4}/)?.[0] || '', journalInfo: { volume: p.volume, issue: p.issue }, pageInfo: p.pages, doi: (p.articleids || []).find(a => a.idtype === 'doi')?.value || '', pubTypeList: { pubType: p.pubtype || [] } };
     });
   }
+  if (!validPublicationData({hitCount:count,resultList:{result:records}},term)) throw new Error('PubMed records do not match the requested publication.');
   return { hitCount: count, resultList: { result: records }, nextCursorMark: offset + ids.length < Math.min(count, 9993) ? `ncbi:${offset + ids.length}` : null, executedQuery, provider: 'PubMed (NCBI backup)', note: 'Europe PMC is unavailable. These records come directly from PubMed. Search results omit abstracts and open-access labels. Open a record to load its original PubMed abstract, or follow its source link.' };
 }
 export async function researchAPI(request) {
