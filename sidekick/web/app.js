@@ -1,3 +1,5 @@
+import { WorkspaceSync } from './sync.js';
+import { validateWorkspace, emptyWorkspace, hasRecords } from './workspace-data.js';
 import { searchPapers, citation, toRIS, defaultFilters } from './research.js';
 import { resources, questions, teachingTopics } from './content.js';
 
@@ -22,12 +24,13 @@ const main = document.querySelector('main');
 const dialog = document.querySelector('dialog');
 const KEY = 'physiosidekick.workspace.v1';
 let storageFailed = false;
-let workspace = { saved: [], reflections: [] };
+let legacyWorkspace = null;
 try {
   const stored = JSON.parse(localStorage.getItem(KEY));
-  if (stored && Array.isArray(stored.saved) && Array.isArray(stored.reflections)) workspace = stored;
+  if (stored) legacyWorkspace = validateWorkspace(stored);
 } catch { storageFailed = true; }
-if (!Array.isArray(workspace.searches)) workspace.searches = [];
+let workspace = emptyWorkspace();
+let sync;
 let route = location.hash.slice(1) || 'home';
 let paperMap = new Map(workspace.saved.map(p => [p.id, p]));
 let filters = { ...defaultFilters };
@@ -43,8 +46,8 @@ let reflectionEditing = null;
 let toastTimer;
 const nav = [['home', 'Overview'], ['research', 'Research'], ['learn', 'Learn & anatomy'], ['practice', 'Practice resources'], ['cpd', 'My CPD'], ['fcp', 'FCP workspace'], ['library', 'Saved papers']];
 function persist() {
-  try { localStorage.setItem(KEY, JSON.stringify(workspace)); return true; }
-  catch { storageFailed = true; toast('Browser storage is unavailable or full. Export your workspace to keep changes.'); return false; }
+  if (!sync?.account) { toast('Connect to your account before saving.'); return false; }
+  return sync.queue(workspace);
 }
 function toast(message) {
   clearTimeout(toastTimer); const el = document.querySelector('#toast'); el.textContent = message; el.classList.add('toast-show');
@@ -142,7 +145,7 @@ function renderResults() {
     const entry = { term: searchState.term, filters: { ...searchState.usedFilters }, savedAt: new Date().toISOString() };
     if (workspace.searches.some(s => s.term === entry.term && JSON.stringify(s.filters) === JSON.stringify(entry.filters))) { toast('This search is already saved'); return; }
     if (workspace.searches.length >= 20) { toast('You have 20 saved searches. Remove one before adding another.'); return; }
-    workspace.searches.unshift(entry); if (persist()) toast('Search saved in this browser'); renderSavedSearches();
+    workspace.searches.unshift(entry); if (persist()) toast('Search added to your account workspace'); renderSavedSearches();
   });
   document.querySelector('#export-search')?.addEventListener('click', () => download('physiosidekick-search-record.txt', `PhysioSidekick research search\nSource: Europe PMC REST API, PubMed-indexed records\nRun: ${searchState.searchedAt}\nEntered search: ${searchState.term || '[author only]'}\nOptions: ${exact ? 'Exact identifier lookup; discovery filters ignored' : searchDescription(f)}\nQuery: ${searchState.query}\nResults reported at search time: ${searchState.total}\n\nDiscovery search only; not a comprehensive systematic-review strategy.\n`, 'text/plain'));
 }
@@ -185,7 +188,7 @@ function library() {
   const papers = workspace.saved.filter(p => `${p.title} ${p.authors} ${p.collection || ''} ${p.notes || ''}`.toLowerCase().includes(libraryFilter.toLowerCase()));
   main.innerHTML = `${intro('KEEP WHAT MATTERS', 'Your saved papers.', 'Build collections for a module, a clinical question or your next teaching session.')}<div class="library-header"><button class="button secondary" id="export-ris" ${!papers.length ? 'disabled' : ''}>${icon('download')}Export ${papers.length} references (.ris)</button><button class="text-button" id="export-citations" ${!papers.length ? 'disabled' : ''}>Download citations</button><span class="subtle">Imports into reference managers</span></div><div class="collection-bar"><input aria-label="Filter saved papers" id="library-search" placeholder="Search your papers, collections and notes…" value="${esc(libraryFilter)}"><span class="subtle">${papers.length} ${papers.length === 1 ? 'paper' : 'papers'}</span></div>
   ${collections.length ? `<div class="pill-list"><button class="pill ${!libraryFilter ? 'active' : ''}" data-library-filter="">All papers</button>${collections.map(c => `<button class="pill ${libraryFilter === c ? 'active' : ''}" data-library-filter="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : ''}<datalist id="collection-options">${collections.map(c => `<option value="${esc(c)}"></option>`).join('')}</datalist>
-  <div class="paper-list">${papers.length ? papers.map(p => paperCard(p, true)).join('') : `<div class="empty">${icon('library')}<h3>${workspace.saved.length ? 'No matching saved papers' : 'Your library starts with one good paper'}</h3><p>${workspace.saved.length ? 'Try another keyword or clear your filter.' : 'Save a research result, add it to a collection and make a note in your own words.'}</p><a class="button" href="#research">Find research</a></div>`}</div><div class="notice">Papers and notes are stored in this browser only. They do not sync between devices. Export your workspace regularly from “Your data & privacy”.</div>`;
+  <div class="paper-list">${papers.length ? papers.map(p => paperCard(p, true)).join('') : `<div class="empty">${icon('library')}<h3>${workspace.saved.length ? 'No matching saved papers' : 'Your library starts with one good paper'}</h3><p>${workspace.saved.length ? 'Try another keyword or clear your filter.' : 'Save a research result, add it to a collection and make a note in your own words.'}</p><a class="button" href="#research">Find research</a></div>`}</div><div class="notice">Your papers and notes save to your signed-in account. On another device, open this same private app and use “Refresh from account” to load the latest saved version. Keep a workspace export as an additional copy.</div>`;
   document.querySelector('#library-search').addEventListener('input', e => { libraryFilter = e.target.value; const pos = e.target.selectionStart; library(); const input = document.querySelector('#library-search'); input.focus(); input.setSelectionRange?.(pos, pos); });
   document.querySelector('#export-ris').onclick = () => download('physiosidekick-references.ris', toRIS(papers), 'application/x-research-info-systems');
   document.querySelector('#export-citations').onclick = () => download('physiosidekick-citations.txt', papers.map(citation).join('\n\n'), 'text/plain');
@@ -226,7 +229,7 @@ function renderReflectionForm() {
     if (!data.title.trim() || !data.learning.trim() || !data.action.trim()) { toast('Please complete the title, learning and next step.'); return; }
     const entry = { ...data, id: r.id || crypto.randomUUID(), minutes: Number(data.minutes) };
     workspace.reflections = r.id ? workspace.reflections.map(old => old.id === r.id ? entry : old) : [entry, ...workspace.reflections];
-    const ok = persist(); cpdFormOpen = false; reflectionEditing = null; cpd(); if (ok) toast('Reflection saved');
+    const ok = persist(); cpdFormOpen = false; reflectionEditing = null; cpd(); if (ok) toast('Reflection added to your workspace');
   };
   document.querySelector('#reflection-title').focus();
 }
@@ -247,15 +250,59 @@ async function copyCitation(id) {
   catch { openDialog(`<h2 id="dialog-title">Copy this citation</h2><p>${esc(citation(p))}</p><p class="subtle">Check against your university or publisher’s required referencing style.</p>`); }
 }
 function privacy() {
-  openDialog(`<span class="eyebrow">YOUR WORKSPACE</span><h2 id="dialog-title">Your data & privacy</h2><p>Saved papers, collection names, notes and reflections are stored in this browser’s local storage. They are not synced to another device or backed up to an account.</p><p>Research keywords are sent to Europe PMC to retrieve publication records. Opening external resources takes you to those providers and their own privacy policies. Fonts load from Google Fonts. No patient records, payment details or AI conversations are collected by this app.</p><p>This private prototype uses the hosting platform’s access controls. Keep all notes and teaching examples free of identifiable patient information.</p><div class="button-row"><button class="button" id="export-workspace">${icon('download')}Export workspace backup</button></div><p class="subtle" style="margin-top:15px">The JSON export contains your papers, notes and reflections. Restore/import is not yet included; keep the file for a future import or manual recovery. References and reflections can also be exported separately.</p>${storageFailed ? '<div class="notice error">Browser persistence is unavailable. Export before leaving.</div>' : ''}`);
-  document.querySelector('#export-workspace').onclick = () => download('physiosidekick-workspace.json', JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), ...workspace }, null, 2), 'application/json');
+  openDialog(`<span class="eyebrow">YOUR ACCOUNT WORKSPACE</span><h2 id="dialog-title">Your data & privacy</h2><p>Your papers, notes, saved searches and reflections are stored in the app’s account database, tied to your signed-in identity. The app keeps an account-specific device copy of pending changes so interrupted saves can be recovered.</p><p>Open the same private app on your iPhone or Mac and sign in with the same account. Data loads when you open the app; “Refresh from account” fetches newer changes. This is not live simultaneous editing.</p><p>Research keywords go to Europe PMC. External resources use their own privacy policies, and fonts load from Google Fonts. Keep identifiable patient information out of this educational prototype.</p><div class="button-row"><button class="button" id="export-workspace">${icon('download')}Export workspace backup</button><label class="button secondary" for="import-workspace">Import a backup</label><input id="import-workspace" type="file" accept="application/json,.json" class="file-input"></div><p class="subtle" style="margin-top:15px">Import shows a summary before combining records. It does not replace the account workspace. Conflicting notes are kept together and conflicting reflections become separate entries.</p>${sync?.pending ? '<div class="notice">This device has changes not yet confirmed by the account server. The export includes your current version.</div>' : ''}<p><a href="/signout-with-chatgpt?return_to=%2F" target="_top">Sign out of this app</a></p>`);
+  document.querySelector('#export-workspace').onclick = () => download('physiosidekick-workspace.json', JSON.stringify({ version: 3, exportedAt: new Date().toISOString(), workspace: sync.invalidPending || sync.pending || workspace }, null, 2), 'application/json');
+  document.querySelector('#import-workspace').onchange = async e => {
+    const file = e.target.files[0]; if (!file) return;
+    try { if (file.size > 2 * 1024 * 1024) throw new Error('Use a workspace export no larger than 2 MB.'); const raw = JSON.parse(await file.text()); reviewImport(validateWorkspace(raw.workspace || raw), false); }
+    catch (error) { toast(`Import not started: ${error.message}`); }
+  };
 }
-function about() { openDialog('<span class="eyebrow">FROM STUDY TO PRACTICE</span><h2 id="dialog-title">A first chapter for PhysioSidekick.</h2><p>This is a private working prototype of a career companion for physiotherapists and students.</p><h3>Working now</h3><ul><li>Live publication search from Europe PMC’s indexed PubMed records.</li><li>Original paper links, indexed abstracts and source access information.</li><li>Saved papers, notes, collections and reference exports.</li><li>Personal learning reflections and editable FCP teaching outlines.</li></ul><h3>Still to build and validate</h3><p>Licensed 3D anatomy, reviewed clinical tools, source-grounded explanations, cross-device accounts, a premium FCP curriculum and the signed iPhone app.</p><p>PhysioSidekick is a working name pending trademark clearance. This prototype is for product testing, not patient-specific decision support.</p>'); }
+function reviewImport(data, legacy = false) {
+  if (cpdFormOpen) { toast('Save or cancel your reflection before importing records.'); return; }
+  openDialog(`<span class="eyebrow">REVIEW IMPORT</span><h2 id="dialog-title">Bring your records into your account</h2><p>This ${legacy ? 'browser' : 'backup'} contains <strong>${data.saved.length} papers, ${data.reflections.length} reflections and ${data.searches.length} searches</strong>.</p><p>These will be combined with your account records. Duplicate papers stay as one paper; different notes are kept together. Conflicting reflections become separate entries. Different collection names are recorded in the paper’s notes.</p><p>The original ${legacy ? 'browser records' : 'backup file'} will remain intact. Imports may restore a record you previously removed from the account.</p><button class="button" id="confirm-import" ${!sync?.account || sync?.inflight ? 'disabled' : ''}>Combine with my account records</button>`);
+  document.querySelector('#confirm-import').onclick = async () => { dialog.close(); await sync.combine(data, legacy); };
+}
+function syncStatus(state) {
+  document.querySelectorAll('[data-note],[data-collection]').forEach(el => { el.readOnly = state.status === 'loading' || state.combining; });
+  const labels = { loading: 'Connecting…', saved: 'Account saved', pending: 'Changes pending', saving: 'Saving…', offline: 'Save interrupted', conflict: 'Changes need review', unavailable: 'Account unavailable', error: 'Save needs attention' };
+  document.querySelector('#sync-status').textContent = labels[state.status] || state.status;
+  const banner = document.querySelector('#sync-banner');
+  let html = '';
+  if (state.status === 'unavailable') html = `<div class="notice error">${esc(state.error)} No account records are shown until your identity is confirmed. <a href="/signin-with-chatgpt?return_to=%2F" target="_top">Sign in</a> <button class="text-button" id="retry-account">Retry connection</button></div>`;
+  else if (state.status === 'conflict') html = `<div class="notice error">${esc(state.error)} <button class="text-button" id="review-conflict">Review recovery options</button></div>`;
+  else if (['offline', 'error'].includes(state.status)) html = `<div class="notice error">${esc(state.error)} <button class="text-button" id="retry-account">Retry saving</button></div>`;
+  else if (state.needsImport) html = '<div class="notice">You have records saved by an earlier version in this browser. <button class="text-button" id="review-local-import">Review and import them</button></div>';
+  if (state.cacheFailed) html += '<div class="notice error">This browser cannot retain a recovery copy. Export your workspace if account saving is interrupted.</div>';
+  banner.innerHTML = html;
+  document.querySelector('#review-local-import')?.addEventListener('click', () => reviewImport(legacyWorkspace, true));
+  document.querySelector('#review-conflict')?.addEventListener('click', conflictDialog);
+  document.querySelector('#retry-account')?.addEventListener('click', () => state.account ? state.pending ? state.flush() : state.refresh() : state.init());
+  if (state.account) document.querySelector('.profile strong').textContent = state.account.name;
+}
+function conflictDialog() {
+  openDialog(`<h2 id="dialog-title">Keep both versions safe</h2><p>Your device has pending changes and the account has a newer version. No automatic overwrite has taken place.</p><p>You can combine both sets of records. Different notes are kept together and different versions of a reflection become separate entries. Removed records may return during a merge.</p><div class="button-row"><button class="button" id="merge-conflict">Combine both versions</button><button class="button secondary" id="export-pending">Export this device’s version</button></div>`);
+  document.querySelector('#merge-conflict').onclick = async () => { dialog.close(); await sync.combine(); };
+  document.querySelector('#export-pending').onclick = () => download('physiosidekick-pending-changes.json', JSON.stringify({ version: 3, workspace: sync.pending || workspace }, null, 2), 'application/json');
+}
+function accountDialog() {
+  openDialog(`<h2 id="dialog-title">Account saving</h2><p><strong>${esc(document.querySelector('#sync-status').textContent)}</strong>${sync.updatedAt ? ` · last confirmed ${esc(new Date(sync.updatedAt).toLocaleString('en-GB'))}` : ''}</p><p>Changes save automatically after a short pause. Open this same private app with the same account on another device, then refresh its account copy.</p><div class="button-row"><button class="button" id="refresh-account" ${!sync.account || sync.inflight ? 'disabled' : ''}>${sync.pending ? 'Retry pending save' : 'Refresh from account'}</button><button class="button secondary" id="account-privacy">Backups & privacy</button></div>`);
+  document.querySelector('#refresh-account').onclick = async () => { dialog.close(); if (sync.status === 'conflict') conflictDialog(); else if (sync.pending) await sync.flush(); else if (!cpdFormOpen) await sync.refresh(); else toast('Save or cancel your reflection before refreshing account records.'); };
+  document.querySelector('#account-privacy').onclick = privacy;
+}
+function about() { openDialog('<span class="eyebrow">FROM STUDY TO PRACTICE</span><h2 id="dialog-title">A first chapter for PhysioSidekick.</h2><p>This is a private working prototype of a career companion for physiotherapists and students.</p><h3>Working now</h3><ul><li>Live publication search from Europe PMC’s indexed PubMed records.</li><li>Original paper links, indexed abstracts and source access information.</li><li>Saved papers, notes, collections and reference exports.</li><li>Personal learning reflections and editable FCP teaching outlines.</li><li>Account saving across devices, backup import and conflict recovery.</li></ul><h3>Still to build and validate</h3><p>Licensed 3D anatomy, reviewed clinical tools, source-grounded explanations, a premium FCP curriculum and the signed iPhone app.</p><p>PhysioSidekick is a working name pending trademark clearance. This prototype is for product testing, not patient-specific decision support.</p>'); }
 function render() {
   route = nav.some(([id]) => id === location.hash.slice(1)) ? location.hash.slice(1) : 'home';
   updateNav(); ({ home, research, library, learn, practice, cpd, fcp }[route])();
   document.title = `${nav.find(([id]) => id === route)[1]} · PhysioSidekick`;
 }
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-save],[data-save-notes],[data-delete-reflection],[data-edit-reflection],[data-remove-search],#save-search,#new-reflection,#first-reflection');
+  if (el && (!sync?.account || sync.combining || sync.status === 'loading')) { e.preventDefault(); e.stopImmediatePropagation(); toast('Wait for the account connection before editing records.'); }
+}, true);
+document.addEventListener('submit', e => {
+  if (e.target.id === 'reflection-form' && (!sync?.account || sync.combining)) { e.preventDefault(); e.stopImmediatePropagation(); toast('Connect to your account before saving a reflection.'); }
+}, true);
 document.addEventListener('click', e => {
   const target = e.target.closest('button'); if (!target) return;
   if (target.dataset.search) startSearch(target.dataset.search);
@@ -276,7 +323,7 @@ document.addEventListener('click', e => {
       p.collection = card.querySelector('[data-collection]').value.trim();
       p.notes = card.querySelector('[data-note]').value;
       paperMap.set(p.id, p);
-      if (persist()) toast('Collection and notes saved');
+      if (persist()) toast('Collection and notes queued for saving');
     }
   }
   if ('libraryFilter' in target.dataset) { libraryFilter = target.dataset.libraryFilter; library(); }
@@ -308,4 +355,13 @@ document.querySelector('#data-button').onclick = privacy;
 document.querySelector('#open-library').innerHTML = icon('library');
 document.querySelector('#open-library').onclick = () => navigate('library');
 window.addEventListener('hashchange', () => { if (dialog.open) dialog.close(); render(); window.scrollTo(0, 0); main.focus({ preventScroll: true }); });
+document.querySelector('#sync-status').onclick = accountDialog;
 render();
+sync = new WorkspaceSync({
+  legacy: legacyWorkspace,
+  onData: data => { workspace = data; workspace.saved.forEach(p => paperMap.set(p.id, p)); render(); },
+  onStatus: syncStatus
+});
+syncStatus(sync);
+sync.init();
+window.addEventListener('online', () => { if (sync.account && sync.pending && sync.status !== 'conflict') sync.flush(); });

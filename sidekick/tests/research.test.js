@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildQuery, normalizePaper, toRIS, safeURL, searchPapers, plain, identifyPaper } from '../dist/research.js';
+import { buildQuery, normalizePaper, toRIS, safeURL, searchPapers, plain, identifyPaper } from '../web/research.js';
 
 test('formatting cleanup preserves comparisons and statistical results in abstracts', () => {
   assert.equal(plain('<h4>Results</h4>P < 0.001; CI > 0.5. <i>n</i> = 50.'), 'Results P < 0.001; CI > 0.5. n = 50.');

@@ -40,6 +40,21 @@ Browser checks with live publication responses verified:
 
 Europe PMC's numeric EXT_ID field requires an unquoted number: quoting a known PMID returned zero results during integration testing. The implementation and regression tests now use numeric syntax. Provider responses were occasionally slow; the app now provides a 25-second timeout and retry message instead of indefinite loading. Provider links are indexed access indications, not a guarantee of live publisher availability.
 
+## Account-storage update
+
+25 automated tests pass, including SQLite-backed migration/API checks and two-client sync tests. New cases cover identity and origin enforcement, owner isolation, body-owner spoofing, stale revision rejection, bounded validation, import URL safety, divergent notes/reflections, explicit legacy migration, recovery after interruption, edits during an in-flight save and exportable invalid edits.
+
+Browser QA on the local preview verified:
+
+- Initial account connection and explicit legacy migration of a saved paper, reflection and search.
+- Imported records reload from SQLite after page reload.
+- Two tabs loaded the same account revision; a newer note from the first tab caused the second tab’s stale save to produce a conflict prompt.
+- Explicit combination retained both notes, with a device-note marker, and persisted after reload.
+- Account status displays pending/saving/saved and exposes Refresh from account.
+- Workspace JSON export triggers a download.
+
+Local preview uses a fictional identity and local SQLite. This is not proof of physical iPhone use or hosted D1 authentication; hosted provisioning and identity need a successful publication. No test fixtures are seeded into hosted storage.
+
 ## Remaining release checks
 
-Physical iPhone/Safari tests; native storage/download/external-link handling; account sync; licensed 3D anatomy; clinical editorial review; provider terms and text reuse; complete accessibility audit; trademark clearance; signed iOS build and App Store review. No public or clinical launch is implied.
+Physical iPhone/Safari and Mac refresh/import tests; native storage/download/external-link handling; licensed 3D anatomy; clinical editorial review; provider terms and text reuse; complete accessibility audit; trademark clearance; signed iOS build and App Store review. No public or clinical launch is implied.

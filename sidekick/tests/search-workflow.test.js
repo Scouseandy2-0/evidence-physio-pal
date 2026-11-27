@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildQuery, identifyPaper, normalizePaper, searchPapers, safeURL } from '../dist/research.js';
+import { buildQuery, identifyPaper, normalizePaper, searchPapers, safeURL } from '../web/research.js';
 
 test('all/any words, phrase and author searches have explicit, isolated scope', () => {
   assert.equal(buildQuery('rotator cuff', { match: 'any', field: 'title' }), '(TITLE:"rotator" OR TITLE:"cuff") AND SRC:MED');

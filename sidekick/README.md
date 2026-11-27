@@ -17,24 +17,30 @@ A connected career companion for physiotherapists and students: learning and ana
 - Personal CPD reflections with editing and Markdown export.
 - Original-source resource shelf, three introductory critical-appraisal learning checks.
 - Editable FCP teaching outlines that download as Markdown. These are frameworks, not clinical teaching packs or an accredited curriculum.
-- Workspace JSON export. Saved data remains on the browser/device; import and account sync are not implemented.
+- Account-backed papers, notes, saved searches and CPD in an owner-scoped D1 database.
+- Workspace JSON export/import, explicit migration of earlier browser records and optimistic revision checks for concurrent devices.
+- Device recovery cache for pending changes; explicit conflict combination preserves differing notes/reflections. Synchronisation occurs on opening the app or using Refresh from account, not through live co-editing.
 
 ## Run and check
 
-No runtime dependencies or build step. Serve `dist/` with a static HTTP server; for example:
+Use Node 24+ for the local SQLite preview. The hosted Worker does not use Node SQLite. Install locked development dependencies and generate the Worker bundle:
 
 ```sh
-python3 -m http.server 8080 --directory dist
+npm ci
+npm run build
+npm run dev
 ```
 
-Open `http://localhost:8080`. Opening index.html as a file is not supported (ES modules).
+The local preview serves `web/` and applies committed SQL migrations to `.sites-runtime/preview.sqlite` at startup. It uses a fixed fictional preview identity solely in `scripts/dev.mjs`; that script is not bundled into production. The hosting platform supplies the real signed-in identity to the deployed Worker.
+
+`npm run db:generate` generates new schema migrations from `db/schema.ts`. Applied SQL and Drizzle metadata must not be edited; append migrations for subsequent changes. No request handler creates tables. Open `http://localhost:4173` for standalone development. For managed preview use the platform's preview launcher.
 
 ```sh
 npm test
 npm run check
 ```
 
-Hosted preview is owner-private. `.openai/hosting.json` binds its source and static directory. The legacy Lovable deployment is not connected to this prototype.
+Hosted preview is owner-private. `.openai/hosting.json` binds the same Site identity and the D1 binding `DB`. A Worker serves both embedded assets and `/api/workspace`; no separate static directory is deployed. The legacy Lovable deployment is not connected to this prototype.
 
 ## Evidence integrity
 
@@ -54,7 +60,10 @@ The library stores publication metadata and indexed abstracts for personal proto
 ## Privacy and limitations
 
 - No patient database, clinical records, AI calls, paid subscriptions or analytics.
-- Local browser storage is neither an account backup nor cross-device sync; clearing browser data removes it. Storage failures are shown.
+- Account records are scoped by the platform-supplied user ID. The API ignores body owner IDs, validates input and rejects missing identity, mismatched write origins, oversized payloads and stale revisions.
+- Local browser storage holds account-specific pending recovery data and the retained original legacy copy. Clearing it can remove changes that have not yet reached the account server. Storage failures are shown.
+- Workspaces currently have a 2 MB server limit, up to 500 papers, 1000 reflections and 20 saved searches. Invalid local edits remain exportable; they do not overwrite the server copy.
+- Imports are opt-in and combine records, rather than replacing the account. Different notes are combined, different reflections become distinct entries, and conflicting collection names are retained in notes. Removed records may return during a merge. There is no automatic last-writer-wins overwrite.
 - External paper/resource links open other providers. Google Fonts is the only other external UI resource.
 - Teaching and reflection entries must contain no identifiable patient information.
 - Intended for private product testing, not patient-specific decision support.
@@ -64,7 +73,7 @@ The library stores publication metadata and indexed abstracts for personal proto
 ## Delivery roadmap
 
 1. Test search and known-paper retrieval with students and clinicians; consider a more expressive, transparent search builder based on observed needs.
-2. Add validated workspace import, durable owner accounts and cross-device collections/reflections; migrate browser data only with an explicit import flow.
+2. Validate account loading, import/recovery and refreshed cross-device records on physical iPhone/Safari and Mac. Review storage regions, retention, deletion and account export before wider distribution.
 3. Add structured appraisal notes and cautiously evaluated source-grounded explanations. Keep claims traceable to actual text and distinguish abstracts from full-text review.
 4. Select and license accurate 3D anatomy. Evaluate usability, offline assets and mobile GPU performance before committing.
 5. Add individually reviewed clinical resources and validated outcome measures with exact versions, permitted use and scoring tests.
@@ -74,3 +83,10 @@ The library stores publication metadata and indexed abstracts for personal proto
 ## Relationship to the old app
 
 The old `evidence-physio-pal` code is retained separately as historical source. Its PEDro/Cochrane generation functions and generic assessment scoring must not be imported. No old Supabase credentials, generated database records, Lovable remote URL, payment setup or patient-management functions are used in this prototype.
+
+
+## Account API and release evidence
+
+`GET /api/workspace` reads only the signed-in owner’s row. `PUT` requires the expected revision; insert/update uses a conditional atomic SQL statement and returns HTTP 409 for a stale revision. The client retains that device version and offers an explicit merge/export choice. Changes queued during a successful write are written in a subsequent revision. Authentication and Site membership remain controlled by the existing private host, not by client-supplied owner fields.
+
+The local preview DB and tests are separate from hosted D1. No preview fixture records are included in the deployment archive. Local tests establish the API/sync logic; hosted identity and D1 provisioning still depend on a successful platform deployment. A pending publication is not proof of hosted end-to-end operation.
