@@ -1,3 +1,4 @@
+import { newTeachingPlan, teachingSource, teachingMarkdown, suggestedAgenda, readingLabels } from './teaching.js';
 import { loadOriginalAbstract, applyOriginalAbstract } from './paper-details.js';
 import { newAppraisal, appraisalFields, basisLabels, reflectionFromAppraisal, appraisalMarkdown } from './appraisal.js';
 import { WorkspaceSync } from './sync.js';
@@ -49,6 +50,7 @@ let cpdFormOpen = false;
 let reflectionEditing = null;
 let reflectionDraft = null;
 let activeAppraisal = null;
+let activeTeaching = null;
 let toastTimer;
 const nav = [['home', 'Overview'], ['research', 'Research'], ['learn', 'Learn & anatomy'], ['practice', 'Practice resources'], ['cpd', 'My CPD'], ['fcp', 'FCP workspace'], ['library', 'Saved papers']];
 function persist() {
@@ -65,7 +67,7 @@ function updateNav() {
   document.querySelector('#desktop-nav').innerHTML = nav.map(([id, label]) => `<a href="#${id}" class="nav-item ${route === id ? 'active' : ''}" ${route === id ? 'aria-current="page"' : ''}>${icon(id)}<span>${label}</span>${id === 'fcp' ? '<span class="premium">PREVIEW</span>' : ''}${id === 'library' ? `<span class="count">${workspace.saved.length}</span>` : ''}</a>`).join('');
   const mobile = [['home', 'Home'], ['research', 'Research'], ['learn', 'Learn'], ['cpd', 'CPD'], ['fcp', 'FCP']];
   document.querySelector('#mobile-nav').innerHTML = mobile.map(([id, label]) => `<a href="#${id}" class="${route === id ? 'active' : ''}" ${route === id ? 'aria-current="page"' : ''}>${icon(id)}<span>${label}</span></a>`).join('');
-  document.querySelector('#breadcrumb').textContent = nav.find(([id]) => route === id)?.[1] || (route === 'appraisal' ? 'Paper appraisal' : 'Overview');
+  document.querySelector('#breadcrumb').textContent = nav.find(([id]) => route === id)?.[1] || (route === 'appraisal' ? 'Paper appraisal' : route === 'teaching' ? 'Teaching session' : 'Overview');
 }
 function intro(eyebrow, title, description, action = '') {
   return `<div class="page-intro"><span class="eyebrow">${eyebrow}</span><div class="title-row"><h1>${title}</h1>${action}</div><p>${description}</p></div>`;
@@ -301,13 +303,69 @@ function renderReflectionForm() {
   document.querySelector('#reflection-title').focus();
 }
 function fcp() {
-  main.innerHTML = `${intro('FIRST CONTACT PRACTICE', 'Teach with a purpose.', 'A dedicated space for FCP learning, reflection and team teaching.')}<section class="fcp-banner"><span class="eyebrow">SPECIALIST AREA · PROTOTYPE PREVIEW</span><h2 style="margin-top:12px">Your next teaching session starts here.</h2><p>Build a discussion plan, add a verified source and make the learning practical. The future premium curriculum and pricing have not been set.</p></section><div class="resource-grid">${teachingTopics.map((t, i) => `<article class="card resource-card"><span class="badge">Teaching framework · 15 minutes</span><h3>${t.title}</h3><p>${t.summary}</p><button class="text-button" data-teaching="${i}">Create teaching outline</button></article>`).join('')}<article class="card resource-card"><span class="badge">Source shelf</span><h3>Start from the current guidance</h3><p>Use the original recommendation, check its scope and add your local pathway before delivering a session.</p><a class="text-button" href="#practice">Open practice resources</a></article></div><div class="notice">These are editable planning frameworks, not reviewed clinical teaching packs, prescribing advice, accredited training or competency sign-off. Clinical teaching content needs professional review before use.</div>`;
+  main.innerHTML = `${intro('FIRST CONTACT PRACTICE', 'Teach with a purpose.', 'A dedicated space for FCP learning, reflection and team teaching.')}<section class="fcp-banner"><span class="eyebrow">SPECIALIST AREA · PROTOTYPE PREVIEW</span><h2 style="margin-top:12px">Your next teaching session starts here.</h2><p>Build a discussion plan, add a verified source and make the learning practical. The future premium curriculum and pricing have not been set.</p></section><section class="card" style="margin-bottom:20px"><div class="split-heading"><h2>Your teaching sessions</h2><button class="button" data-new-teaching>New session</button></div><p>Plans and paper references save to your account. Return here to continue or adapt a session.</p>${workspace.teachingPlans.length ? workspace.teachingPlans.map(t => `<article class="teaching-summary"><h3>${esc(t.title || 'Untitled teaching session')}</h3><p class="subtle">${esc(t.audience || 'Audience not recorded')} · ${t.minutes} minutes · ${t.sources.length} attached papers · Draft</p><div class="button-row"><button class="text-button" data-open-teaching="${esc(t.id)}">Open session</button><button class="text-button" data-copy-teaching="${esc(t.id)}">Duplicate session</button></div></article>`).join('') : '<p class="subtle">Start a blank session or use one of the frameworks below.</p>'}</section><div class="resource-grid">${teachingTopics.map((t, i) => `<article class="card resource-card"><span class="badge">Teaching framework · 15 minutes</span><h3>${t.title}</h3><p>${t.summary}</p><button class="text-button" data-teaching="${i}">Create teaching outline</button></article>`).join('')}<article class="card resource-card"><span class="badge">Source shelf</span><h3>Start from the current guidance</h3><p>Use the original recommendation, check its scope and add your local pathway before delivering a session.</p><a class="text-button" href="#practice">Open practice resources</a></article></div><div class="notice">These are editable planning frameworks, not reviewed clinical teaching packs, prescribing advice, accredited training or competency sign-off. Clinical teaching content needs professional review before use.</div>`;
 }
 function teaching(index) {
-  const t = teachingTopics[index]; if (!t) return;
-  openDialog(`<span class="eyebrow">FCP TEACHING PLANNER</span><h2 id="dialog-title">${t.title}</h2><form id="teaching-form"><div class="field"><label for="teaching-title">Session title</label><input id="teaching-title" name="title" value="${t.title}" maxlength="180" required></div><div class="field"><label for="teaching-objectives">Learning objectives</label><textarea id="teaching-objectives" name="objectives" required maxlength="4000">${t.objectives}</textarea></div><div class="field"><label for="teaching-source">Verified source to discuss</label><input id="teaching-source" name="source" value="${t.source}" maxlength="1000" required></div><div class="field"><label for="teaching-case">Fictional case or discussion question</label><textarea id="teaching-case" name="discussion" placeholder="Add a fictional case or general question. No identifiable patient information." maxlength="6000" required></textarea></div><div class="outline"><h3>Suggested 15-minute structure</h3><ol><li>2 minutes: agree the question and objectives.</li><li>5 minutes: examine the source and its limitations.</li><li>5 minutes: discuss the fictional case or question.</li><li>3 minutes: agree takeaways, uncertainty and a learning action.</li></ol></div><div class="notice">Review and complete the outline before teaching. The app does not verify the clinical accuracy of what you enter.</div><button class="button" type="submit">${icon('download')}Download teaching outline</button></form>`);
-  document.querySelector('#teaching-form').onsubmit = e => { e.preventDefault(); const d = Object.fromEntries(new FormData(e.currentTarget)); download('physiosidekick-teaching-outline.md', `# ${d.title}\n\nStatus: editable teaching framework; requires professional review.\n\n## Objectives\n${d.objectives}\n\n## Source\n${d.source}\n\n## Fictional case / question\n${d.discussion}\n\n## 15-minute agenda\n- 2 min: question and objectives\n- 5 min: source and limitations\n- 5 min: discussion\n- 3 min: takeaways, uncertainty and a learning action\n\n## Facilitator preparation\n- Read and check the original source and its currency.\n- Check any applicable local pathway.\n- Review all clinical content.\n- Record what remains uncertain.\n\n## Takeaways and next action\n[Complete during the session]\n`, 'text/markdown'); toast('Teaching outline downloaded'); };
+  const topic = teachingTopics[index]; if (!topic) return;
+  createTeaching(topic);
 }
+function createTeaching(topic) {
+  if (!sync?.account || sync.combining || sync.status === 'loading') { toast('Connect to your account before creating a session.'); return; }
+  const plan = newTeachingPlan(topic); workspace.teachingPlans.unshift(plan); activeTeaching = plan.id; persist(); navigate('teaching');
+}
+function teachingEditor() {
+  const t = workspace.teachingPlans.find(t => t.id === activeTeaching);
+  if (!t) { fcp(); return; }
+  const fields = [['objectives','Learning objectives','What should learners be able to explain, question or do after the session?'],['agenda','Agenda','Check that the timings in your edited agenda fit the planned session length.'],['discussion','Fictional case or discussion question','Use a fictional scenario or general question. Do not enter identifiable patient information.'],['preparation','Facilitator preparation','What do you need to read, check or prepare before teaching?'],['takeaways','Takeaways and next action','What should the group take away, and what uncertainty or follow-up remains?'],['guidance','Guidance or other references to check','Record guideline titles, versions, URLs and any local pathway you need to verify.']];
+  main.innerHTML = `${intro('FROM EVIDENCE TO TEACHING', 'Build a useful session.', 'Your plan saves as you type. Check the account status above for confirmation.')}<div class="button-row" style="margin-bottom:20px"><a class="text-button" href="#fcp">All teaching sessions</a><button class="button secondary" id="export-teaching">Export teaching plan</button></div><div class="notice">Draft planning workspace. Source attachment does not verify clinical content or establish study quality. Review the original papers and complete the plan before delivery.</div><form id="saved-teaching-form" class="card form-card"><div class="field"><label for="session-title">Session title</label><input id="session-title" data-session-field="title" maxlength="180" value="${esc(t.title)}"></div><div class="form-row"><div class="field"><label for="session-audience">Audience</label><input id="session-audience" data-session-field="audience" maxlength="120" value="${esc(t.audience)}" placeholder="e.g. FCP team or student journal club"></div><div class="field"><label for="session-minutes">Planned duration in minutes</label><input id="session-minutes" data-session-field="minutes" type="number" min="5" max="480" value="${t.minutes}" aria-describedby="session-time-hint"><p class="subtle" id="session-time-hint">5–480 minutes. Learning time is not automatically added to CPD.</p></div></div>${fields.map(([key,label,hint]) => `<div class="field"><label for="session-${key}">${label}</label><p class="subtle" id="session-hint-${key}">${hint}</p><textarea id="session-${key}" data-session-field="${key}" maxlength="6000" aria-describedby="session-hint-${key}">${esc(t[key])}</textarea></div>`).join('')}</form><section class="card" style="margin-top:20px"><h2>Attach real paper references</h2><p>Choose a paper saved in your library. Citations and original links are retained with this plan, even if you later remove the paper from your library.</p><div class="field"><label for="session-paper">Saved paper</label><select id="session-paper"><option value="">Choose a saved paper</option>${workspace.saved.map(p => `<option value="${esc(p.id)}">${esc(p.title)} · PMID ${esc(p.pmid)}</option>`).join('')}</select></div><div class="button-row"><button class="button secondary" id="attach-session-paper" ${workspace.saved.length ? '' : 'disabled'}>Attach selected paper</button><a class="text-button" href="#research">Find more papers</a></div><div id="session-sources"></div></section><div class="button-row" style="margin-top:20px"><button class="danger-button" id="remove-teaching">Remove this session</button></div>`;
+  document.querySelector('#saved-teaching-form').onsubmit = e => e.preventDefault();
+  document.querySelector('#saved-teaching-form').addEventListener('input', e => {
+    const key = e.target.dataset.sessionField; if (!key || !sync?.account || sync.combining || sync.status === 'loading') return;
+    if (key === 'minutes') {
+      const minutes = Number(e.target.value); if (!Number.isInteger(minutes) || minutes < 5 || minutes > 480) { e.target.setCustomValidity('Use 5 to 480 minutes.'); return; }
+      e.target.setCustomValidity('');
+      if (t.agenda === suggestedAgenda(t.minutes)) { t.agenda = suggestedAgenda(minutes); document.querySelector('#session-agenda').value = t.agenda; }
+      t.minutes = minutes;
+    } else t[key] = e.target.value;
+    t.updatedAt = new Date().toISOString(); persist();
+  });
+  document.querySelector('#export-teaching').onclick = () => {
+    if (!document.querySelector('#session-minutes').reportValidity()) return;
+    download('physiosidekick-teaching-plan.md', teachingMarkdown(t), 'text/markdown');
+  };
+  document.querySelector('#attach-session-paper').onclick = () => {
+    if (!sync?.account || sync.combining || sync.status === 'loading') return;
+    const paper = workspace.saved.find(p => p.id === document.querySelector('#session-paper').value);
+    if (!paper) { toast('Choose a saved paper first.'); return; }
+    if (t.sources.some(s => s.pmid === paper.pmid)) { toast('That paper is already attached.'); return; }
+    if (t.sources.length >= 20) { toast('A session can have up to 20 attached papers.'); return; }
+    const appraisal = workspace.appraisals.filter(a => a.paperId === paper.id).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+    t.sources.push(teachingSource(paper, appraisal)); t.updatedAt = new Date().toISOString(); persist(); renderTeachingSources(t);
+  };
+  document.querySelector('#remove-teaching').onclick = () => {
+    openDialog('<h2 id="dialog-title">Remove this teaching session?</h2><p>The session plan and its attached reference snapshots will be removed from your account workspace. Saved papers, appraisals and CPD reflections remain. Export a copy first if you want to keep it.</p><button class="button" id="confirm-remove-teaching">Remove session</button>');
+    document.querySelector('#confirm-remove-teaching').onclick = () => {
+      if (!sync?.account || sync.combining || sync.status === 'loading') return;
+      workspace.teachingPlans = workspace.teachingPlans.filter(p => p.id !== t.id); activeTeaching = null; persist(); dialog.close(); navigate('fcp');
+    };
+  };
+  renderTeachingSources(t);
+}
+function renderTeachingSources(t) {
+  const area = document.querySelector('#session-sources');
+  area.innerHTML = t.sources.length ? t.sources.map(s => `<article class="teaching-summary"><h3>${esc(s.title)}</h3><p>${esc(s.citation)}</p><a href="https://pubmed.ncbi.nlm.nih.gov/${esc(s.pmid)}/" target="_blank" rel="noopener noreferrer">Open original PubMed record</a>${s.retracted ? '<div class="notice error">Marked as retracted in the attached index record. Investigate the retraction notice before teaching from it.</div>' : ''}<div class="field" style="margin-top:15px"><label for="session-basis-${s.pmid}">Reading basis for this session</label><select id="session-basis-${s.pmid}" data-session-basis="${esc(s.pmid)}">${Object.entries(readingLabels).map(([key,label]) => `<option value="${key}" ${key === s.readingBasis ? 'selected' : ''}>${label}</option>`).join('')}</select><p class="subtle">Initially copied from the latest saved appraisal when present. Confirm what you actually reviewed. This is your declaration, not an app quality check.</p></div><button class="text-button" data-remove-source="${esc(s.pmid)}">Detach reference</button></article>`).join('') : '<p class="subtle" style="margin-top:20px">No papers attached yet.</p>';
+  area.onchange = e => {
+    if (!sync?.account || sync.combining || sync.status === 'loading') return;
+    const source = t.sources.find(s => s.pmid === e.target.dataset.sessionBasis); if (!source) return;
+    source.readingBasis = e.target.value; t.updatedAt = new Date().toISOString(); persist();
+  };
+  area.onclick = e => {
+    if (!sync?.account || sync.combining || sync.status === 'loading') return;
+    const button = e.target.closest('[data-remove-source]'); if (!button) return;
+    t.sources = t.sources.filter(s => s.pmid !== button.dataset.removeSource); t.updatedAt = new Date().toISOString(); persist(); renderTeachingSources(t);
+  };
+}
+
 function download(filename, text, type) {
   const url = URL.createObjectURL(new Blob([text], { type: `${type};charset=utf-8` })); const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
@@ -317,8 +375,8 @@ async function copyCitation(id) {
   catch { openDialog(`<h2 id="dialog-title">Copy this citation</h2><p>${esc(citation(p))}</p><p class="subtle">Check against your university or publisher’s required referencing style.</p>`); }
 }
 function privacy() {
-  openDialog(`<span class="eyebrow">YOUR ACCOUNT WORKSPACE</span><h2 id="dialog-title">Your data & privacy</h2><p>Your papers, notes, saved searches, appraisals and reflections are stored in the app’s account database, tied to your signed-in identity. The app keeps an account-specific device copy of pending changes so interrupted saves can be recovered.</p><p>Open the same private app on your iPhone or Mac and sign in with the same account. Data loads when you open the app; “Refresh from account” fetches newer changes. This is not live simultaneous editing.</p><p>Research keywords pass through the app server to Europe PMC, with PubMed (NCBI) as a backup. Publication metadata may be cached for five minutes. Opening a missing abstract can request that paper’s PMID from PubMed; a retrieved abstract and its source are kept when you save the paper. Your account identity is not forwarded to either research service. External resources use their own privacy policies, and fonts load from Google Fonts. Keep identifiable patient information out of this educational prototype.</p><div class="button-row"><button class="button" id="export-workspace">${icon('download')}Export workspace backup</button><label class="button secondary" for="import-workspace">Import a backup</label><input id="import-workspace" type="file" accept="application/json,.json" class="file-input"></div><p class="subtle" style="margin-top:15px">Import shows a summary before combining records. It does not replace the account workspace. Conflicting notes are kept together and conflicting reflections become separate entries.</p>${sync?.pending ? '<div class="notice">This device has changes not yet confirmed by the account server. The export includes your current version.</div>' : ''}<p><a href="/signout-with-chatgpt?return_to=%2F" target="_top">Sign out of this app</a></p>`);
-  document.querySelector('#export-workspace').onclick = () => download('physiosidekick-workspace.json', JSON.stringify({ version: 4, exportedAt: new Date().toISOString(), workspace: sync.invalidPending || sync.pending || workspace }, null, 2), 'application/json');
+  openDialog(`<span class="eyebrow">YOUR ACCOUNT WORKSPACE</span><h2 id="dialog-title">Your data & privacy</h2><p>Your papers, notes, saved searches, appraisals, teaching plans and reflections are stored in the app’s account database, tied to your signed-in identity. The app keeps an account-specific device copy of pending changes so interrupted saves can be recovered.</p><p>Open the same private app on your iPhone or Mac and sign in with the same account. Data loads when you open the app; “Refresh from account” fetches newer changes. This is not live simultaneous editing.</p><p>Research keywords pass through the app server to Europe PMC, with PubMed (NCBI) as a backup. Publication metadata may be cached for five minutes. Opening a missing abstract can request that paper’s PMID from PubMed; a retrieved abstract and its source are kept when you save the paper. Your account identity is not forwarded to either research service. External resources use their own privacy policies, and fonts load from Google Fonts. Keep identifiable patient information out of this educational prototype.</p><div class="button-row"><button class="button" id="export-workspace">${icon('download')}Export workspace backup</button><label class="button secondary" for="import-workspace">Import a backup</label><input id="import-workspace" type="file" accept="application/json,.json" class="file-input"></div><p class="subtle" style="margin-top:15px">Import shows a summary before combining records. It does not replace the account workspace. Conflicting notes are kept together and conflicting reflections become separate entries.</p>${sync?.pending ? '<div class="notice">This device has changes not yet confirmed by the account server. The export includes your current version.</div>' : ''}<p><a href="/signout-with-chatgpt?return_to=%2F" target="_top">Sign out of this app</a></p>`);
+  document.querySelector('#export-workspace').onclick = () => download('physiosidekick-workspace.json', JSON.stringify({ version: 5, exportedAt: new Date().toISOString(), workspace: sync.invalidPending || sync.pending || workspace }, null, 2), 'application/json');
   document.querySelector('#import-workspace').onchange = async e => {
     const file = e.target.files[0]; if (!file) return;
     try { if (file.size > 2 * 1024 * 1024) throw new Error('Use a workspace export no larger than 2 MB.'); const raw = JSON.parse(await file.text()); reviewImport(validateWorkspace(raw.workspace || raw), false); }
@@ -327,7 +385,7 @@ function privacy() {
 }
 function reviewImport(data, legacy = false) {
   if (cpdFormOpen) { toast('Save or cancel your reflection before importing records.'); return; }
-  openDialog(`<span class="eyebrow">REVIEW IMPORT</span><h2 id="dialog-title">Bring your records into your account</h2><p>This ${legacy ? 'browser' : 'backup'} contains <strong>${data.saved.length} papers, ${data.reflections.length} reflections and ${data.searches.length} searches and ${data.appraisals.length} appraisals</strong>.</p><p>These will be combined with your account records. Duplicate papers stay as one paper; different notes are kept together. Conflicting reflections and appraisals become separate entries. Different collection names are recorded in the paper’s notes.</p><p>The original ${legacy ? 'browser records' : 'backup file'} will remain intact. Imports may restore a record you previously removed from the account.</p><button class="button" id="confirm-import" ${!sync?.account || sync?.inflight ? 'disabled' : ''}>Combine with my account records</button>`);
+  openDialog(`<span class="eyebrow">REVIEW IMPORT</span><h2 id="dialog-title">Bring your records into your account</h2><p>This ${legacy ? 'browser' : 'backup'} contains <strong>${data.saved.length} papers, ${data.reflections.length} reflections and ${data.searches.length} searches and ${data.appraisals.length} appraisals and ${data.teachingPlans.length} teaching plans</strong>.</p><p>These will be combined with your account records. Duplicate papers stay as one paper; different notes are kept together. Conflicting reflections, appraisals and teaching plans become separate entries. Different collection names are recorded in the paper’s notes.</p><p>The original ${legacy ? 'browser records' : 'backup file'} will remain intact. Imports may restore a record you previously removed from the account.</p><button class="button" id="confirm-import" ${!sync?.account || sync?.inflight ? 'disabled' : ''}>Combine with my account records</button>`);
   document.querySelector('#confirm-import').onclick = async () => { dialog.close(); await sync.combine(data, legacy); };
 }
 function syncStatus(state) {
@@ -348,23 +406,23 @@ function syncStatus(state) {
   if (state.account) document.querySelector('.profile strong').textContent = state.account.name;
 }
 function conflictDialog() {
-  openDialog(`<h2 id="dialog-title">Keep both versions safe</h2><p>Your device has pending changes and the account has a newer version. No automatic overwrite has taken place.</p><p>You can combine both sets of records. Different notes are kept together and different versions of a reflection or appraisal become separate entries. Removed records may return during a merge.</p><div class="button-row"><button class="button" id="merge-conflict">Combine both versions</button><button class="button secondary" id="export-pending">Export this device’s version</button></div>`);
+  openDialog(`<h2 id="dialog-title">Keep both versions safe</h2><p>Your device has pending changes and the account has a newer version. No automatic overwrite has taken place.</p><p>You can combine both sets of records. Different notes are kept together and different versions of a reflection, appraisal or teaching plan become separate entries. Removed records may return during a merge.</p><div class="button-row"><button class="button" id="merge-conflict">Combine both versions</button><button class="button secondary" id="export-pending">Export this device’s version</button></div>`);
   document.querySelector('#merge-conflict').onclick = async () => { dialog.close(); await sync.combine(); };
-  document.querySelector('#export-pending').onclick = () => download('physiosidekick-pending-changes.json', JSON.stringify({ version: 4, workspace: sync.pending || workspace }, null, 2), 'application/json');
+  document.querySelector('#export-pending').onclick = () => download('physiosidekick-pending-changes.json', JSON.stringify({ version: 5, workspace: sync.pending || workspace }, null, 2), 'application/json');
 }
 function accountDialog() {
   openDialog(`<h2 id="dialog-title">Account saving</h2><p><strong>${esc(document.querySelector('#sync-status').textContent)}</strong>${sync.updatedAt ? ` · last confirmed ${esc(new Date(sync.updatedAt).toLocaleString('en-GB'))}` : ''}</p><p>Changes save automatically after a short pause. Open this same private app with the same account on another device, then refresh its account copy.</p><div class="button-row"><button class="button" id="refresh-account" ${!sync.account || sync.inflight ? 'disabled' : ''}>${sync.pending ? 'Retry pending save' : 'Refresh from account'}</button><button class="button secondary" id="account-privacy">Backups & privacy</button></div>`);
   document.querySelector('#refresh-account').onclick = async () => { dialog.close(); if (sync.status === 'conflict') conflictDialog(); else if (sync.pending) await sync.flush(); else if (!cpdFormOpen) await sync.refresh(); else toast('Save or cancel your reflection before refreshing account records.'); };
   document.querySelector('#account-privacy').onclick = privacy;
 }
-function about() { openDialog('<span class="eyebrow">FROM STUDY TO PRACTICE</span><h2 id="dialog-title">A first chapter for PhysioSidekick.</h2><p>This is a private working prototype of a career companion for physiotherapists and students.</p><h3>Working now</h3><ul><li>Live publication search from Europe PMC’s indexed PubMed records.</li><li>Original paper links, indexed abstracts and source access information.</li><li>Saved papers, notes, collections and reference exports.</li><li>Structured paper appraisals linked to editable CPD reflections.</li><li>Personal learning reflections and editable FCP teaching outlines.</li><li>Account saving across devices, backup import and conflict recovery.</li></ul><h3>Still to build and validate</h3><p>Licensed 3D anatomy, reviewed clinical tools, source-grounded explanations, a premium FCP curriculum and the signed iPhone app.</p><p>PhysioSidekick is a working name pending trademark clearance. This prototype is for product testing, not patient-specific decision support.</p>'); }
+function about() { openDialog('<span class="eyebrow">FROM STUDY TO PRACTICE</span><h2 id="dialog-title">A first chapter for PhysioSidekick.</h2><p>This is a private working prototype of a career companion for physiotherapists and students.</p><h3>Working now</h3><ul><li>Live publication search from Europe PMC’s indexed PubMed records.</li><li>Original paper links, indexed abstracts and source access information.</li><li>Saved papers, notes, collections and reference exports.</li><li>Saved teaching sessions with attached paper references and editable exports.</li><li>Structured paper appraisals linked to editable CPD reflections.</li><li>Personal learning reflections and editable FCP teaching outlines.</li><li>Account saving across devices, backup import and conflict recovery.</li></ul><h3>Still to build and validate</h3><p>Licensed 3D anatomy, reviewed clinical tools, source-grounded explanations, a premium FCP curriculum and the signed iPhone app.</p><p>PhysioSidekick is a working name pending trademark clearance. This prototype is for product testing, not patient-specific decision support.</p>'); }
 function render() {
-  route = (location.hash.slice(1) === 'appraisal' || nav.some(([id]) => id === location.hash.slice(1))) ? location.hash.slice(1) : 'home';
-  updateNav(); ({ home, research, library, learn, practice, cpd, fcp, appraisal }[route])();
-  document.title = `${(nav.find(([id]) => id === route)?.[1] || 'Paper appraisal')} · PhysioSidekick`;
+  route = (['appraisal','teaching'].includes(location.hash.slice(1)) || nav.some(([id]) => id === location.hash.slice(1))) ? location.hash.slice(1) : 'home';
+  updateNav(); ({ home, research, library, learn, practice, cpd, fcp, appraisal, teaching: teachingEditor }[route])();
+  document.title = `${(nav.find(([id]) => id === route)?.[1] || (route === 'teaching' ? 'Teaching session' : 'Paper appraisal'))} · PhysioSidekick`;
 }
 document.addEventListener('click', e => {
-  const el = e.target.closest('[data-appraise],[data-open-appraisal],[data-save],[data-save-notes],[data-delete-reflection],[data-edit-reflection],[data-remove-search],#save-search,#new-reflection,#first-reflection');
+  const el = e.target.closest('[data-new-teaching],[data-copy-teaching],[data-open-teaching],[data-teaching],[data-appraise],[data-open-appraisal],[data-save],[data-save-notes],[data-delete-reflection],[data-edit-reflection],[data-remove-search],#save-search,#new-reflection,#first-reflection');
   if (el && (!sync?.account || sync.combining || sync.status === 'loading')) { e.preventDefault(); e.stopImmediatePropagation(); toast('Wait for the account connection before editing records.'); }
 }, true);
 document.addEventListener('submit', e => {
@@ -373,6 +431,12 @@ document.addEventListener('submit', e => {
 document.addEventListener('click', e => {
   if (e.target.closest('[data-all-appraisals]')) activeAppraisal = null;
   const target = e.target.closest('button'); if (!target) return;
+  if ('newTeaching' in target.dataset) createTeaching();
+  if (target.dataset.openTeaching) { activeTeaching = target.dataset.openTeaching; navigate('teaching'); }
+  if (target.dataset.copyTeaching) {
+    const source = workspace.teachingPlans.find(t => t.id === target.dataset.copyTeaching);
+    if (source) { const copy = structuredClone(source); copy.id = crypto.randomUUID(); copy.title = (source.title + ' (copy)').slice(0,180); copy.updatedAt = new Date().toISOString(); workspace.teachingPlans.unshift(copy); activeTeaching = copy.id; persist(); navigate('teaching'); }
+  }
   if (target.dataset.loadAbstract) retrieveAbstract(target.dataset.loadAbstract);
   if (target.dataset.appraise) beginAppraisal(target.dataset.appraise);
   if (target.dataset.openAppraisal) { activeAppraisal = target.dataset.openAppraisal; navigate('appraisal'); }

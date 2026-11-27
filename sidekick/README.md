@@ -18,7 +18,7 @@ A connected career companion for physiotherapists and students: learning and ana
 - Appraisal notes seed an editable CPD draft with a canonical PubMed link. The reader supplies learning time and explicitly saves; later appraisal edits do not rewrite the reflection.
 - Personal CPD reflections with editing and Markdown export.
 - Original-source resource shelf, three introductory critical-appraisal learning checks.
-- Editable FCP teaching outlines that download as Markdown. These are frameworks, not clinical teaching packs or an accredited curriculum.
+- Saved FCP/student teaching sessions with editable objectives, audience, duration, agenda, discussion, preparation and takeaways; reusable duplication and Markdown export. Original paper references attach from the saved library. These are planning frameworks, not reviewed clinical teaching packs or an accredited curriculum.
 - Account-backed papers, notes, saved searches and CPD in an owner-scoped D1 database.
 - Workspace JSON export/import, explicit migration of earlier browser records and optimistic revision checks for concurrent devices.
 - Device recovery cache for pending changes; explicit conflict combination preserves differing notes/reflections. Synchronisation occurs on opening the app or using Refresh from account, not through live co-editing.
@@ -113,3 +113,11 @@ NLM format documentation: https://www.nlm.nih.gov/databases/download/pubmed_medl
 EFetch return formats: https://www.ncbi.nlm.nih.gov/books/NBK25499/table/chapter4.T._valid_values_of__retmode_and/
 
 This does not fetch publisher full text or establish a reuse licence. The private-prototype text-reuse/provider-terms review remains required before wider distribution.
+
+## Reusable teaching sessions
+
+The FCP workspace now lists account-backed teaching plans. Start blank or use an existing general framework, edit fields and attach papers from the saved library. Default agenda timings scale to valid 5–480 minute sessions; a manually edited agenda is preserved and must be checked against planned duration. Planning a session does not log CPD time.
+
+Each attached source keeps a title/citation/PMID snapshot, a canonical PubMed link, an attachment time, declared reading basis and any indexed retraction warning. Reading basis is initially copied from the latest saved appraisal when available and remains editable as a declaration for this session. Removing a library paper does not remove the session’s reference. Duplicate creates an independent plan. Removing a session leaves papers/appraisals/reflections intact. Markdown exports retain source links and reading labels.
+
+Validated workspace JSON includes up to 200 teaching plans with up to 20 unique papers per plan, subject to the existing 2 MB workspace limit. Backups preserve plans; conflicts retain both complete versions. Old tabs omitting existing plans are rejected rather than silently deleting them. No SQL migration or change of Site audience is needed. No paid curriculum or subscriptions have been activated.

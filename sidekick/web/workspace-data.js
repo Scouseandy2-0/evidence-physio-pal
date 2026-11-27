@@ -1,5 +1,5 @@
 import { safeURL, defaultFilters } from './research.js';
-export const emptyWorkspace = () => ({ saved: [], reflections: [], searches: [], appraisals: [] });
+export const emptyWorkspace = () => ({ saved: [], reflections: [], searches: [], appraisals: [], teachingPlans: [] });
 const fail = message => { throw new Error(message); };
 const str = (v, max, label, required = false) => {
   if (v == null && !required) return '';
@@ -52,6 +52,17 @@ export function validateWorkspace(input) {
     for (const key of ['question', 'findings', 'strengths', 'limitations', 'applicability', 'uncertainties', 'nextStep']) result[key] = str(a[key], 5000, 'appraisal notes');
     return result;
   });
+  const teachingPlans = list(input.teachingPlans || [], 200, 'teaching plans').map(t => {
+    if (!t || !/^[a-zA-Z0-9_-]{1,100}$/.test(t.id) || !Number.isFinite(Date.parse(t.updatedAt))) fail('Invalid teaching plan identifier or time.');
+    if (!Number.isInteger(t.minutes) || t.minutes < 5 || t.minutes > 480) fail('Invalid session length; use 5 to 480 minutes.');
+    const plan = { id: t.id, title: str(t.title, 180, 'session title'), audience: str(t.audience, 120, 'session audience'), minutes: t.minutes, updatedAt: str(t.updatedAt, 100, 'session time') };
+    for (const key of ['objectives', 'discussion', 'agenda', 'preparation', 'takeaways', 'guidance']) plan[key] = str(t[key], 6000, 'teaching plan notes');
+    plan.sources = unique(list(t.sources || [], 20, 'session sources').map(source => {
+      if (!source || !/^[1-9]\d{0,8}$/.test(source.pmid) || !['notRead', 'notRecorded', 'abstract', 'fullText'].includes(source.readingBasis) || !Number.isFinite(Date.parse(source.attachedAt))) fail('Invalid teaching source.');
+      return { pmid: source.pmid, title: str(source.title, 4000, 'source title', true), citation: str(source.citation, 20000, 'source citation', true), readingBasis: source.readingBasis, retracted: source.retracted === true, attachedAt: str(source.attachedAt, 100, 'source attachment time') };
+    }), source => source.pmid, 'session sources');
+    return plan;
+  });
   const searches = list(input.searches || [], 20, 'saved searches').map(s => {
     const f = s.filters || {};
     const filters = { ...defaultFilters };
@@ -62,9 +73,9 @@ export function validateWorkspace(input) {
     filters.openAccess = f.openAccess === true; filters.author = str(f.author, 100, 'search author');
     return { term: str(s.term, 250, 'search term'), filters, savedAt: str(s.savedAt, 100, 'search time') };
   });
-  return { saved: unique(saved, p => p.id, 'papers'), reflections: unique(reflections, r => r.id, 'reflections'), searches, appraisals: unique(appraisals, a => a.id, 'appraisals') };
+  return { saved: unique(saved, p => p.id, 'papers'), reflections: unique(reflections, r => r.id, 'reflections'), searches, appraisals: unique(appraisals, a => a.id, 'appraisals'), teachingPlans: unique(teachingPlans, t => t.id, 'teaching plans') };
 }
-export function hasRecords(w) { return w.saved.length + w.reflections.length + (w.searches.length + (w.appraisals?.length || 0)) > 0; }
+export function hasRecords(w) { return w.saved.length + w.reflections.length + (w.searches.length + (w.appraisals?.length || 0) + (w.teachingPlans?.length || 0)) > 0; }
 export function mergeWorkspaces(remote, device, newId = () => crypto.randomUUID()) {
   const a = validateWorkspace(remote), b = validateWorkspace(device);
   const papers = new Map(a.saved.map(p => [p.id, p]));
@@ -96,6 +107,11 @@ export function mergeWorkspaces(remote, device, newId = () => crypto.randomUUID(
     if (!reflections.has(r.id)) reflections.set(r.id, r);
     else if (JSON.stringify(reflections.get(r.id)) !== JSON.stringify(r)) { const copy = { ...r, id: newId() }; reflections.set(copy.id, copy); }
   }
+  const teachingPlans = new Map(a.teachingPlans.map(t => [t.id, t]));
+  for (const t of b.teachingPlans) {
+    if (!teachingPlans.has(t.id)) teachingPlans.set(t.id, t);
+    else if (JSON.stringify(teachingPlans.get(t.id)) !== JSON.stringify(t)) { const copy = { ...t, id: newId() }; teachingPlans.set(copy.id, copy); }
+  }
   const searches = new Map([...a.searches, ...b.searches].map(s => [JSON.stringify([s.term, s.filters]), s]));
-  return validateWorkspace({ saved: [...papers.values()], reflections: [...reflections.values()], searches: [...searches.values()], appraisals: [...appraisals.values()] });
+  return validateWorkspace({ saved: [...papers.values()], reflections: [...reflections.values()], searches: [...searches.values()], appraisals: [...appraisals.values()], teachingPlans: [...teachingPlans.values()] });
 }

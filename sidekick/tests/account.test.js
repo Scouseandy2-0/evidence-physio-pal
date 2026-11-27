@@ -127,3 +127,16 @@ test('older tabs retain original-abstract provenance when resaving unchanged tex
   assert.equal(stored.workspace.saved[0].abstractCopyright,'Example publisher copyright.');
   assert.equal(stored.workspace.saved[0].notes,'Keep my note');
 });
+
+test('saved teaching sessions reload with source snapshots and reject old tabs omitting them', async () => {
+  const env={DB:database()};
+  const {newTeachingPlan,teachingSource}=await import('../web/teaching.js');
+  const session=newTeachingPlan({},'session-1');session.sources=[teachingSource(paper())];
+  const workspace={...emptyWorkspace(),teachingPlans:[session]};
+  assert.equal((await workspaceAPI(req('a','PUT',{revision:0,workspace}),env)).status,200);
+  const loaded=await (await workspaceAPI(req('a'),env)).json();
+  assert.equal(loaded.workspace.teachingPlans[0].sources[0].pmid,'123');
+  const old={...workspace};delete old.teachingPlans;
+  assert.equal((await workspaceAPI(req('a','PUT',{revision:1,workspace:old}),env)).status,409);
+  assert.equal((await (await workspaceAPI(req('a'),env)).json()).workspace.teachingPlans.length,1);
+});

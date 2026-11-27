@@ -30,6 +30,7 @@ export async function workspaceAPI(request, env) {
     const current = await env.DB.prepare('SELECT data FROM workspaces WHERE owner_id = ?').bind(owner).first();
     const prior = current ? JSON.parse(current.data) : null;
     if (!Array.isArray(body.workspace.appraisals) && prior?.appraisals?.length) return json({ error: 'This app tab is out of date. Export pending changes, then reload before saving appraisal records.' }, 409);
+    if (!Array.isArray(body.workspace.teachingPlans) && prior?.teachingPlans?.length) return json({ error: 'This app tab is out of date. Export pending changes, then reload before saving teaching plans.' }, 409);
     for (const paper of workspace.saved) {
       const old = prior?.saved?.find(p => p.id === paper.id);
       if (!paper.abstractSource && old?.abstractSource && paper.abstract === old.abstract) {
