@@ -26,10 +26,15 @@ export async function workspaceAPI(request, env) {
     let body, workspace;
     try { body = JSON.parse(new TextDecoder().decode(buffer)); workspace = validateWorkspace(body.workspace); } catch (e) { return json({ error: e.message || 'Invalid workspace.' }, 400); }
     if (!Number.isSafeInteger(body.revision) || body.revision < 0) return json({ error: 'Invalid workspace revision.' }, 400);
-    // A previously opened v3 browser must not silently remove v4 appraisal records.
-    if (!Array.isArray(body.workspace.appraisals)) {
-      const current = await env.DB.prepare('SELECT data FROM workspaces WHERE owner_id = ?').bind(owner).first();
-      if (current && JSON.parse(current.data).appraisals?.length) return json({ error: 'This app tab is out of date. Export pending changes, then reload before saving appraisal records.' }, 409);
+    // Older tabs must not silently remove newer appraisal or abstract provenance.
+    const current = await env.DB.prepare('SELECT data FROM workspaces WHERE owner_id = ?').bind(owner).first();
+    const prior = current ? JSON.parse(current.data) : null;
+    if (!Array.isArray(body.workspace.appraisals) && prior?.appraisals?.length) return json({ error: 'This app tab is out of date. Export pending changes, then reload before saving appraisal records.' }, 409);
+    for (const paper of workspace.saved) {
+      const old = prior?.saved?.find(p => p.id === paper.id);
+      if (!paper.abstractSource && old?.abstractSource && paper.abstract === old.abstract) {
+        for (const key of ['abstractSource', 'abstractStatus', 'abstractRetrievedAt', 'abstractCopyright']) paper[key] = old[key];
+      }
     }
     const data = JSON.stringify(workspace), updatedAt = new Date().toISOString();
     if (new TextEncoder().encode(data).length > limit) return json({ error: 'Workspace exceeds the 2 MB prototype limit.' }, 413);

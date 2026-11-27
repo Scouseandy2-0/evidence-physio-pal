@@ -114,3 +114,16 @@ test('appraisals persist with linked CPD and an old app tab cannot silently stri
   assert.equal((await workspaceAPI(req('a', 'PUT', { revision: 1, workspace: legacy }), env)).status, 409);
   assert.equal((await (await workspaceAPI(req('a'), env)).json()).workspace.appraisals.length, 1);
 });
+
+test('older tabs retain original-abstract provenance when resaving unchanged text', async () => {
+  const env = { DB: database() };
+  const saved = { ...paper('Keep my note'), abstract: 'Indexed example abstract.', abstractSource: 'PubMed (NCBI)', abstractStatus: 'available', abstractRetrievedAt: '2026-11-27T12:00:00.000Z', abstractCopyright: 'Example publisher copyright.' };
+  const w = { ...emptyWorkspace(), saved: [saved] };
+  assert.equal((await workspaceAPI(req('a','PUT',{revision:0,workspace:w}),env)).status,200);
+  const oldPaper = { ...saved }; for (const key of ['abstractSource','abstractStatus','abstractRetrievedAt','abstractCopyright']) delete oldPaper[key];
+  assert.equal((await workspaceAPI(req('a','PUT',{revision:1,workspace:{...emptyWorkspace(),saved:[oldPaper]}}),env)).status,200);
+  const stored = await (await workspaceAPI(req('a'),env)).json();
+  assert.equal(stored.workspace.saved[0].abstractSource,'PubMed (NCBI)');
+  assert.equal(stored.workspace.saved[0].abstractCopyright,'Example publisher copyright.');
+  assert.equal(stored.workspace.saved[0].notes,'Keep my note');
+});

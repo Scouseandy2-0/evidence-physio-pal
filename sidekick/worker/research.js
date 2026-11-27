@@ -70,7 +70,7 @@ export async function lookupPublications({ term, filters = {}, cursor = '*' }, {
       return { source: 'MED', id, title: p.title, authorString: (p.authors || []).map(a => a.name).join(', '), authorList: { author: (p.authors || []).map(a => ({ fullName: a.name })) }, journalTitle: p.fulljournalname || p.source, pubYear: p.pubdate?.match(/\d{4}/)?.[0] || '', journalInfo: { volume: p.volume, issue: p.issue }, pageInfo: p.pages, doi: (p.articleids || []).find(a => a.idtype === 'doi')?.value || '', pubTypeList: { pubType: p.pubtype || [] } };
     });
   }
-  return { hitCount: count, resultList: { result: records }, nextCursorMark: offset + ids.length < Math.min(count, 9993) ? `ncbi:${offset + ids.length}` : null, executedQuery, provider: 'PubMed (NCBI backup)', note: 'Europe PMC is unavailable. These records come directly from PubMed. Abstracts and open-access labels are unavailable on this backup route; open the PubMed record for details.' };
+  return { hitCount: count, resultList: { result: records }, nextCursorMark: offset + ids.length < Math.min(count, 9993) ? `ncbi:${offset + ids.length}` : null, executedQuery, provider: 'PubMed (NCBI backup)', note: 'Europe PMC is unavailable. These records come directly from PubMed. Search results omit abstracts and open-access labels. Open a record to load its original PubMed abstract, or follow its source link.' };
 }
 export async function researchAPI(request) {
   if (!request.headers.get('oai-authenticated-user-id') || !request.headers.get('oai-authenticated-user-email')) return json({ error: 'Sign in to search research.' }, 401);

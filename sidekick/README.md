@@ -51,7 +51,7 @@ https://www.ebi.ac.uk/europepmc/webservices/rest/search
 
 Documentation: https://dev.europepmc.org/RestfulWebService
 
-Europe PMC has a seven-second deadline; on first-page failure, discovery without an OA filter falls back to NCBI PubMed ESearch plus ESummary. Backup pagination remains on PubMed, and later primary-page failures do not mix providers. The backup has genuine bibliographic metadata but no abstracts or confirmed access labels; the UI explicitly explains this limitation. An OA filter is never silently replaced with a free-to-read filter. Exact identifier lookups still bypass discovery filters. Both providers have bounded requests. Repeated identical requests share in-flight work and a five-minute, bounded in-memory metadata cache.
+Europe PMC has a seven-second deadline; on first-page failure, discovery without an OA filter falls back to NCBI PubMed ESearch plus ESummary. Backup pagination remains on PubMed, and later primary-page failures do not mix providers. The backup search has genuine bibliographic metadata but no abstracts or confirmed access labels. A separate on-demand original-abstract loader uses PubMed EFetch by a verified numeric PMID. The UI explicitly explains this limitation. An OA filter is never silently replaced with a free-to-read filter. Exact identifier lookups still bypass discovery filters. Both providers have bounded requests. Repeated identical requests share in-flight work and a five-minute, bounded in-memory metadata cache.
 
 All titles, authors, abstracts, identifiers and publication types come from those provider responses. Missing information is shown as missing. There is no paper generator, synthetic fallback, fake DOI, inferred PEDro score or automatic evidence-quality grade. Publication indexing is not clinical appraisal. Publisher access labels are cautious: no indexed open-access indicator does not prove a paywall.
 
@@ -102,3 +102,14 @@ Open a real publication record or saved paper and choose **Appraise this paper**
 **Create CPD reflection** requires a declared reading basis, reader findings and a next step. It opens a reviewable form with no invented learning time. Saving creates a linked, independent snapshot of the reader’s notes. Existing linked reflections reopen for editing rather than multiplying each time the button is pressed. Both appraisal Markdown exports and CPD exports retain source provenance and reading basis. Workspace backups preserve appraisals.
 
 Appraisals retain paper title, citation and PMID after removing a paper from the saved library. Conflict merges retain both appraisal versions and remap device reflection links to their preserved version. Legacy workspaces load with an empty appraisal list. An old browser attempting to omit existing appraisal data receives a conflict response requiring export/reload. No SQL migration is required: these records use the validated owner-scoped workspace JSON.
+
+## Original indexed abstracts on demand
+
+For a paper without an abstract, open **Read record** and choose **Load original PubMed abstract**. Authenticated `GET /api/paper?pmid=…` retrieves one fixed-endpoint NCBI EFetch record in tagged PubMed/MEDLINE format. It accepts only a numeric PMID, checks the returned PMID and title, reads the AB field and keeps the publisher CI copyright statement separate. Continuation lines are joined without paraphrasing or inventing missing content. The returned MEDLINE representation is displayed as supplied, including NLM’s representation of symbols; no AI summarisation occurs.
+
+A valid record with no AB field produces an explicit no-English-abstract state. Network errors, invalid data and mismatched IDs produce a retryable error and never prove an abstract is absent. Requests have a 12-second upstream deadline, a 512 KB response bound, a five-minute metadata cache and duplicate-request coalescing. No account identity or cookies are sent to NCBI. A retrieved abstract, its source, retrieval time and publisher copyright save with a retained paper and survive exports/imports. User notes and collection assignments are preserved. The account API preserves existing provenance when an older tab sends the same abstract without its newer source fields.
+
+NLM format documentation: https://www.nlm.nih.gov/databases/download/pubmed_medline.html
+EFetch return formats: https://www.ncbi.nlm.nih.gov/books/NBK25499/table/chapter4.T._valid_values_of__retmode_and/
+
+This does not fetch publisher full text or establish a reuse licence. The private-prototype text-reuse/provider-terms review remains required before wider distribution.

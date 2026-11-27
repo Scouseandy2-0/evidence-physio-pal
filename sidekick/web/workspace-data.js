@@ -31,6 +31,10 @@ export function validateWorkspace(input) {
       retrievedAt: str(p.retrievedAt, 100, 'retrieval time'), savedAt: str(p.savedAt, 100, 'saved time'),
       notes: str(p.notes, 20000, 'paper notes'), collection: str(p.collection, 80, 'collection')
     };
+    if (p.abstractSource) {
+      if (p.abstractSource !== 'PubMed (NCBI)' || !['available', 'notIndexed'].includes(p.abstractStatus) || !Number.isFinite(Date.parse(p.abstractRetrievedAt)) || (p.abstractStatus === 'available') !== Boolean(paper.abstract.trim())) fail('Invalid abstract provenance.');
+      Object.assign(paper, { abstractSource: p.abstractSource, abstractStatus: p.abstractStatus, abstractRetrievedAt: str(p.abstractRetrievedAt, 100, 'abstract retrieval time'), abstractCopyright: str(p.abstractCopyright, 10000, 'abstract copyright') });
+    }
     return paper;
   });
   const reflections = list(input.reflections, 1000, 'reflections').map(r => {
@@ -68,6 +72,10 @@ export function mergeWorkspaces(remote, device, newId = () => crypto.randomUUID(
     const existing = papers.get(p.id);
     if (!existing) papers.set(p.id, p);
     else {
+      if (!existing.abstract && p.abstractSource) {
+        for (const key of ['abstract', 'abstractSource', 'abstractStatus', 'abstractRetrievedAt', 'abstractCopyright']) existing[key] = p[key];
+        existing.retracted ||= p.retracted;
+      }
       if (p.notes && p.notes !== existing.notes && !existing.notes.endsWith(`\n\n[Device note]\n${p.notes}`)) existing.notes = existing.notes ? `${existing.notes}\n\n[Device note]\n${p.notes}` : p.notes;
       if (!existing.collection) existing.collection = p.collection;
       else if (p.collection && p.collection !== existing.collection) existing.notes += `\n\n[Device collection] ${p.collection}`;
