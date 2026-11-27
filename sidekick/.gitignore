@@ -5,3 +5,6 @@ node_modules/
 .sites-runtime/
 .DS_Store
 dist/
+
+# Rebuilt from src/anatomy-viewer.js
+web/anatomy-viewer.js

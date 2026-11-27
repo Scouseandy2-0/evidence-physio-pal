@@ -71,7 +71,7 @@ The library stores publication metadata and indexed abstracts for personal proto
 - External paper/resource links open other providers. Google Fonts is the only other external UI resource.
 - Teaching and reflection entries must contain no identifiable patient information.
 - Intended for private product testing, not patient-specific decision support.
-- Integrated 3D anatomy is explicitly not available yet. There is a link to OpenStax; no licence for a commercial anatomy viewer has been assumed.
+- Integrated skeletal anatomy preview now uses the licensed BodyParts3D / OrganUI source described below. Expanded anatomy systems and expert review remain outstanding.
 - This is not a signed native iOS app. The next native phase should package local assets with Capacitor, retain verified-source search, test downloads/storage/external links on iPhone, and use TestFlight after Mac signing and Apple enrolment.
 
 ## Delivery roadmap
@@ -79,7 +79,7 @@ The library stores publication metadata and indexed abstracts for personal proto
 1. Test search and known-paper retrieval with students and clinicians; consider a more expressive, transparent search builder based on observed needs.
 2. Validate account loading, import/recovery and refreshed cross-device records on physical iPhone/Safari and Mac. Review storage regions, retention, deletion and account export before wider distribution.
 3. Add structured appraisal notes and cautiously evaluated source-grounded explanations. Keep claims traceable to actual text and distinguish abstracts from full-text review.
-4. Select and license accurate 3D anatomy. Evaluate usability, offline assets and mobile GPU performance before committing.
+4. Extend and independently review skeletal anatomy; test physical iPhone GPU performance before expanding to muscle and nerve systems.
 5. Add individually reviewed clinical resources and validated outcome measures with exact versions, permitted use and scoring tests.
 6. Develop FCP teaching packs with objectives, fictional cases, facilitator notes and verified references; define review/version ownership before selling them.
 7. Obtain brand clearance, review content/data/provider obligations, decide subscriptions, package iOS and validate TestFlight before App Store submission.
@@ -148,3 +148,13 @@ Portfolio records are personal accounts of learning and self-reported time, not 
 
 Reference implementation guidance: https://www.w3.org/TR/appmanifest/ and https://webkit.org/blog/13878/
 Apple Home Screen instructions: https://support.apple.com/en-gb/guide/iphone/iphea86e5236/27/ios/27
+
+## Skeletal anatomy preview
+
+242 selectable source structures from OrganUI’s BodyParts3D 3.0 model, pinned at `120fc17278559057b37aff516eee89d263b604c6`. The unchanged 5,221,116-byte GLB has SHA-256 `c68b05d97d70c4d33363bf71d9885c191eb25f61a82dbba935a726ddd8e60ac8`, checked at load time. Full attribution, provenance and source notices are served alongside it. Model and derived views are CC BY-SA 2.1 Japan, separate from the MIT Three.js viewer software. Credit: BodyParts3D, © The Database Center for Life Science licensed under CC Attribution-Share Alike 2.1 Japan.
+
+The accessible structure list works before downloading 3D. WebGL supports the skeleton, region visibility, selection highlighting, isolation, focus and camera controls. Without WebGL a software SVG view displays one selected structure at a time. Interleaved attributes are unpacked without changing geometry for this renderer. Rendering is event-driven and viewer resources are released on navigation. Research and saved-work actions use source labels; CPD drafts contain source attribution but no invented learning or time.
+
+Educational preview: a single simplified adult male skeleton with selected cartilage and discs. It omits muscles, nerves, ligaments, capsules, articular cartilage, coccyx, teeth and ear ossicles. Source colours are illustrative. Two ambiguous costal cartilage labels remain explicitly source labels. Expert anatomical review and physical iPhone/WebGL QA are outstanding; this is not a complete or clinically validated atlas.
+
+Source mirrors can recover the binary with `npm run anatomy:fetch`; build and test setup also retrieve it if absent and reject incorrect size/hash. This downloads only the fixed, pinned source URL and preserves its attribution notices. The Sites source includes the binary; the GitHub mirror uses this reproducible retrieval path.

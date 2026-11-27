@@ -100,3 +100,9 @@ Rendered local-browser QA added a clearly labelled software-test outcome and rev
 71 automated tests pass. New checks cover mixed-type workspace search/ranking, accent and all-word matching, outcome/type filters, accurate total versus result cap, non-mutation, bounded reading preferences, persistence/failure defaults and Home Screen manifest/PNG dimensions. A built-Worker fetch check confirmed HTTP 200, correct MIME types and uncorrupted PNG signatures for the manifest and all three icons.
 
 Rendered local-browser QA found existing software-QA teaching, appraisal, CPD and revision records in one query; filtered to a reflection and confirmed focus/highlight on the exact article; opened a paper by PMID; and searched/jumped to a matching revision card. Reading size 125%, comfortable spacing and reduced motion survived reload, the desktop layout stayed within the viewport, and Reset returned to 100%. The setup dialog displayed its app icon and installation instructions. No physical iPhone Home Screen, mobile viewport, Safari sign-in or standalone-storage test is claimed. No offline mode was added.
+
+## Skeletal anatomy preview
+
+Automated checks cover pinned binary hash and mesh/catalog correspondence, source labels, region/search filters and blank source-linked learning drafts. Added regression coverage for preserving positions when unpacking interleaved GLTF geometry for the SVG fallback. Build and syntax checks pass.
+
+Rendered browser QA: femur and right scaphoid display correctly in software mode; source-ID/region filtering, focus, lateral view and anatomy-to-research navigation work. Anatomy-to-CPD produces a draft with the right structure/FMA source, blank minutes and blank learning/action fields; the QA draft was cancelled. WebGL is disabled in the remote browser, so full GPU rendering and physical iPhone behaviour are not verified. No production account data was used or seeded.

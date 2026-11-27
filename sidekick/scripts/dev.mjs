@@ -16,7 +16,7 @@ for (const name of readdirSync('drizzle').filter(f => f.endsWith('.sql')).sort()
 }
 export const adapter = { prepare(sql) { return { bind(...args) { return { async first() { return db.prepare(sql).get(...args) || null; } }; } }; } };
 const port = Number(process.env.PORT || 4173);
-const types = { html: 'text/html', js: 'text/javascript', css: 'text/css', svg: 'image/svg+xml', png: 'image/png', webmanifest: 'application/manifest+json' };
+const types = { html: 'text/html', js: 'text/javascript', css: 'text/css', svg: 'image/svg+xml', png: 'image/png', webmanifest: 'application/manifest+json', glb: 'model/gltf-binary', md: 'text/plain', txt: 'text/plain' };
 createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://127.0.0.1:${port}`);
