@@ -1,0 +1,275 @@
+import { searchPapers, citation, toRIS } from './research.js';
+import { resources, questions, teachingTopics } from './content.js';
+
+const icons = {
+  home: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  research: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',
+  learn: '<path d="m2 8 10-5 10 5-10 5L2 8Z"/><path d="M6 10v7c4 3 8 3 12 0v-7M22 8v8"/>',
+  practice: '<rect x="3" y="6" width="18" height="15" rx="2"/><path d="M8 6V3h8v3m-4 5v6m-3-3h6"/>',
+  cpd: '<path d="M8 3H5a2 2 0 0 0-2 2v15a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V5a2 2 0 0 0-2-2h-3"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="m8 13 3 3 5-6"/>',
+  fcp: '<path d="M12 3 3 7v5c0 5 9 9 9 9s9-4 9-9V7l-9-4Z"/><path d="m8 12 3 3 5-6"/>',
+  library: '<path d="M6 3h12v19l-6-4-6 4V3Z"/>',
+  book: '<path d="M12 5c-3-2-7-2-10-1v15c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1Zm0 0v15"/>',
+  anatomy: '<circle cx="12" cy="4" r="2"/><path d="M8 9h8m-4-3v8m-4 7 4-7 4 7M8 9l-3 5m11-5 3 5"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6m10-6v6M3 11h18"/>',
+  check: '<path d="m5 12 4 4L19 6"/>',
+  download: '<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',
+  plus: '<path d="M12 4v16M4 12h16"/>',
+};
+const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || icons.book}</svg>`;
+const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const main = document.querySelector('main');
+const dialog = document.querySelector('dialog');
+const KEY = 'physiosidekick.workspace.v1';
+let storageFailed = false;
+let workspace = { saved: [], reflections: [] };
+try {
+  const stored = JSON.parse(localStorage.getItem(KEY));
+  if (stored && Array.isArray(stored.saved) && Array.isArray(stored.reflections)) workspace = stored;
+} catch { storageFailed = true; }
+let route = location.hash.slice(1) || 'home';
+let paperMap = new Map(workspace.saved.map(p => [p.id, p]));
+let filters = { type: 'all', years: '', openAccess: false, sort: 'relevance' };
+let searchState = { term: '', papers: [], total: 0, nextCursor: '*', error: '', searched: false, loading: false };
+let controller;
+let requestNumber = 0;
+let learnTab = 'appraisal';
+let quizIndex = 0;
+let quizAnswered = false;
+let libraryFilter = '';
+let cpdFormOpen = false;
+let reflectionEditing = null;
+let toastTimer;
+const nav = [['home', 'Overview'], ['research', 'Research'], ['learn', 'Learn & anatomy'], ['practice', 'Practice resources'], ['cpd', 'My CPD'], ['fcp', 'FCP workspace'], ['library', 'Saved papers']];
+function persist() {
+  try { localStorage.setItem(KEY, JSON.stringify(workspace)); return true; }
+  catch { storageFailed = true; toast('Browser storage is unavailable or full. Export your workspace to keep changes.'); return false; }
+}
+function toast(message) {
+  clearTimeout(toastTimer); const el = document.querySelector('#toast'); el.textContent = message; el.classList.add('toast-show');
+  toastTimer = setTimeout(() => el.classList.remove('toast-show'), 4500);
+}
+function openDialog(html) { document.querySelector('#dialog-content').innerHTML = `<div class="dialog-body">${html}</div>`; if (!dialog.open) dialog.showModal(); }
+function navigate(next) { if (location.hash === `#${next}`) render(); else location.hash = next; }
+function updateNav() {
+  document.querySelector('#desktop-nav').innerHTML = nav.map(([id, label]) => `<a href="#${id}" class="nav-item ${route === id ? 'active' : ''}" ${route === id ? 'aria-current="page"' : ''}>${icon(id)}<span>${label}</span>${id === 'fcp' ? '<span class="premium">PREVIEW</span>' : ''}${id === 'library' ? `<span class="count">${workspace.saved.length}</span>` : ''}</a>`).join('');
+  const mobile = [['home', 'Home'], ['research', 'Research'], ['learn', 'Learn'], ['cpd', 'CPD'], ['fcp', 'FCP']];
+  document.querySelector('#mobile-nav').innerHTML = mobile.map(([id, label]) => `<a href="#${id}" class="${route === id ? 'active' : ''}" ${route === id ? 'aria-current="page"' : ''}>${icon(id)}<span>${label}</span></a>`).join('');
+  document.querySelector('#breadcrumb').textContent = nav.find(([id]) => route === id)?.[1] || 'Overview';
+}
+function intro(eyebrow, title, description, action = '') {
+  return `<div class="page-intro"><span class="eyebrow">${eyebrow}</span><div class="title-row"><h1>${title}</h1>${action}</div><p>${description}</p></div>`;
+}
+function searchForm(id, value = '', hero = false) {
+  return `<form id="${id}" class="${hero ? '' : 'searchbox research-search'}">${hero ? '<div class="searchbox">' : ''}${icon('research')}<input type="search" name="topic" aria-label="Search research papers" placeholder="${hero ? 'What are you curious about?' : 'Topic, author or DOI…'}" value="${esc(value)}" maxlength="250" required><button class="button ${hero ? 'light' : ''}" type="submit">Search</button>${hero ? '</div>' : ''}</form>`;
+}
+function home() {
+  const minutes = workspace.reflections.reduce((sum, r) => sum + Number(r.minutes || 0), 0);
+  main.innerHTML = `${intro('YOUR KNOWLEDGE, CONNECTED', 'A little curiosity. A lot of possibility.', 'Your space to learn, explore the evidence and grow as a physio.', `<span class="date-pill">${icon('calendar')}${new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long' }).format(new Date())}</span>`)}
+  <section class="hero" aria-labelledby="hero-title"><div><span class="eyebrow">START WITH A QUESTION</span><h2 id="hero-title">Good practice starts<br>with better questions.</h2><p>Find real research. Follow the original paper. Build your own understanding.</p>${searchForm('home-search', '', true)}<div class="suggestions"><span>Explore a topic</span>${['Rotator cuff exercise', 'Knee osteoarthritis', 'Low back pain'].map(t => `<button data-search="${t}">${t}</button>`).join('')}</div></div><div class="hero-icon">${icon('book')}</div></section>
+  <div class="section-heading"><h2>Make it your sidekick</h2><span class="subtle">From study to practice</span></div>
+  <section class="cards" aria-label="Explore your workspace">
+  <a href="#learn" class="card feature-card"><span class="tile-icon">${icon('learn')}</span><h3>Build your understanding</h3><p>Critical appraisal, learning checks and anatomy resources.</p><span class="mini-label">LEARN SOMETHING NEW</span></a>
+  <a href="#library" class="card feature-card"><span class="tile-icon blue">${icon('library')}</span><h3>A library that’s yours</h3><p>Keep papers, collections and your own notes together.</p><span class="mini-label">${workspace.saved.length} SAVED ${workspace.saved.length === 1 ? 'PAPER' : 'PAPERS'}</span></a>
+  <a href="#cpd" class="card feature-card"><span class="tile-icon gold">${icon('cpd')}</span><h3>Make learning count</h3><p>Capture a reflection and decide what you’ll do next.</p><span class="mini-label">${workspace.reflections.length} REFLECTIONS · ${minutes} MIN LOGGED</span></a></section>
+  <div class="two-col"><section><div class="section-heading"><h2>Follow your curiosity</h2><a href="#research" class="text-button">Explore research</a></div><div class="card topic-list">${[['Shoulder & upper limb', 'Rotator cuff rehabilitation', 'Rotator cuff exercise'], ['Knee & lower limb', 'Exercise and osteoarthritis', 'Knee osteoarthritis exercise'], ['Spine & pain', 'Understanding low back pain', 'Low back pain physiotherapy']].map(([title, sub, query]) => `<div class="topic-item"><span class="topic-symbol">${icon('research')}</span><div><strong>${title}</strong><small>${sub}</small></div><button class="text-button" data-search="${query}">Find papers</button></div>`).join('')}</div></section>
+  <section class="card fcp-card" style="margin-top:30px"><span class="eyebrow">FOR FIRST CONTACT PHYSIOS</span><h3>A space for your<br>next teaching session.</h3><p>Turn a learning question into a structured team discussion.</p><a href="#fcp" class="button secondary">Explore the FCP workspace</a></section></div>
+  ${storageFailed ? '<div class="notice error">Browser storage could not be read. Use “Your data & privacy” to export changes before closing this page.</div>' : ''}`;
+  document.querySelector('#home-search').addEventListener('submit', e => { e.preventDefault(); startSearch(new FormData(e.currentTarget).get('topic')); });
+}
+function research() {
+  main.innerHTML = `${intro('FOLLOW THE SOURCE', 'Real papers. Clear starting points.', 'Search PubMed-indexed publications through Europe PMC. No generated references or automatic quality scores.')}${searchForm('research-search', searchState.term)}
+  <div class="research-layout"><aside class="card filter-panel" aria-label="Research filters"><h2>Refine your search</h2>
+  <div class="field"><label for="study-type">Publication type</label><select id="study-type"><option value="all">All publications</option><option value="review">Systematic reviews</option><option value="trial">Randomised trials</option></select></div>
+  <div class="field"><label for="year-filter">Publication date</label><select id="year-filter"><option value="">Any date</option><option value="5">Past 5 calendar years</option><option value="2">Past 2 calendar years</option></select></div>
+  <div class="field"><label for="sort-filter">Sort results</label><select id="sort-filter"><option value="relevance">Relevance</option><option value="newest">Newest first</option></select></div>
+  <label class="check-field"><input type="checkbox" id="open-access"> Open access only</label><p class="subtle">Publication type and access labels come from the index. They do not establish study quality.</p></aside><section aria-label="Search results"><div id="results" aria-live="polite"></div></section></div>`;
+  document.querySelector('#study-type').value = filters.type;
+  document.querySelector('#year-filter').value = filters.years;
+  document.querySelector('#sort-filter').value = filters.sort;
+  document.querySelector('#open-access').checked = filters.openAccess;
+  document.querySelector('#research-search').addEventListener('submit', e => { e.preventDefault(); runSearch(String(new FormData(e.currentTarget).get('topic'))); });
+  [['study-type', 'type'], ['year-filter', 'years'], ['sort-filter', 'sort'], ['open-access', 'openAccess']].forEach(([id, key]) => document.getElementById(id).addEventListener('change', e => { filters[key] = key === 'openAccess' ? e.target.checked : e.target.value; if (searchState.searched) runSearch(searchState.term); }));
+  renderResults();
+}
+function startSearch(term) { searchState.term = term; navigate('research'); runSearch(term); }
+async function runSearch(term, more = false) {
+  term = term.trim(); if (!term) return;
+  controller?.abort(); controller = new AbortController(); const current = ++requestNumber;
+  searchState = { ...searchState, term, loading: true, searched: true, error: '', ...(more ? {} : { papers: [], total: 0, nextCursor: '*' }) };
+  if (route === 'research') { const input = document.querySelector('#research-search input'); if (input) input.value = term; renderResults(); }
+  try {
+    const data = await searchPapers(term, filters, more ? searchState.nextCursor : '*', controller.signal);
+    if (current !== requestNumber) return;
+    const all = more ? [...searchState.papers, ...data.papers] : data.papers;
+    searchState = { ...searchState, papers: [...new Map(all.map(p => [p.id, p])).values()], total: data.total, nextCursor: data.nextCursor, loading: false };
+    data.papers.forEach(p => paperMap.set(p.id, p));
+  } catch (e) { if (current !== requestNumber || e.name === 'AbortError') return; searchState.loading = false; searchState.error = e.message || 'Search failed. Please try again.'; }
+  if (route === 'research') renderResults();
+}
+function renderResults() {
+  const el = document.querySelector('#results'); if (!el) return;
+  if (!searchState.searched) { el.innerHTML = `<div class="empty">${icon('research')}<h3>Your next discovery starts here</h3><p>Search a condition, intervention, author or DOI. Open a record to read the indexed abstract and find the original paper.</p><button class="button secondary" data-search="Knee osteoarthritis exercise">Try knee osteoarthritis</button></div>`; return; }
+  if (searchState.loading && !searchState.papers.length) { el.innerHTML = '<div class="loading"><span class="spinner"></span>Searching real publication records…</div>'; return; }
+  el.innerHTML = `${searchState.error ? `<div class="notice error">${esc(searchState.error)} <button class="text-button" id="retry-search">Retry search</button></div>` : ''}<div class="result-toolbar"><strong>${searchState.total.toLocaleString()} indexed results</strong><span>Source: Europe PMC / PubMed<br>Relevance is not evidence quality</span></div>
+  ${!searchState.papers.length && !searchState.error ? `<div class="empty">${icon('research')}<h3>No matching papers found</h3><p>Try fewer keywords or remove a filter. An empty result is better than an invented reference.</p></div>` : ''}<div class="paper-list">${searchState.papers.map(p => paperCard(p)).join('')}</div>
+  ${searchState.nextCursor && searchState.papers.length < searchState.total && searchState.papers.length ? `<button id="load-more" class="button secondary" style="margin-top:20px" ${searchState.loading ? 'disabled' : ''}>${searchState.loading ? 'Loading…' : 'Load more papers'}</button>` : ''}`;
+  document.querySelector('#retry-search')?.addEventListener('click', () => runSearch(searchState.term));
+  document.querySelector('#load-more')?.addEventListener('click', () => runSearch(searchState.term, true));
+}
+function paperCard(p, savedView = false) {
+  const saved = workspace.saved.some(s => s.id === p.id);
+  const type = p.types?.find(t => /systematic review|meta-analysis|randomized controlled trial/i.test(t)) || p.types?.[0] || 'Indexed publication';
+  return `<article class="card paper-card" data-paper="${esc(p.id)}"><div class="paper-tags"><span class="badge neutral">${esc(type)}</span><span class="badge ${p.openAccess ? 'oa' : ''}">${p.openAccess ? 'Open access indexed' : 'Access may require subscription'}</span>${p.retracted ? '<span class="badge" style="background:#ffe9e2;color:#a03f28">Retracted publication</span>' : ''}</div>
+  <h3><button class="paper-title" data-detail="${esc(p.id)}">${esc(p.title)}</button></h3><div class="paper-meta">${esc(p.authors || 'Authors not supplied')}<br>${esc(p.journal || 'Journal not supplied')} · ${esc(p.year || 'Date not supplied')}</div>
+  <p class="paper-abstract">${esc(p.abstract || 'No abstract is available in this index record. Open the original source to investigate further.')}</p>
+  <div class="paper-actions"><button class="text-button" data-detail="${esc(p.id)}">Read record</button><a href="${esc(p.recordURL)}" target="_blank" rel="noopener noreferrer">PubMed</a>${p.doi ? `<a href="https://doi.org/${esc(p.doi)}" target="_blank" rel="noopener noreferrer">Publisher / DOI</a>` : ''}<button class="save-button ${saved ? 'saved' : ''}" data-save="${esc(p.id)}" aria-label="${saved ? 'Remove saved paper' : 'Save paper'}: ${esc(p.title)}">${icon('library')}${saved ? 'Saved' : 'Save'}</button></div>
+  ${savedView ? `<div class="saved-extra"><div class="saved-grid"><div class="field"><label for="collection-${p.pmid}">Collection</label><input id="collection-${p.pmid}" value="${esc(p.collection || '')}" data-collection="${esc(p.id)}" placeholder="e.g. Shoulder assignment" maxlength="80" list="collection-options"></div><div class="field"><label>Reference</label><button class="button secondary" data-copy="${esc(p.id)}">Copy citation</button></div></div><div class="field"><label for="note-${p.pmid}">Your notes</label><textarea id="note-${p.pmid}" data-note="${esc(p.id)}" maxlength="10000" placeholder="What did you learn? No identifiable patient information.">${esc(p.notes || '')}</textarea></div><button class="button secondary" data-save-notes="${esc(p.id)}">Save collection & notes</button></div>` : ''}</article>`;
+}
+function paperDetail(id) {
+  const p = paperMap.get(id); if (!p) return;
+  openDialog(`<span class="eyebrow">ORIGINAL PUBLICATION RECORD</span><h2 id="dialog-title">${esc(p.title)}</h2><p class="paper-meta">${esc(p.authors)}<br>${esc(p.journal)} · ${esc(p.year)}</p>
+  ${p.retracted ? '<div class="notice error">This record is marked as a retracted publication. Investigate the retraction notice before using its findings.</div>' : ''}
+  <div class="identifier">PMID: ${esc(p.pmid)}${p.doi ? `<br>DOI: ${esc(p.doi)}` : ''}</div><div class="button-row"><a class="button" href="${esc(p.recordURL)}" target="_blank" rel="noopener noreferrer">Open PubMed record</a>${p.fullText ? `<a class="button secondary" href="${esc(p.fullText)}" target="_blank" rel="noopener noreferrer">Open free full text</a>` : p.doi ? `<a class="button secondary" href="https://doi.org/${esc(p.doi)}" target="_blank" rel="noopener noreferrer">Check publisher access</a>` : ''}</div>
+  <h3>Indexed abstract</h3><p class="abstract-full">${esc(p.abstract || 'The index does not provide an abstract for this paper.')}</p><div class="notice">This is publication metadata and an indexed abstract, not an AI summary or a quality assessment. Full text may contain important methods, results and limitations omitted here.</div>
+  <h3>Before applying the findings</h3><ul><li>Does the population and setting match your question?</li><li>How was the study designed, and what could bias its findings?</li><li>How large and uncertain are the effects, and were harms reported?</li><li>Have you read the full text, or only the abstract?</li></ul>
+  <div class="button-row"><button class="button secondary" data-save="${esc(p.id)}">${icon('library')}${workspace.saved.some(s => s.id === id) ? 'Remove from saved papers' : 'Save to my papers'}</button><button class="button secondary" data-copy="${esc(p.id)}">Copy citation</button></div><p class="subtle" style="margin-top:20px">Record retrieved ${esc(new Date(p.retrievedAt).toLocaleDateString('en-GB'))}. <a href="${esc(p.indexedURL)}" target="_blank" rel="noopener noreferrer">View Europe PMC record</a>. Bibliographic details may be updated by the source.</p>`);
+}
+function toggleSave(id) {
+  const p = paperMap.get(id); if (!p) return;
+  const at = workspace.saved.findIndex(s => s.id === id);
+  if (at >= 0) {
+    const old = workspace.saved[at];
+    if (old.notes || old.collection) {
+      openDialog(`<h2 id="dialog-title">Remove this saved paper?</h2><p>Your collection assignment and notes for this paper will also be removed from this browser.</p><button class="button" id="confirm-unsave">Remove saved paper and notes</button>`);
+      document.querySelector('#confirm-unsave').onclick = () => { workspace.saved = workspace.saved.filter(s => s.id !== id); finishSave('Paper removed'); dialog.close(); }; return;
+    }
+    workspace.saved.splice(at, 1); finishSave('Paper removed');
+  } else { workspace.saved.unshift({ ...p, collection: '', notes: '', savedAt: new Date().toISOString() }); finishSave('Paper saved to your library'); }
+  if (dialog.open) paperDetail(id);
+}
+function finishSave(message) {
+  const ok = persist(); updateNav(); if (route === 'library') library(); else if (route === 'research') renderResults(); if (ok) toast(message);
+}
+function library() {
+  const collections = [...new Set(workspace.saved.map(p => p.collection).filter(Boolean))].sort();
+  const papers = workspace.saved.filter(p => `${p.title} ${p.authors} ${p.collection || ''} ${p.notes || ''}`.toLowerCase().includes(libraryFilter.toLowerCase()));
+  main.innerHTML = `${intro('KEEP WHAT MATTERS', 'Your saved papers.', 'Build collections for a module, a clinical question or your next teaching session.')}<div class="library-header"><button class="button secondary" id="export-ris" ${!papers.length ? 'disabled' : ''}>${icon('download')}Export ${papers.length} references (.ris)</button><button class="text-button" id="export-citations" ${!papers.length ? 'disabled' : ''}>Download citations</button><span class="subtle">Imports into reference managers</span></div><div class="collection-bar"><input aria-label="Filter saved papers" id="library-search" placeholder="Search your papers, collections and notes…" value="${esc(libraryFilter)}"><span class="subtle">${papers.length} ${papers.length === 1 ? 'paper' : 'papers'}</span></div>
+  ${collections.length ? `<div class="pill-list"><button class="pill ${!libraryFilter ? 'active' : ''}" data-library-filter="">All papers</button>${collections.map(c => `<button class="pill ${libraryFilter === c ? 'active' : ''}" data-library-filter="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : ''}<datalist id="collection-options">${collections.map(c => `<option value="${esc(c)}"></option>`).join('')}</datalist>
+  <div class="paper-list">${papers.length ? papers.map(p => paperCard(p, true)).join('') : `<div class="empty">${icon('library')}<h3>${workspace.saved.length ? 'No matching saved papers' : 'Your library starts with one good paper'}</h3><p>${workspace.saved.length ? 'Try another keyword or clear your filter.' : 'Save a research result, add it to a collection and make a note in your own words.'}</p><a class="button" href="#research">Find research</a></div>`}</div><div class="notice">Papers and notes are stored in this browser only. They do not sync between devices. Export your workspace regularly from “Your data & privacy”.</div>`;
+  document.querySelector('#library-search').addEventListener('input', e => { libraryFilter = e.target.value; const pos = e.target.selectionStart; library(); const input = document.querySelector('#library-search'); input.focus(); input.setSelectionRange?.(pos, pos); });
+  document.querySelector('#export-ris').onclick = () => download('physiosidekick-references.ris', toRIS(papers), 'application/x-research-info-systems');
+  document.querySelector('#export-citations').onclick = () => download('physiosidekick-citations.txt', papers.map(citation).join('\n\n'), 'text/plain');
+}
+function resourceCard(r) { return `<article class="card resource-card"><span class="badge">${r.label}</span><h3>${r.name}</h3><p>${r.description}</p><a class="text-button" href="${r.url}" target="_blank" rel="noopener noreferrer">Open original resource</a></article>`; }
+function learn() {
+  main.innerHTML = `${intro('LEARN WITH INTENTION', 'Understand more. Keep questioning.', 'Build the habits that connect anatomy, evidence and thoughtful practice.')}<div class="tabs" role="tablist" aria-label="Learning areas">${[['appraisal', 'Critical appraisal'], ['anatomy', 'Anatomy'], ['sources', 'Research sources']].map(([id, label]) => `<button class="tab ${learnTab === id ? 'active' : ''}" role="tab" aria-selected="${learnTab === id}" data-learn-tab="${id}" id="tab-${id}" aria-controls="learning-content">${label}</button>`).join('')}</div><section id="learning-content" role="tabpanel" aria-labelledby="tab-${learnTab}"></section>`;
+  const area = document.querySelector('#learning-content');
+  if (learnTab === 'anatomy') area.innerHTML = `<div class="anatomy-placeholder">${icon('anatomy')}<div><span class="eyebrow">ANATOMY WORKSPACE</span><h2>Start with the foundations.</h2><p>An integrated 3D anatomy viewer is planned. It is not included in this prototype: the model accuracy, licence and mobile performance need checking first.</p></div></div><div class="resource-grid">${resources.filter(r => r.area === 'anatomy').map(resourceCard).join('')}<article class="card resource-card"><span class="badge">Connect the learning</span><h3>From structure to research</h3><p>Explore papers about shoulder anatomy and biomechanics, then keep useful findings in a collection.</p><button class="text-button" data-search="Shoulder anatomy biomechanics">Find shoulder anatomy papers</button></article></div>`;
+  else if (learnTab === 'sources') area.innerHTML = `<div class="resource-grid">${resources.filter(r => r.area === 'research').map(resourceCard).join('')}</div>`;
+  else { area.innerHTML = `<div class="two-col"><section class="card" id="quiz-area"></section><article class="card resource-card"><span class="badge">Start a useful habit</span><h3>Read. Question. Reflect.</h3><p>A summary is a starting point. Check the original source, write down what remains uncertain and decide what you need to learn next.</p><a href="#cpd" class="text-button">Capture a reflection</a><div class="notice">These short learning checks are introductory exercises, not accredited training or a clinical competency assessment.</div><a class="text-button" href="${resources[3].url}" target="_blank" rel="noopener noreferrer">Explore CASP appraisal checklists</a></article></div>`; renderQuiz(); }
+}
+function renderQuiz() {
+  quizAnswered = false; const q = questions[quizIndex];
+  document.querySelector('#quiz-area').innerHTML = `<span class="eyebrow">A MOMENT TO THINK · ${quizIndex + 1} OF ${questions.length}</span><h2 style="margin:18px 0;font-size:1.2rem;line-height:1.5">${q.question}</h2><div>${q.options.map((o, i) => `<button class="quiz-option" data-answer="${i}">${o}</button>`).join('')}</div><div id="quiz-feedback" aria-live="polite"></div><button class="text-button" id="next-question" hidden>Next learning check</button>`;
+  document.querySelector('#next-question').onclick = () => { quizIndex = (quizIndex + 1) % questions.length; renderQuiz(); };
+}
+function practice() {
+  main.innerHTML = `${intro('PRACTICE RESOURCES', 'Go straight to the source.', 'A starting shelf of original professional resources. Always check scope, currency and local pathways.')}<div class="resource-grid">${resources.filter(r => r.area === 'practice').map(resourceCard).join('')}<article class="card resource-card"><span class="badge">Research in context</span><h3>Find the evidence behind a question</h3><p>Look up original publications, examine their limitations and save the ones relevant to your learning.</p><a class="text-button" href="#research">Search research</a></article></div><div class="notice">Validated outcome measures and assessment resources will be added after their exact versions, scoring methods and permissions are verified. No generic assessment scores are used here.</div>`;
+}
+function cpd() {
+  const total = workspace.reflections.reduce((sum, r) => sum + Number(r.minutes || 0), 0);
+  main.innerHTML = `${intro('YOUR DEVELOPMENT', 'Give your learning a next step.', 'Record what you learned, why it matters and what you intend to do with it.', '<button class="button" id="new-reflection">'+icon('plus')+'Add reflection</button>')}<div class="card"><div class="split-heading"><h2>Your learning record</h2><button class="text-button" id="export-cpd" ${!workspace.reflections.length ? 'disabled' : ''}>Export reflections</button></div><div class="stat-line"><div><strong>${workspace.reflections.length}</strong><span>Reflections recorded</span></div><div><strong>${total}</strong><span>Learning minutes logged</span></div></div></div>
+  <div class="notice">This is your personal learning log. Time logged does not establish accreditation or fulfilment of regulatory requirements. Keep entries free of identifiable patient information.</div><div id="reflection-form-area"></div><div class="paper-list">${workspace.reflections.length ? workspace.reflections.map(r => `<article class="card"><div class="reflection-meta"><span>${esc(r.date)}</span><span>· ${Number(r.minutes)} minutes</span><span class="badge">${esc(r.kind)}</span></div><h3>${esc(r.title)}</h3><p class="reflection-content">${esc(r.learning)}</p><h3>My next step</h3><p class="reflection-content">${esc(r.action)}</p>${r.source ? `<p class="identifier">Source: ${esc(r.source)}</p>` : ''}<div class="reflection-actions"><button class="text-button" data-edit-reflection="${esc(r.id)}">Edit reflection</button><button class="danger-button" data-delete-reflection="${esc(r.id)}">Remove</button></div></article>`).join('') : `<div class="empty">${icon('cpd')}<h3>A useful thought is worth keeping</h3><p>Start with a paper, a teaching session or a question that changed your understanding.</p><button class="button secondary" id="first-reflection">Write your first reflection</button></div>`}</div>`;
+  document.querySelector('#new-reflection').onclick = () => { reflectionEditing = null; cpdFormOpen = true; renderReflectionForm(); };
+  document.querySelector('#first-reflection')?.addEventListener('click', () => { reflectionEditing = null; cpdFormOpen = true; renderReflectionForm(); });
+  document.querySelector('#export-cpd').onclick = () => download('physiosidekick-reflections.md', '# My learning reflections\n\n' + workspace.reflections.map(r => `## ${r.title}\n${r.date} · ${r.minutes} minutes · ${r.kind}\n\n${r.learning}\n\n### Next step\n${r.action}\n\nSource: ${r.source || 'Not recorded'}`).join('\n\n---\n\n'), 'text/markdown');
+  if (cpdFormOpen) renderReflectionForm();
+}
+function renderReflectionForm() {
+  const r = workspace.reflections.find(r => r.id === reflectionEditing) || {};
+  const area = document.querySelector('#reflection-form-area');
+  area.innerHTML = `<form id="reflection-form" class="card form-card" style="margin-bottom:20px"><h2>${r.id ? 'Edit your reflection' : 'Capture a reflection'}</h2><div class="field"><label for="reflection-title">Learning title</label><input id="reflection-title" name="title" value="${esc(r.title || '')}" maxlength="180" required></div><div class="form-row"><div class="field"><label for="reflection-date">Date</label><input id="reflection-date" name="date" type="date" value="${esc(r.date || new Date().toISOString().slice(0, 10))}" required></div><div class="field"><label for="reflection-minutes">Learning time in minutes</label><input id="reflection-minutes" name="minutes" type="number" min="1" max="1440" value="${Number(r.minutes || 15)}" required></div></div><div class="field"><label for="reflection-kind">Activity</label><select id="reflection-kind" name="kind"><option>Research reading</option><option>Teaching</option><option>Course or learning</option><option>Professional reflection</option></select></div><div class="field"><label for="reflection-learning">What did you learn, and why does it matter?</label><textarea id="reflection-learning" name="learning" maxlength="10000" required>${esc(r.learning || '')}</textarea></div><div class="field"><label for="reflection-action">What will you do next?</label><textarea id="reflection-action" name="action" maxlength="10000" required>${esc(r.action || '')}</textarea></div><div class="field"><label for="reflection-source">Source or reference (optional)</label><input id="reflection-source" name="source" value="${esc(r.source || '')}" maxlength="1000" placeholder="Paper DOI, guideline or session title"></div><div class="button-row"><button class="button" type="submit">Save reflection</button><button class="button secondary" type="button" id="cancel-reflection">Cancel</button></div></form>`;
+  if (r.kind) document.querySelector('#reflection-kind').value = r.kind;
+  document.querySelector('#cancel-reflection').onclick = () => { cpdFormOpen = false; reflectionEditing = null; area.innerHTML = ''; };
+  document.querySelector('#reflection-form').onsubmit = e => {
+    e.preventDefault(); const data = Object.fromEntries(new FormData(e.currentTarget));
+    if (!data.title.trim() || !data.learning.trim() || !data.action.trim()) { toast('Please complete the title, learning and next step.'); return; }
+    const entry = { ...data, id: r.id || crypto.randomUUID(), minutes: Number(data.minutes) };
+    workspace.reflections = r.id ? workspace.reflections.map(old => old.id === r.id ? entry : old) : [entry, ...workspace.reflections];
+    const ok = persist(); cpdFormOpen = false; reflectionEditing = null; cpd(); if (ok) toast('Reflection saved');
+  };
+  document.querySelector('#reflection-title').focus();
+}
+function fcp() {
+  main.innerHTML = `${intro('FIRST CONTACT PRACTICE', 'Teach with a purpose.', 'A dedicated space for FCP learning, reflection and team teaching.')}<section class="fcp-banner"><span class="eyebrow">SPECIALIST AREA · PROTOTYPE PREVIEW</span><h2 style="margin-top:12px">Your next teaching session starts here.</h2><p>Build a discussion plan, add a verified source and make the learning practical. The future premium curriculum and pricing have not been set.</p></section><div class="resource-grid">${teachingTopics.map((t, i) => `<article class="card resource-card"><span class="badge">Teaching framework · 15 minutes</span><h3>${t.title}</h3><p>${t.summary}</p><button class="text-button" data-teaching="${i}">Create teaching outline</button></article>`).join('')}<article class="card resource-card"><span class="badge">Source shelf</span><h3>Start from the current guidance</h3><p>Use the original recommendation, check its scope and add your local pathway before delivering a session.</p><a class="text-button" href="#practice">Open practice resources</a></article></div><div class="notice">These are editable planning frameworks, not reviewed clinical teaching packs, prescribing advice, accredited training or competency sign-off. Clinical teaching content needs professional review before use.</div>`;
+}
+function teaching(index) {
+  const t = teachingTopics[index]; if (!t) return;
+  openDialog(`<span class="eyebrow">FCP TEACHING PLANNER</span><h2 id="dialog-title">${t.title}</h2><form id="teaching-form"><div class="field"><label for="teaching-title">Session title</label><input id="teaching-title" name="title" value="${t.title}" maxlength="180" required></div><div class="field"><label for="teaching-objectives">Learning objectives</label><textarea id="teaching-objectives" name="objectives" required maxlength="4000">${t.objectives}</textarea></div><div class="field"><label for="teaching-source">Verified source to discuss</label><input id="teaching-source" name="source" value="${t.source}" maxlength="1000" required></div><div class="field"><label for="teaching-case">Fictional case or discussion question</label><textarea id="teaching-case" name="discussion" placeholder="Add a fictional case or general question. No identifiable patient information." maxlength="6000" required></textarea></div><div class="outline"><h3>Suggested 15-minute structure</h3><ol><li>2 minutes: agree the question and objectives.</li><li>5 minutes: examine the source and its limitations.</li><li>5 minutes: discuss the fictional case or question.</li><li>3 minutes: agree takeaways, uncertainty and a learning action.</li></ol></div><div class="notice">Review and complete the outline before teaching. The app does not verify the clinical accuracy of what you enter.</div><button class="button" type="submit">${icon('download')}Download teaching outline</button></form>`);
+  document.querySelector('#teaching-form').onsubmit = e => { e.preventDefault(); const d = Object.fromEntries(new FormData(e.currentTarget)); download('physiosidekick-teaching-outline.md', `# ${d.title}\n\nStatus: editable teaching framework; requires professional review.\n\n## Objectives\n${d.objectives}\n\n## Source\n${d.source}\n\n## Fictional case / question\n${d.discussion}\n\n## 15-minute agenda\n- 2 min: question and objectives\n- 5 min: source and limitations\n- 5 min: discussion\n- 3 min: takeaways, uncertainty and a learning action\n\n## Facilitator preparation\n- Read and check the original source and its currency.\n- Check any applicable local pathway.\n- Review all clinical content.\n- Record what remains uncertain.\n\n## Takeaways and next action\n[Complete during the session]\n`, 'text/markdown'); toast('Teaching outline downloaded'); };
+}
+function download(filename, text, type) {
+  const url = URL.createObjectURL(new Blob([text], { type: `${type};charset=utf-8` })); const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+async function copyCitation(id) {
+  const p = paperMap.get(id); if (!p) return;
+  try { await navigator.clipboard.writeText(citation(p)); toast('Citation copied · check your required referencing style'); }
+  catch { openDialog(`<h2 id="dialog-title">Copy this citation</h2><p>${esc(citation(p))}</p><p class="subtle">Check against your university or publisher’s required referencing style.</p>`); }
+}
+function privacy() {
+  openDialog(`<span class="eyebrow">YOUR WORKSPACE</span><h2 id="dialog-title">Your data & privacy</h2><p>Saved papers, collection names, notes and reflections are stored in this browser’s local storage. They are not synced to another device or backed up to an account.</p><p>Research keywords are sent to Europe PMC to retrieve publication records. Opening external resources takes you to those providers and their own privacy policies. Fonts load from Google Fonts. No patient records, payment details or AI conversations are collected by this app.</p><p>This private prototype uses the hosting platform’s access controls. Keep all notes and teaching examples free of identifiable patient information.</p><div class="button-row"><button class="button" id="export-workspace">${icon('download')}Export workspace backup</button></div><p class="subtle" style="margin-top:15px">The JSON export contains your papers, notes and reflections. Restore/import is not yet included; keep the file for a future import or manual recovery. References and reflections can also be exported separately.</p>${storageFailed ? '<div class="notice error">Browser persistence is unavailable. Export before leaving.</div>' : ''}`);
+  document.querySelector('#export-workspace').onclick = () => download('physiosidekick-workspace.json', JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), ...workspace }, null, 2), 'application/json');
+}
+function about() { openDialog('<span class="eyebrow">FROM STUDY TO PRACTICE</span><h2 id="dialog-title">A first chapter for PhysioSidekick.</h2><p>This is a private working prototype of a career companion for physiotherapists and students.</p><h3>Working now</h3><ul><li>Live publication search from Europe PMC’s indexed PubMed records.</li><li>Original paper links, indexed abstracts and source access information.</li><li>Saved papers, notes, collections and reference exports.</li><li>Personal learning reflections and editable FCP teaching outlines.</li></ul><h3>Still to build and validate</h3><p>Licensed 3D anatomy, reviewed clinical tools, source-grounded explanations, cross-device accounts, a premium FCP curriculum and the signed iPhone app.</p><p>PhysioSidekick is a working name pending trademark clearance. This prototype is for product testing, not patient-specific decision support.</p>'); }
+function render() {
+  route = nav.some(([id]) => id === location.hash.slice(1)) ? location.hash.slice(1) : 'home';
+  updateNav(); ({ home, research, library, learn, practice, cpd, fcp }[route])();
+  document.title = `${nav.find(([id]) => id === route)[1]} · PhysioSidekick`;
+}
+document.addEventListener('click', e => {
+  const target = e.target.closest('button'); if (!target) return;
+  if (target.dataset.search) startSearch(target.dataset.search);
+  if (target.dataset.detail) paperDetail(target.dataset.detail);
+  if (target.dataset.save) toggleSave(target.dataset.save);
+  if (target.dataset.copy) copyCitation(target.dataset.copy);
+  if (target.dataset.saveNotes) {
+    const card = target.closest('[data-paper]');
+    const p = workspace.saved.find(p => p.id === target.dataset.saveNotes);
+    if (p) {
+      p.collection = card.querySelector('[data-collection]').value.trim();
+      p.notes = card.querySelector('[data-note]').value;
+      paperMap.set(p.id, p);
+      if (persist()) toast('Collection and notes saved');
+    }
+  }
+  if ('libraryFilter' in target.dataset) { libraryFilter = target.dataset.libraryFilter; library(); }
+  if (target.dataset.learnTab) { learnTab = target.dataset.learnTab; learn(); document.querySelector(`#tab-${learnTab}`).focus(); }
+  if ('answer' in target.dataset && !quizAnswered) {
+    quizAnswered = true; const q = questions[quizIndex]; const answer = Number(target.dataset.answer);
+    document.querySelectorAll('[data-answer]').forEach((b, i) => { b.disabled = true; if (i === q.correct) b.classList.add('correct'); else if (i === answer) b.classList.add('incorrect'); });
+    document.querySelector('#quiz-feedback').innerHTML = `<div class="notice">${answer === q.correct ? 'That’s right. ' : 'A useful distinction: '}${q.explanation}</div>`;
+    document.querySelector('#next-question').hidden = false;
+  }
+  if ('teaching' in target.dataset) teaching(Number(target.dataset.teaching));
+  if (target.dataset.editReflection) { reflectionEditing = target.dataset.editReflection; cpdFormOpen = true; renderReflectionForm(); }
+  if (target.dataset.deleteReflection) {
+    const id = target.dataset.deleteReflection; openDialog('<h2 id="dialog-title">Remove this reflection?</h2><p>This removes the reflection from this browser. Export a copy first if you want to keep it.</p><button class="button" id="confirm-delete">Remove reflection</button>');
+    document.querySelector('#confirm-delete').onclick = () => { workspace.reflections = workspace.reflections.filter(r => r.id !== id); const ok = persist(); dialog.close(); cpd(); if (ok) toast('Reflection removed'); };
+  }
+});
+document.addEventListener('input', e => {
+  const id = e.target.dataset.note || e.target.dataset.collection; if (!id) return;
+  const p = workspace.saved.find(p => p.id === id); if (!p) return;
+  if ('note' in e.target.dataset) p.notes = e.target.value;
+  if ('collection' in e.target.dataset) p.collection = e.target.value.trim();
+  paperMap.set(id, p); persist();
+});
+document.querySelector('.dialog-close').onclick = () => dialog.close();
+dialog.addEventListener('click', e => { if (e.target === dialog) { const r = dialog.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dialog.close(); } });
+document.querySelector('#about-button').onclick = about;
+document.querySelector('#data-button').onclick = privacy;
+document.querySelector('#open-library').innerHTML = icon('library');
+document.querySelector('#open-library').onclick = () => navigate('library');
+window.addEventListener('hashchange', () => { if (dialog.open) dialog.close(); render(); window.scrollTo(0, 0); main.focus({ preventScroll: true }); });
+render();

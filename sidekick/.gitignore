@@ -1,0 +1,6 @@
+node_modules/
+.env
+.env.*
+*.tar.gz
+.sites-runtime/
+.DS_Store
