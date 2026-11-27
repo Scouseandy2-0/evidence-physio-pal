@@ -30,3 +30,9 @@ Six source-linked drafts are prepared; zero have a recorded completed clinical r
 Source boundaries: NG12 content is used within its suspected-cancer context to examine follow-up responsibility, not as a generic MSK referral algorithm. NG59 is scoped to low back pain/sciatica. The shoulder summary is identified as a 2021 publication rather than asserted to be the latest pathway. No new medication dose, emergency exclusion score, referral deadline or validated diagnostic checklist is supplied.
 
 Student unit version 2026-11-27.2 updates the anatomy-scope question and model-coverage source after adding the separate muscle model. All five student units retain pending review.
+
+## Inspector reference notes
+
+| Item | Version | Content | Source evidence | Review state |
+|---|---|---|---|---|
+| Tap-to-inspect reference notes | 2026-11-27.1 | 41 muscle and 25 bone-family profiles (50 paired skeletal structures); other selections explicitly catalogue-only | Original factual summaries and section links mapped in docs/anatomy-inspector-review.md; no mesh attachment coordinates inferred | Prepared drafts; independent anatomical review pending |
