@@ -64,7 +64,20 @@ export function normalizePaper(p) {
     retrievedAt: new Date().toISOString()
   };
 }
-export async function searchPapers(term, filters, cursor = '*', signal, { timeoutMs = 25000 } = {}) {
+export function europePMCSearchURL(term, filters = {}, cursor = '*') {
+  if (typeof cursor !== 'string' || !cursor || cursor.length > 2048 || cursor.startsWith('ncbi:')) throw new Error('Start a new Europe PMC search.');
+  const url = new URL('https://www.ebi.ac.uk/europepmc/webservices/rest/search');
+  Object.entries({ query: buildQuery(term, filters), format: 'json', resultType: 'core', pageSize: '8', cursorMark: cursor }).forEach(([k,v])=>url.searchParams.set(k,v));
+  return url;
+}
+export function validPublicationData(data) {
+  return Number.isSafeInteger(data?.hitCount) && data.hitCount >= 0 && Array.isArray(data.resultList?.result) && (data.hitCount === 0 || data.resultList.result.length > 0) && data.resultList.result.every(p=>p.source==='MED' && /^\d+$/.test(String(p.id)) && typeof p.title==='string' && p.title.trim());
+}
+export function externalResearchLinks(term, filters = {}) {
+  const query=buildQuery(term,filters);
+  return { europePMC: `https://europepmc.org/search?query=${encodeURIComponent(query)}` };
+}
+export async function searchPapers(term, filters, cursor = '*', signal, { timeoutMs = 50000, directTimeoutMs = 20000 } = {}) {
   const query = buildQuery(term, filters);
   const request = new AbortController();
   let timedOut = false;
@@ -73,13 +86,39 @@ export async function searchPapers(term, filters, cursor = '*', signal, { timeou
   signal?.addEventListener('abort', cancel, { once: true });
   const timer = setTimeout(() => { timedOut = true; request.abort(); }, timeoutMs);
   try {
-    const response = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ term, filters, cursor }), signal: request.signal, credentials: 'same-origin' });
-    const data = await response.json().catch(() => { throw new Error(`The publication service is unavailable (${response.status}). Please try again.`); });
-    if (!response.ok) throw new Error(data.error || `The publication service is unavailable (${response.status}). Please try again.`);
-    if (!Number.isFinite(data.hitCount) || !Array.isArray(data.resultList?.result)) throw new Error('The publication service returned an unexpected response. Please try again.');
+    if(request.signal.aborted)throw new DOMException('Aborted','AbortError');
+    let data;
+    try {
+      const response = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ term, filters, cursor }), signal: request.signal, credentials: 'same-origin' });
+      if ([400,401,403,413,415,429].includes(response.status)) {
+        const body=await response.json().catch(()=>({}));
+        const error=new Error(body.error || 'Sign in again or check your search before retrying.'); error.noDirectFallback=true; throw error;
+      }
+      data = await response.json().catch(() => { throw new Error(`The publication service is unavailable (${response.status}). Please try again.`); });
+      if (!response.ok) throw new Error(data.error || `The publication service is unavailable (${response.status}). Please try again.`);
+      if (!validPublicationData(data)) throw new Error('The publication service returned an unexpected response. Please try again.');
+    } catch (error) {
+      if (error.noDirectFallback || request.signal.aborted || cursor.startsWith('ncbi:')) throw error;
+      // Independent browser connection to the same public index. Never send identity or cookies.
+      const direct = new AbortController();
+      const cancelDirect=()=>direct.abort(); request.signal.addEventListener('abort',cancelDirect,{once:true});
+      const directTimer=setTimeout(()=>direct.abort(),directTimeoutMs);
+      try {
+        const response=await fetch(europePMCSearchURL(term,filters,cursor),{method:'GET',mode:'cors',credentials:'omit',referrerPolicy:'no-referrer',headers:{accept:'application/json'},signal:direct.signal});
+        if(!response.ok)throw new Error('The direct publication connection is unavailable.');
+        data=await response.json();
+        if(!validPublicationData(data))throw new Error('The direct publication connection returned an unexpected response.');
+        data={...data,executedQuery:query,provider:'Europe PMC / PubMed (direct connection)',note:'The hosted search connection was unavailable. These are live Europe PMC records loaded directly, with the same search filters.'};
+      } catch (directError) {
+        if(request.signal.aborted)throw new DOMException('Aborted','AbortError');
+        throw new Error('Research could not be loaded in the app. Open the same search on Europe PMC below, or retry shortly. No result count was returned.');
+      } finally {clearTimeout(directTimer);request.signal.removeEventListener('abort',cancelDirect);}
+    }
+    if(request.signal.aborted)throw new DOMException('Aborted','AbortError');
     return { papers: data.resultList.result.map(normalizePaper).filter(Boolean), total: data.hitCount, nextCursor: data.nextCursorMark, query: data.executedQuery || query, provider: data.provider || 'Europe PMC / PubMed', note: data.note || '', identifier: identifyPaper(term) };
   } catch (error) {
-    if (timedOut) throw new Error('The publication service took too long. Please retry shortly; no result count was returned.');
+    if (timedOut) throw new Error('The publication service took too long. Open the same search on Europe PMC below, or retry shortly; no result count was returned.');
+    if(request.signal.aborted)throw new DOMException('Aborted','AbortError');
     throw error;
   } finally { clearTimeout(timer); signal?.removeEventListener('abort', cancel); }
 }

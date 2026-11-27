@@ -36,8 +36,8 @@ test('failed publication services fail visibly rather than synthesising studies'
   const original = globalThis.fetch;
   try {
     globalThis.fetch = async () => new Response('Unavailable', { status: 503 });
-    await assert.rejects(searchPapers('knee', {}), /unavailable \(503\)/);
+    await assert.rejects(searchPapers('knee', {}), /could not be loaded/);
     globalThis.fetch = async () => Response.json({ unexpected: 'format' });
-    await assert.rejects(searchPapers('knee', {}), /unexpected response/);
+    await assert.rejects(searchPapers('knee', {}), /could not be loaded/);
   } finally { globalThis.fetch = original; }
 });

@@ -8,7 +8,7 @@ import { loadOriginalAbstract, applyOriginalAbstract } from './paper-details.js'
 import { newAppraisal, appraisalFields, basisLabels, reflectionFromAppraisal, appraisalMarkdown } from './appraisal.js';
 import { WorkspaceSync } from './sync.js';
 import { validateWorkspace, emptyWorkspace, hasRecords } from './workspace-data.js';
-import { searchPapers, citation, toRIS, defaultFilters } from './research.js';
+import { searchPapers, externalResearchLinks, citation, toRIS, defaultFilters } from './research.js';
 import { resources, questions, teachingTopics } from './content.js';
 
 const icons = {
@@ -197,10 +197,11 @@ async function runSearch(term, more = false) {
 function renderResults() {
   const el = document.querySelector('#results'); if (!el) return;
   if (!searchState.searched) { el.innerHTML = `<div class="empty">${icon('research')}<h3>Your next discovery starts here</h3><p>Search a topic or paper title, or paste a DOI, PMID or PubMed link. Use search options to narrow the words and author.</p><button class="button secondary" data-search="Knee osteoarthritis exercise">Try knee osteoarthritis</button></div>`; return; }
-  if (searchState.loading && !searchState.papers.length) { el.innerHTML = '<div class="loading"><span class="spinner"></span>Searching real publication records…</div>'; return; }
-  const exact = searchState.identifier;
   const f = searchState.usedFilters || filters;
-  el.innerHTML = `${searchState.error ? `<div class="notice error">${esc(searchState.error)} <button class="text-button" id="retry-search">Retry search</button></div>` : ''}
+  let sourceLink=''; try { sourceLink=externalResearchLinks(searchState.term,f).europePMC; } catch {}
+  if (searchState.loading && !searchState.papers.length) { el.innerHTML = `<div class="loading"><span class="spinner"></span>Searching real publication records…</div><p class="subtle">The research index can be slow. ${sourceLink ? `<a href="${esc(sourceLink)}" target="_blank" rel="noopener noreferrer">Open the same search on Europe PMC</a> while this loads.` : ''}</p>`; return; }
+  const exact = searchState.identifier;
+  el.innerHTML = `${searchState.error ? `<div class="notice error">${esc(searchState.error)} <button class="text-button" id="retry-search">Retry search</button>${sourceLink ? `<p><a class="button secondary" href="${esc(sourceLink)}" target="_blank" rel="noopener noreferrer">Open this search on Europe PMC</a></p><small>The same keywords and filters are preserved. This opens the research index directly.</small>` : ''}</div>` : ''}
   ${exact ? `<div class="notice">Exact ${exact.kind} lookup: <strong>${esc(exact.value)}</strong>. Keyword, author, date, publication-type and access filters were ignored so they cannot hide this paper.</div>` : ''}
   ${searchState.note ? `<div class="notice">${esc(searchState.note)}</div>` : ''}
   ${searchState.query ? `<div class="result-toolbar"><strong>${searchState.total.toLocaleString()} indexed ${searchState.total === 1 ? 'result' : 'results'}</strong><span>${esc(searchState.provider || 'Europe PMC / PubMed')}<br>Relevance is not evidence quality</span></div>` : ''}

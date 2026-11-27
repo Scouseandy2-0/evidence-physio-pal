@@ -1,4 +1,4 @@
-import { buildQuery, identifyPaper } from '../web/research.js';
+import { buildQuery, identifyPaper, europePMCSearchURL, validPublicationData } from '../web/research.js';
 const PAGE_SIZE = 8;
 const cache = new Map();
 const pending = new Map();
@@ -27,20 +27,19 @@ async function upstream(url, fetcher, ms) {
   try {
     // Do not forward account headers, cookies or identity to publication services.
     const response = await fetcher(url, { signal: abort.signal, headers: { accept: 'application/json' }, credentials: 'omit' });
-    if (!response.ok) throw new Error('Publication provider unavailable');
+    if (!response.ok) { console.warn('publication_upstream', JSON.stringify({host:new URL(url).hostname,status:response.status})); throw new Error('Publication provider unavailable'); }
     return await response.json();
-  } finally { clearTimeout(timer); }
+  } catch (error) { console.warn('publication_connection', JSON.stringify({host:new URL(url).hostname,kind:abort.signal.aborted?'timeout':error.name==='SyntaxError'?'invalid_json':'connection_failed'})); throw error; } finally { clearTimeout(timer); }
 }
-export async function lookupPublications({ term, filters = {}, cursor = '*' }, { fetcher = globalThis.fetch, primaryTimeout = 7000, backupTimeout = 6000 } = {}) {
+export async function lookupPublications({ term, filters = {}, cursor = '*' }, { fetcher = globalThis.fetch, primaryTimeout = 15000, backupTimeout = 6000 } = {}) {
   const query = buildQuery(term, filters);
   const exact = identifyPaper(term);
   const isBackup = cursor.startsWith('ncbi:');
   if (!isBackup) {
     try {
-      const url = new URL('https://www.ebi.ac.uk/europepmc/webservices/rest/search');
-      Object.entries({ query, format: 'json', resultType: 'core', pageSize: String(PAGE_SIZE), cursorMark: cursor }).forEach(([k, v]) => url.searchParams.set(k, v));
+      const url = europePMCSearchURL(term, filters, cursor);
       const data = await upstream(url, fetcher, primaryTimeout);
-      if (!Number.isSafeInteger(data.hitCount) || data.hitCount < 0 || !Array.isArray(data.resultList?.result) || (data.hitCount > 0 && !data.resultList.result.length && cursor === '*')) throw new Error('Invalid publication response');
+      if (!validPublicationData(data)) throw new Error('Invalid publication response');
       return { ...data, executedQuery: query, provider: 'Europe PMC / PubMed' };
     } catch {
       // Never mix provider pages, or substitute free-to-read for an OA licence filter.
