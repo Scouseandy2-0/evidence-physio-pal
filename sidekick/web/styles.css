@@ -111,3 +111,9 @@ button{min-height:44px}
 
 .indexed-types { margin:22px 0; padding:14px 16px; background:#eef4fc; border-radius:8px; }
 .indexed-types summary { cursor:pointer; font-weight:700; }
+
+.learning-exports { margin:20px 0; }
+.learning-exports .button { min-height:48px; font-size:1rem; }
+.learning-followups { margin:18px 0; }
+#study-filters { margin-top:20px; }
+@media(max-width:650px) { .learning-exports .button { flex:1 1 180px; } }

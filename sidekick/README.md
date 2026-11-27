@@ -255,3 +255,14 @@ The PDF/Word deployment was confirmed succeeded. Andrew then supplied real iPhon
 The live source audit compared four records against NCBI tagged records, checked DOI, paging, combined filters, OA/date filtering, empty results and live PubMed backup under a simulated primary outage. It found that collectiveName author entries were dropped from normalized authorList and therefore RIS exports. Newly retrieved records now preserve group authors; a regression check protects that source shape. Existing previously saved metadata is not silently rewritten. Indexed publication labels and filter omissions are now explained in the interface. See docs/research-audit-2026-11-27.md and its machine-readable before/after reports. npm run audit:research performs an on-demand public-record audit; it is separate from offline npm test.
 
 Recent production logs also exposed Safari’s conventional icon requests returning 404. Both apple-touch-icon aliases now serve the existing 180px PNG and favicon.ico serves the existing SVG with the correct response content type. No new image or user-data operation is introduced.
+
+
+## Five learning workflow improvements — 27 November 2026
+
+1. Saved paper appraisals export to genuine PDF and editable DOCX, retaining citation/PMID, reading basis, study design, all appraisal fields and known source-retraction warnings.
+2. Saved teaching plans export to PDF/DOCX with audience, planned minutes, agenda, preparation, discussion, takeaways, guidance/review-status text and attached reference snapshots. Planned time is never turned into CPD time.
+3. Personal revision sets export to PDF/DOCX with the full set of questions/answers, source snapshots, declared reading basis, retraction warnings and self-reported recall history. Exports explicitly include the whole set, independent of list filters. Markdown remains available in all three areas.
+4. Revision-set search matches question/answer/source/PMID and recall-rating filters, with matching counts, reset, empty states and a filtered-practice option. Filtering preserves open card drafts and does not mutate stored cards; practice captures the filtered IDs for that round.
+5. Home/CPD show due/future review-date counts and a due-date action. CPD adds due/future/undated filters; all portfolio formats apply the same date-based selection and record its reference day. An existing outcome does not imply a review is closed. No notification or reminder is scheduled.
+
+Binary exports share the existing self-hosted document/font bundle and are prepared on-device. Each uses a fresh Save file link suitable for an intentional download tap. Format generation does not upload learning notes to an external conversion service. The new workflows have developer/desktop evidence, separate from Andrew’s already-confirmed iPhone portfolio exports.

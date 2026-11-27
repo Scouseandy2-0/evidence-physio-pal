@@ -20,3 +20,11 @@ export function rateStudyCard(card, rating, now = new Date()) {
 export function studyMarkdown(set) {
   return `# ${set.title || 'Untitled study set'}\n\nPersonal revision cards; answers are written by the user and are not verified clinical guidance.\nRecall ratings are self-reported, not competency scores.\n\n${set.cards.map((card,i) => `## ${i+1}. ${card.question}\n\n${card.answer}\n\nSource: ${card.source.citation}\nhttps://pubmed.ncbi.nlm.nih.gov/${card.source.pmid}/\nReading basis: ${readingLabels[card.source.readingBasis]}${card.source.retracted ? '\nWARNING: source marked as retracted in the attached index record.' : ''}\nSelf-rating: ${card.rating}\nLast reviewed: ${card.reviewedAt || 'Not reviewed'}`).join('\n\n---\n\n')}\n`;
 }
+
+export function filterStudyCards(cards,{term='',rating='all'}={}){
+ if(!['all','unrated','again','recalled'].includes(rating))throw Error('Choose a valid recall-rating filter.');
+ if(typeof term!=='string'||term.length>250)throw Error('Use up to 250 characters to find cards.');
+ const normalize=value=>String(value||'').normalize('NFKD').replace(/\p{M}/gu,'').toLocaleLowerCase('en-GB');
+ const words=normalize(term).trim().split(/\s+/).filter(Boolean);
+ return cards.filter(card=>(rating==='all'||card.rating===rating)&&words.every(word=>normalize([card.question,card.answer,card.source.title,card.source.citation,card.source.pmid].join(' ')).includes(word)));
+}

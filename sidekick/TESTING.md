@@ -215,3 +215,12 @@ Andrew’s real iPhone screenshot confirmed that the preceding HTML/Markdown exp
 Chrome local preview searched live sources for PMID 34265255, displayed the matching title/authors/year/DOI/full-text links, and fetched the original NCBI abstract with source/time/copyright attribution. No owner production records were changed. This does not close Andrew’s earlier hosted iPhone search failure.
 
 Andrew’s uploaded files/screenshots establish iPhone PDF/DOCX downloads and Pages opening/layout; docs/device-evidence.md records exact observations and their limits. Prior historical “not tested on iPhone” notes must be read together with this later evidence. The PDF/Word production deployment was separately confirmed succeeded.
+
+
+## Five learning workflow improvements — 27 November 2026
+
+149 automated tests passed before packaging. New checks exercise common document sections and all six PDF/DOCX outputs across appraisal/teaching/revision, source-snapshot preservation, warnings/reading basis, editable Word XML and safe source relationships, revision search/ratings without mutation, inclusive due-date selection, outcomes remaining independent, and identical selection in PDF sections/HTML/Markdown. An actual-app Linkedom test drives due-date buttons, all three export-control pairs, source/rating filtering, draft preservation during filtering and filtered practice. No layout/VoiceOver/iPhone pass is implied by that test.
+
+Chrome local preview created clearly fictional software-test notes against a real paper record. Appraisal PDF and revision PDF were generated/downloaded through the new modal Save file links and their extracted contents inspected. A teaching DOCX was generated/downloaded and its ZIP/text/reference/planned-time content checked. Revision search matched a PMID. A local fictional CPD record was given a review date and the due-date count/selection updated correctly. These were local preview records; Andrew’s production records were not edited.
+
+No new schema, supplier, external message, payment, access change or clinical-content approval. Independent content review, comprehensive anatomy and real-device checks for these new flows remain open. Earlier confirmed iPhone reflection/portfolio exports are preserved in docs/device-evidence.md.
