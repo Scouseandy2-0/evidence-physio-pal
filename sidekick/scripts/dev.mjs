@@ -3,6 +3,7 @@ import { createServer } from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync, readdirSync, mkdirSync } from 'node:fs';
 import { workspaceAPI } from '../worker/api.js';
+import { researchAPI } from '../worker/research.js';
 mkdirSync('.sites-runtime', { recursive: true });
 const db = new DatabaseSync('.sites-runtime/preview.sqlite');
 db.exec('CREATE TABLE IF NOT EXISTS preview_migrations (name TEXT PRIMARY KEY)');
@@ -21,7 +22,7 @@ createServer(async (req, res) => {
     if (url.pathname.startsWith('/api/')) {
       const chunks = []; for await (const part of req) chunks.push(part);
       const headers = new Headers(req.headers); headers.set('oai-authenticated-user-id', 'local-preview-user'); headers.set('oai-authenticated-user-email', 'preview@example.invalid'); headers.set('oai-authenticated-user-full-name', 'Local preview');
-      const response = await workspaceAPI(new Request(url, { method: req.method, headers, ...(req.method === 'PUT' ? { body: Buffer.concat(chunks) } : {}) }), { DB: adapter });
+      const response = await (url.pathname === '/api/research' ? researchAPI : workspaceAPI)(new Request(url, { method: req.method, headers, ...(['PUT', 'POST'].includes(req.method) ? { body: Buffer.concat(chunks) } : {}) }), { DB: adapter });
       res.writeHead(response.status, Object.fromEntries(response.headers)); res.end(await response.text()); return;
     }
     const path = url.pathname === '/' ? '/index.html' : url.pathname;

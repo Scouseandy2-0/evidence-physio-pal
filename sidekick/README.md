@@ -12,7 +12,7 @@ A connected career companion for physiotherapists and students: learning and ana
 - Live keyword, exact-phrase, author, DOI and PMID search of Europe PMC's PubMed-indexed records, title/abstract scope, publication/date/access filters and cursor pagination.
 - Indexed abstracts, publication-type metadata, retraction warnings when supplied, PubMed records, DOI links and free-full-text links when indexed.
 - Saved papers, named collections, notes and citation/RIS exports.
-- Up to 20 browser-local saved searches, rerun with their options; downloadable search records with the actual query, run time and reported result count.
+- Up to 20 account-backed saved searches, rerun with their options; downloadable search records with the actual query, run time and reported result count.
 - Direct indexed free-full-text links on results, separate text/PDF source choices and institutional-access guidance where free access is unconfirmed.
 - Personal CPD reflections with editing and Markdown export.
 - Original-source resource shelf, three introductory critical-appraisal learning checks.
@@ -40,18 +40,20 @@ npm test
 npm run check
 ```
 
-Hosted preview is owner-private. `.openai/hosting.json` binds the same Site identity and the D1 binding `DB`. A Worker serves both embedded assets and `/api/workspace`; no separate static directory is deployed. The legacy Lovable deployment is not connected to this prototype.
+Hosted preview is owner-private. `.openai/hosting.json` binds the same Site identity and the D1 binding `DB`. A Worker serves both embedded assets and `/api/workspace` plus `/api/research`; no separate static directory is deployed. The legacy Lovable deployment is not connected to this prototype.
 
 ## Evidence integrity
 
-The search requests `SRC:MED` records directly from the Europe PMC REST search API:
+The authenticated same-origin search proxy requests `SRC:MED` records from the Europe PMC REST search API:
 https://www.ebi.ac.uk/europepmc/webservices/rest/search
 
 Documentation: https://dev.europepmc.org/RestfulWebService
 
-All titles, authors, abstracts, identifiers and publication types come from that response. Missing information is shown as missing. There is no paper generator, synthetic fallback, fake DOI, inferred PEDro score or automatic evidence-quality grade. Publication indexing is not clinical appraisal. Publisher access labels are cautious: no indexed open-access indicator does not prove a paywall.
+Europe PMC has a seven-second deadline; on first-page failure, discovery without an OA filter falls back to NCBI PubMed ESearch plus ESummary. Backup pagination remains on PubMed, and later primary-page failures do not mix providers. The backup has genuine bibliographic metadata but no abstracts or confirmed access labels; the UI explicitly explains this limitation. An OA filter is never silently replaced with a free-to-read filter. Exact identifier lookups still bypass discovery filters. Both providers have bounded requests. Repeated identical requests share in-flight work and a five-minute, bounded in-memory metadata cache.
 
-The app sends search terms to Europe PMC from the browser, without credentials. No patient information should be entered. Search supports all/any words, exact phrases, title/abstract or title-only scope, an author field and DOI/PMID/PubMed-link lookups. Exact identifiers bypass discovery filters so they cannot be hidden by date or publication-type settings. A visible query and search-record export make the options inspectable; unrestricted Boolean syntax is not supported. It does not claim comprehensive literature coverage.
+All titles, authors, abstracts, identifiers and publication types come from those provider responses. Missing information is shown as missing. There is no paper generator, synthetic fallback, fake DOI, inferred PEDro score or automatic evidence-quality grade. Publication indexing is not clinical appraisal. Publisher access labels are cautious: no indexed open-access indicator does not prove a paywall.
+
+The browser sends bounded JSON to `/api/research` on the same app origin. The authenticated proxy sends research terms to Europe PMC or NCBI without account headers or cookies. Failed requests show an error without a false zero-result count. The executed provider and query appear in the UI and search export. No patient information should be entered. Search supports all/any words, exact phrases, title/abstract or title-only scope, an author field and DOI/PMID/PubMed-link lookups. Exact identifiers bypass discovery filters so they cannot be hidden by date or publication-type settings. A visible query and search-record export make the options inspectable; unrestricted Boolean syntax is not supported. It does not claim comprehensive literature coverage.
 
 For abstracts, formatting tags are removed while comparison symbols and text are retained; all displayed text is escaped. Follow original sources for interpretation and critical appraisal. Records may be incomplete, misclassified or updated by the provider.
 

@@ -5,9 +5,11 @@ const assets = Object.fromEntries(Object.entries(types).map(([path, type]) => [`
 // All assets are bundled into the Worker; no independent static hosting is needed.
 rmSync('dist', { recursive: true, force: true }); mkdirSync('dist/server', { recursive: true }); mkdirSync('dist/.openai', { recursive: true });
 const entry = `import { workspaceAPI } from './worker/api.js';
+import { researchAPI } from './worker/research.js';
 const assets = ${JSON.stringify(assets)};
 export default { async fetch(request, env) {
   const url = new URL(request.url);
+  if (url.pathname === '/api/research') return researchAPI(request);
   if (url.pathname.startsWith('/api/')) return workspaceAPI(request,env);
   if (!['GET','HEAD'].includes(request.method)) return new Response('Method not allowed',{status:405});
   const asset=assets[url.pathname==='/'?'/index.html':url.pathname];

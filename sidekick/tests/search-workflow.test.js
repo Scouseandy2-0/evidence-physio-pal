@@ -39,8 +39,10 @@ test('search exposes its exact query and cursor without dropping request cancell
   const original = globalThis.fetch;
   try {
     globalThis.fetch = async (url, options) => {
-      assert.equal(url.searchParams.get('cursorMark'), 'next-page');
-      assert.equal(options.credentials, 'omit');
+      assert.equal(url, '/api/research');
+      assert.equal(JSON.parse(options.body).cursor, 'next-page');
+      assert.equal(options.method, 'POST');
+      assert.equal(options.credentials, 'same-origin');
       assert.ok(options.signal);
       return Response.json({ hitCount: 1, resultList: { result: [{ id: '123', source: 'MED', title: 'Example' }] }, nextCursorMark: 'done' });
     };

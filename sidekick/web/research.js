@@ -1,5 +1,5 @@
 // Publication metadata comes only from Europe PMC's indexed PubMed records.
-export const API = 'https://www.ebi.ac.uk/europepmc/webservices/rest/search';
+export const API = '/api/research';
 export function plain(value = '') {
   return String(value).replace(/<\/?[a-z][a-z0-9]*(?:\s[^<>]*)?\s*\/?>/gi, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&#(\d+);/g, (_, n) => Number(n) <= 0x10ffff ? String.fromCodePoint(Number(n)) : '').replace(/\s+/g, ' ').trim();
 }
@@ -65,9 +65,7 @@ export function normalizePaper(p) {
   };
 }
 export async function searchPapers(term, filters, cursor = '*', signal, { timeoutMs = 25000 } = {}) {
-  const url = new URL(API);
-  const params = { query: buildQuery(term, filters), format: 'json', resultType: 'core', pageSize: '12', cursorMark: cursor };
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  const query = buildQuery(term, filters);
   const request = new AbortController();
   let timedOut = false;
   const cancel = () => request.abort();
@@ -75,13 +73,13 @@ export async function searchPapers(term, filters, cursor = '*', signal, { timeou
   signal?.addEventListener('abort', cancel, { once: true });
   const timer = setTimeout(() => { timedOut = true; request.abort(); }, timeoutMs);
   try {
-    const response = await fetch(url, { signal: request.signal, credentials: 'omit' });
-    if (!response.ok) throw new Error(`The publication service is unavailable (${response.status}). Please try again.`);
-    const data = await response.json();
+    const response = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ term, filters, cursor }), signal: request.signal, credentials: 'same-origin' });
+    const data = await response.json().catch(() => { throw new Error(`The publication service is unavailable (${response.status}). Please try again.`); });
+    if (!response.ok) throw new Error(data.error || `The publication service is unavailable (${response.status}). Please try again.`);
     if (!Number.isFinite(data.hitCount) || !Array.isArray(data.resultList?.result)) throw new Error('The publication service returned an unexpected response. Please try again.');
-    return { papers: data.resultList.result.map(normalizePaper).filter(Boolean), total: data.hitCount, nextCursor: data.nextCursorMark, query: params.query, identifier: identifyPaper(term) };
+    return { papers: data.resultList.result.map(normalizePaper).filter(Boolean), total: data.hitCount, nextCursor: data.nextCursorMark, query: data.executedQuery || query, provider: data.provider || 'Europe PMC / PubMed', note: data.note || '', identifier: identifyPaper(term) };
   } catch (error) {
-    if (timedOut) throw new Error('The publication service took too long. Try again or use fewer keywords.');
+    if (timedOut) throw new Error('The publication service took too long. Please retry shortly; no result count was returned.');
     throw error;
   } finally { clearTimeout(timer); signal?.removeEventListener('abort', cancel); }
 }
