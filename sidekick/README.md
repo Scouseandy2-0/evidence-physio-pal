@@ -273,3 +273,8 @@ Binary exports share the existing self-hosted document/font bundle and are prepa
 CPD now has Set review date above its filters and Set/Change review date on each reflection. The picker lists all saved reflections independently of current filters, so a hidden undated/future record can still be updated. The change preserves the learning date, minutes, content and outcomes; invalid dates or dates before learning are rejected. Account-save acknowledgements remain distinct from a queued edit. After assignment, unrelated filters reset, the relevant due/future view opens and the updated record is focused.
 
 From/To are labelled Learning date from/to, review filtering is labelled explicitly, and empty-state guidance explains hidden records. Safari date inputs are constrained to their parent width. No notification is scheduled and no production record was changed by the developer to choose a date for Andrew.
+
+
+## Continue this project
+
+Use [TODO.md](TODO.md) for the prioritised remaining work, [V1-COMPLETION.md](V1-COMPLETION.md) for fixed acceptance criteria and [docs/device-evidence.md](docs/device-evidence.md) for actual iPhone observations. The current anatomy models are backed up in this source tree with their attribution/licences, alongside pinned checksum-verified restoration scripts.
