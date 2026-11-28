@@ -10,15 +10,15 @@ let serial=0;
 async function app(hash,publicationFetch,run){
  const {window,document}=parseHTML(readFileSync('web/index.html','utf8'));
  const keys=['window','document','location','localStorage','fetch','FormData','requestAnimationFrame'],old=Object.fromEntries(keys.map(k=>[k,globalThis[k]]));
- let currentHash=hash,focus=null,scrolled=null;const calls=[];
+ let currentHash=hash,focus=null,scrolled=null,accountWorkspace=emptyWorkspace(),revision=0,workspaceWrites=0;const calls=[];
  const location={get hash(){return currentHash;},set hash(value){currentHash=value.startsWith('#')?value:'#'+value;queueMicrotask(()=>window.dispatchEvent(new window.Event('hashchange')));}};
  Object.assign(globalThis,{window,document,location,FormData:class{constructor(form){this.form=form;}get(name){return this.form.querySelector(`[name="${name}"]`)?.value;}*[Symbol.iterator](){for(const el of this.form.querySelectorAll("[name]"))yield[el.name,el.value];}},localStorage:{getItem(){return null},setItem(){},removeItem(){}},requestAnimationFrame:fn=>setTimeout(fn,0)});
  window.scrollY=420;window.scrollTo=(x,y)=>{scrolled=y;};window.matchMedia=()=>({matches:false});window.HTMLElement.prototype.focus=function(){focus=this;};Object.defineProperty(document,'activeElement',{get(){return focus;}});
  const selected=new WeakMap();Object.defineProperty(window.HTMLSelectElement.prototype,'value',{get(){return selected.get(this)??this.querySelector('option[selected]')?.getAttribute('value')??this.querySelector('option')?.getAttribute('value')??'';},set(v){selected.set(this,String(v));}});
  const dialog=document.querySelector('dialog');dialog.open=false;dialog.showModal=()=>{dialog.open=true;};dialog.close=()=>{dialog.open=false;};
- globalThis.fetch=async(url,options={})=>{if(url==='/api/workspace')return Response.json({account:{id:'qa'},revision:0,workspace:emptyWorkspace()});calls.push({url,options});return publicationFetch(url,options);};
+ globalThis.fetch=async(url,options={})=>{if(url==='/api/workspace'){if(options.method==='PUT'){workspaceWrites++;const body=JSON.parse(options.body);accountWorkspace=body.workspace;revision=body.revision+1;return Response.json({revision,updatedAt:new Date().toISOString()});}return Response.json({account:{id:'qa'},revision,workspace:accountWorkspace});}calls.push({url,options});return publicationFetch(url,options);};
  const follow=async link=>{link.click();location.hash=link.getAttribute('href');await tick();await new Promise(r=>setTimeout(r,5));};
- try{await import(`../web/app.js?paper-pages-${serial++}`);await tick();await tick();await run({window,document,location,calls,follow,get focus(){return focus;},get scrolled(){return scrolled;}});}
+ try{await import(`../web/app.js?paper-pages-${serial++}`);await tick();await tick();await run({window,document,location,calls,follow,get focus(){return focus;},get scrolled(){return scrolled;},get workspaceWrites(){return workspaceWrites;},get stored(){return accountWorkspace;}});}
  finally{for(const key of keys){if(old[key]===undefined)delete globalThis[key];else globalThis[key]=old[key];}}
 }
 test('five distinct paper titles open native pages, retain search state and return focus to the matching result',async()=>{
@@ -52,5 +52,32 @@ test('an absent indexed record has a retry and source link rather than a fabrica
  let attempt=0;
  await app('#paper/888',async()=>Response.json(payload(++attempt===1?[]:['888'])),async ctx=>{
   assert.match(ctx.document.querySelector('main').textContent,/No matching indexed record/);assert.ok(ctx.document.querySelector('#retry-paper-record'));ctx.document.querySelector('#retry-paper-record').click();await tick();await tick();assert.equal(ctx.document.querySelector('#paper-heading').textContent,'Fictional paper 888');assert.equal(ctx.calls.length,2);
+ });
+});
+
+const originalRecord=()=>({pmid:'456',title:'Fictional paper 456',abstract:'Fictional original-source abstract for software QA.',abstractStatus:'available',abstractSource:'PubMed (NCBI)',abstractURL:'https://pubmed.ncbi.nlm.nih.gov/456/',abstractRetrievedAt:new Date().toISOString(),abstractCopyright:'QA copyright',retracted:true});
+test('abstract retrieval retains the paper heading, source link and reading position through loading and completion',async()=>{
+ let release;
+ await app('#paper/456',async(url)=>url==='/api/research'?Response.json(payload(['456'])):new Promise(resolve=>{release=()=>resolve(Response.json(originalRecord()));}),async ctx=>{
+  const {document}=ctx,heading=document.querySelector('#paper-heading'),source=document.querySelector('.paper-record a'),warning=document.querySelector('#paper-source-warning');
+  const button=document.querySelector('#paper-abstract-action');button.focus();button.click();assert.equal(document.querySelector('#paper-heading'),heading);assert.equal(document.querySelector('.paper-record a'),source);assert.match(document.querySelector('#paper-abstract-status').textContent,/Loading/);
+  release();await tick();await tick();assert.equal(document.querySelector('#paper-heading'),heading);assert.equal(document.querySelector('.paper-record a'),source);assert.match(document.querySelector('.abstract-full').textContent,/Fictional original-source abstract/);assert.equal(warning.hidden,false);assert.equal(ctx.focus.id,'paper-abstract-heading');assert.equal(ctx.scrolled,null);
+ });
+});
+test('failed abstract retrieval keeps the record in place and leaves an actionable retry',async()=>{
+ await app('#paper/456',async url=>url==='/api/research'?Response.json(payload(['456'])):Response.json({error:'Fixture unavailable'},{status:503}),async ctx=>{
+  const heading=ctx.document.querySelector('#paper-heading');ctx.document.querySelector('#paper-abstract-action').click();await tick();await tick();assert.equal(ctx.document.querySelector('#paper-heading'),heading);assert.ok(ctx.document.querySelector('#paper-abstract-action'));assert.match(ctx.document.querySelector('#paper-abstract-status').textContent,/unavailable|could not/i);assert.equal(ctx.location.hash,'#paper/456');
+ });
+});
+test('save and unsave retain the same paper/button nodes, with queued work attempted on backgrounding',async()=>{
+ await app('#paper/456',async()=>Response.json(payload(['456'])),async ctx=>{
+  const {document,window}=ctx,heading=document.querySelector('#paper-heading'),button=document.querySelector('.paper-record [data-save]');button.focus();button.click();assert.equal(document.querySelector('#paper-heading'),heading);assert.equal(document.querySelector('.paper-record [data-save]'),button);assert.match(button.textContent,/Remove from saved/);assert.equal(ctx.focus,button);
+  Object.defineProperty(document,'visibilityState',{value:'hidden'});document.dispatchEvent(new window.Event('visibilitychange'));await tick();await tick();assert.equal(ctx.workspaceWrites,1);assert.equal(ctx.stored.saved.length,1);
+  button.click();assert.equal(document.querySelector('#paper-heading'),heading);assert.equal(document.querySelector('.paper-record [data-save]'),button);assert.match(button.textContent,/Save to my papers/);document.dispatchEvent(new window.Event('visibilitychange'));await tick();await tick();assert.equal(ctx.stored.saved.length,0);assert.equal(ctx.scrolled,null);
+ });
+});
+test('closing and reopening a problem report retains its draft without uploading it',async()=>{
+ await app('#home',async()=>{throw Error('No publication request expected');},async ctx=>{
+  const {document,window}=ctx;document.querySelector('#report-button').click();document.querySelector('#problem-description').value='Fictional retained report details';document.querySelector('#problem-expected').value='Stay on the selected paper';document.querySelector('#problem-form').dispatchEvent(new window.Event('input',{bubbles:true}));document.querySelector('.dialog-close').click();document.querySelector('#report-button').click();assert.equal(document.querySelector('#problem-description').value,'Fictional retained report details');assert.equal(document.querySelector('#problem-expected').value,'Stay on the selected paper');assert.equal(ctx.workspaceWrites,0);assert.equal(ctx.calls.length,0);
  });
 });

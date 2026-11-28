@@ -28,3 +28,7 @@ Before wider recruitment or paid use, record the responsible operator/contact, a
 ## Local navigation diagnostics — 28 November 2026
 
 Problem reports can include the last 20 app page/control/focus events from the current visit. The journal is held only in memory, clears on reload/close and is not automatically submitted, written to the account database or placed in browser storage. It records fixed page/control categories and whether a click carried a pointer count; it does not infer that VoiceOver caused an event. Full URLs, paper identifiers/titles, research queries, account identity and learning notes are excluded from this automatic context. User-written report descriptions still need review for private information before sharing.
+
+## Report drafts and lifecycle saves — 28 November 2026
+
+Report form fields remain only in current-visit memory across close/reopen and clear on reload or workspace reset. They are not uploaded automatically or written to browser/account storage. Page-hidden/pagehide events attempt already queued record saves through the existing sync flow; pending recovery copies remain until verified confirmation. These attempts do not guarantee background completion and do not submit unqueued reflection/card/report forms.

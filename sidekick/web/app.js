@@ -1,3 +1,5 @@
+import {setupScrollableTabs} from './tab-navigation.js';
+import {registerPendingSaveLifecycle} from './lifecycle-saves.js';
 import {createNavigationDiagnostics} from './navigation-diagnostics.js';
 import {anatomyInventoryCSV} from './anatomy-inventory.js';
 import { structureDetails, detailCoverage } from './anatomy-details.js';
@@ -70,6 +72,7 @@ let anatomyWorkbenchCleanup=null;
 let anatomySystem='skeleton', anatomyGuideId='', anatomySide='all';
 let anatomyViewer=null, anatomyReady=false, anatomyTerm='', anatomyRegion='', anatomySelected=null, anatomyLoadVersion=0;
 let learnTab = 'units';
+let learningTabsCleanup=null;
 let quizIndex = 0;
 let quizAnswered = false;
 let libraryFilter = '';
@@ -180,11 +183,14 @@ function guideCard() {
   const steps=guideProgress(workspace),done=steps.filter(step=>step.done).length;
   return `<section class="card start-guide" aria-labelledby="guide-heading"><div class="section-heading"><h2 id="guide-heading">Your first useful steps</h2><button class="text-button" id="hide-guide">Hide guide</button></div><p>${done} of 3 saved-record steps completed. This is a setup guide, not a reading or competency score.</p><ol class="guide-steps">${steps.map(step=>`<li><strong>${step.done?'Saved record present · ':''}${esc(step.title)}</strong><p>${esc(step.detail)}</p></li>`).join('')}</ol><button class="button secondary" data-start-guide>Open getting-started guide</button></section>`;
 }
+let problemReportDraft={category:'research',device:'Not specified',description:'',expected:''};
 function problemReport() {
-  openDialog(`<span class="eyebrow">HELP IMPROVE YOUR SIDEKICK</span><h2 id="dialog-title">Report a problem</h2><p>Create a report to copy into this chat or share with your tester. Reports are prepared on this device; nothing is sent automatically.</p><p class="subtle">Do not include patient information, passwords or private account details. The report adds the app release, page name, saving status, whether changes are pending and the last 20 page/control events from this visit. Searches, paper titles, URLs, learning notes and account identity are excluded from that automatic context.</p><form id="problem-form"><div class="field"><label for="problem-area">Problem area</label><select id="problem-area" name="category">${Object.entries(reportCategories).map(([value,label])=>`<option value="${value}">${esc(label)}</option>`).join('')}</select></div><div class="field"><label for="problem-device">Device (optional)</label><select id="problem-device" name="device">${['Not specified','iPhone or iPad','Mac','Other'].map(value=>`<option>${value}</option>`).join('')}</select></div><div class="field"><label for="problem-description">What happened? Include the steps to repeat it.</label><textarea id="problem-description" name="description" required minlength="10" maxlength="2000"></textarea></div><div class="field"><label for="problem-expected">What did you expect? (optional)</label><textarea id="problem-expected" name="expected" maxlength="1000"></textarea></div><p id="problem-status" role="status"></p><button class="button" type="submit">Preview report</button></form><section id="problem-preview" hidden><h3>Review before sharing</h3><div class="field"><label for="problem-text">Report preview</label><textarea id="problem-text" rows="12" readonly></textarea></div><div class="button-row"><button class="button secondary" id="copy-problem">Copy report</button><button class="button secondary" id="download-problem">Download report (.txt)</button></div><p class="subtle">The report has not been submitted. Paste the copied text into this chat when you want me to investigate.</p></section>`);
+  openDialog(`<span class="eyebrow">HELP IMPROVE YOUR SIDEKICK</span><h2 id="dialog-title">Report a problem</h2><p>Create a report to copy into this chat or share with your tester. Reports are prepared on this device; nothing is sent automatically. Draft text stays when you close and reopen this window during the current workspace visit; reloading clears it.</p><p class="subtle">Do not include patient information, passwords or private account details. The report adds the app release, page name, saving status, whether changes are pending and the last 20 page/control events from this visit. Searches, paper titles, URLs, learning notes and account identity are excluded from that automatic context.</p><form id="problem-form"><div class="field"><label for="problem-area">Problem area</label><select id="problem-area" name="category">${Object.entries(reportCategories).map(([value,label])=>`<option value="${value}">${esc(label)}</option>`).join('')}</select></div><div class="field"><label for="problem-device">Device (optional)</label><select id="problem-device" name="device">${['Not specified','iPhone or iPad','Mac','Other'].map(value=>`<option>${value}</option>`).join('')}</select></div><div class="field"><label for="problem-description">What happened? Include the steps to repeat it.</label><textarea id="problem-description" name="description" required minlength="10" maxlength="2000"></textarea></div><div class="field"><label for="problem-expected">What did you expect? (optional)</label><textarea id="problem-expected" name="expected" maxlength="1000"></textarea></div><p id="problem-status" role="status"></p><button class="button" type="submit">Preview report</button></form><section id="problem-preview" hidden><h3>Review before sharing</h3><div class="field"><label for="problem-text">Report preview</label><textarea id="problem-text" rows="12" readonly></textarea></div><div class="button-row"><button class="button secondary" id="copy-problem">Copy report</button><button class="button secondary" id="download-problem">Download report (.txt)</button></div><p class="subtle">The report has not been submitted. Paste the copied text into this chat when you want me to investigate.</p></section>`);
   let report='';const form=document.querySelector('#problem-form'),status=document.querySelector('#problem-status');
-  form.oninput=()=>{report='';document.querySelector('#problem-preview').hidden=true;status.textContent='Details changed. Preview again to update the report.';};
-  form.onsubmit=e=>{e.preventDefault();try{report=buildProblemReport(Object.fromEntries(new FormData(form)),{route,navigation:navigationDiagnostics.snapshot(),mode:sync?.mode || (sync?.account ? 'account' : 'browse'),syncStatus:sync?.status,pending:!!(sync?.pending||sync?.invalidPending)});document.querySelector('#problem-text').value=report;document.querySelector('#problem-preview').hidden=false;status.textContent='Preview ready. Nothing has been sent.';document.querySelector('#problem-text').focus();}catch(error){status.textContent=error.message;}};
+  for(const [key,value]of Object.entries(problemReportDraft)){const field=form.querySelector(`[name="${key}"]`);if(field)field.value=value;}
+  const captureReport=()=>{problemReportDraft=Object.fromEntries(new FormData(form));report='';document.querySelector('#problem-preview').hidden=true;status.textContent='Draft kept for this visit. Preview again to update the report.';};
+  form.oninput=captureReport;form.onchange=captureReport;
+  form.onsubmit=e=>{e.preventDefault();try{problemReportDraft=Object.fromEntries(new FormData(form));report=buildProblemReport(problemReportDraft,{route,navigation:navigationDiagnostics.snapshot(),mode:sync?.mode || (sync?.account ? 'account' : 'browse'),syncStatus:sync?.status,pending:!!(sync?.pending||sync?.invalidPending)});document.querySelector('#problem-text').value=report;document.querySelector('#problem-preview').hidden=false;status.textContent='Preview ready. Nothing has been sent.';document.querySelector('#problem-text').focus();}catch(error){status.textContent=error.message;}};
   document.querySelector('#copy-problem').onclick=async()=>{if(!report)return;try{await navigator.clipboard.writeText(report);status.textContent='Report copied. It has not been sent.';}catch{const text=document.querySelector('#problem-text');text.focus();text.select();status.textContent='Select and copy the preview text. Nothing has been sent.';}};
   document.querySelector('#download-problem').onclick=()=>{if(report)download('physiosidekick-problem-report.txt',report,'text/plain');};
 }
@@ -344,17 +350,35 @@ async function loadPaperPage(pmid){
 function paperRecordContent(p){
   const id=p.id;
   return `<span class="eyebrow">ORIGINAL PUBLICATION RECORD</span><h1 id="paper-heading" tabindex="-1">${esc(p.title)}</h1><p class="paper-meta">${esc(p.authors)}<br>${esc(p.journal)} · ${esc(p.year)}</p>
-  ${p.retracted ? '<div class="notice error">This record is marked as a retracted publication. Investigate the retraction notice before using its findings.</div>' : ''}
+  <div class="notice error" id="paper-source-warning" ${p.retracted?'':'hidden'}>This record is marked as a retracted publication. Investigate the retraction notice before using its findings.</div>
   <div class="identifier">PMID: ${esc(p.pmid)}${p.doi ? `<br>DOI: ${esc(p.doi)}` : ''}</div><div class="button-row"><a class="button" href="${esc(p.recordURL)}" target="_blank" rel="noopener noreferrer">Open PubMed record (new tab)</a>${p.fullText ? `<a class="button secondary" href="${esc(p.fullText)}" target="_blank" rel="noopener noreferrer">Open free full text</a>` : p.doi ? `<a class="button secondary" href="${esc(doiURL(p.doi))}" target="_blank" rel="noopener noreferrer">Check publisher access</a>` : ''}</div>
-  <p class="subtle">PubMed and full-text links open a separate website in a new browser tab.</p><section class="access-panel"><h2>Get the full paper</h2>${p.fullText ? `<p>A free full-text link is listed by the index. The provider controls access and the version available.</p><div class="button-row">${(p.fullTextLinks?.length ? p.fullTextLinks : [{ url: p.fullText, style: 'full text', provider: 'Indexed source' }]).map(l => `<a class="button secondary" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.style === 'pdf' ? 'PDF' : l.style === 'html' ? 'Full text' : l.style)} · ${esc(l.provider.replaceAll('_', ' '))}</a>`).join('')}</div>` : `<p>A free full-text link is not confirmed here. That does not necessarily mean the paper is paywalled.</p><ol><li>Open the publisher/DOI or PubMed record and check its full-text links.</li><li>If asked to pay, try your university, NHS or employer library’s institutional sign-in.</li><li>Ask your library about document supply or an authorised author manuscript.</li></ol>`}</section><h2>Indexed abstract</h2><p class="abstract-full">${esc(p.abstract || (p.abstractStatus === 'notIndexed' ? 'No English abstract is indexed in the retrieved PubMed record. The paper may have other-language material; check its original record.' : 'An abstract was not supplied with these search results. You can check the original PubMed record below.'))}</p>${p.abstract && !p.abstractSource ? `<p class="subtle">This abstract has not been freshly checked against PubMed. <a href="${esc(p.indexedURL)}" target="_blank" rel="noopener noreferrer">Verify at Europe PMC</a> or check the original PubMed abstract below.</p>` : ''}${p.abstractSource ? `<p class="subtle">Abstract source: ${esc(p.abstractSource)} · Retrieved ${esc(new Date(p.abstractRetrievedAt).toLocaleString('en-GB'))}. <a href="${esc(p.recordURL)}" target="_blank" rel="noopener noreferrer">Verify at PubMed</a></p>${p.abstractCopyright ? `<p class="subtle">${esc(p.abstractCopyright)}</p>` : ''}` : ''}${!p.abstract || p.abstractSource !== 'PubMed (NCBI)' ? `<button class="button secondary" id="paper-abstract-action" data-load-abstract="${esc(id)}" ${abstractRequests.has(id) ? 'disabled' : ''}>${abstractRequests.has(id) ? 'Loading original abstract…' : p.abstractStatus === 'notIndexed' ? 'Recheck PubMed abstract' : p.abstract ? 'Check original PubMed abstract' : 'Load original PubMed abstract'}</button>` : ''}${abstractErrors.has(id) ? `<div class="notice error">${esc(abstractErrors.get(id))}</div>` : ''}<div class="notice">This is publication metadata and an indexed abstract, not an AI summary or a quality assessment. Full text may contain important methods, results and limitations omitted here.</div>
+  <p class="subtle">PubMed and full-text links open a separate website in a new browser tab.</p><section class="access-panel"><h2>Get the full paper</h2>${p.fullText ? `<p>A free full-text link is listed by the index. The provider controls access and the version available.</p><div class="button-row">${(p.fullTextLinks?.length ? p.fullTextLinks : [{ url: p.fullText, style: 'full text', provider: 'Indexed source' }]).map(l => `<a class="button secondary" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.style === 'pdf' ? 'PDF' : l.style === 'html' ? 'Full text' : l.style)} · ${esc(l.provider.replaceAll('_', ' '))}</a>`).join('')}</div>` : `<p>A free full-text link is not confirmed here. That does not necessarily mean the paper is paywalled.</p><ol><li>Open the publisher/DOI or PubMed record and check its full-text links.</li><li>If asked to pay, try your university, NHS or employer library’s institutional sign-in.</li><li>Ask your library about document supply or an authorised author manuscript.</li></ol>`}</section><section id="paper-abstract-region" aria-labelledby="paper-abstract-heading">${paperAbstractContent(p)}</section>
   <div class="button-row"><button class="button" data-appraise="${esc(p.id)}">Appraise this paper</button></div><details class="indexed-types"><summary>Indexed publication labels</summary><p>These labels are supplied by the research index. They can be incomplete and do not verify the study design or quality. Check the paper’s methods before classifying it yourself.</p><ul>${(p.types?.length ? p.types : ['No publication labels supplied']).map(type=>`<li>${esc(type)}</li>`).join('')}</ul></details><h2>Before applying the findings</h2><ul><li>Does the population and setting match your question?</li><li>How was the study designed, and what could bias its findings?</li><li>How large and uncertain are the effects, and were harms reported?</li><li>Have you read the full text, or only the abstract?</li></ul>
   <div class="button-row"><button class="button secondary" data-save="${esc(p.id)}">${icon('library')}${workspace.saved.some(s => s.id === id) ? 'Remove from saved papers' : 'Save to my papers'}</button><button class="button secondary" data-copy="${esc(p.id)}">Copy citation</button></div><p class="subtle" style="margin-top:20px">Record retrieved ${esc(new Date(p.retrievedAt).toLocaleDateString('en-GB'))}. <a href="${esc(p.indexedURL)}" target="_blank" rel="noopener noreferrer">View Europe PMC record</a>. Bibliographic details may be updated by the source.</p>`;
+}
+function paperAbstractContent(p) {
+  const id=p.id;
+  return `<h2 id="paper-abstract-heading" tabindex="-1">Indexed abstract</h2><p id="paper-abstract-status" role="status" aria-live="polite" ${abstractErrors.has(id)?'class="notice error"':''}>${esc(abstractRequests.has(id)?'Loading the original PubMed abstract…':abstractErrors.get(id)||(p.abstractSource==='PubMed (NCBI)'?(p.abstractStatus==='notIndexed'?'PubMed returned no indexed English abstract.':'Original PubMed abstract loaded.') : ''))}</p><p class="abstract-full">${esc(p.abstract || (p.abstractStatus === 'notIndexed' ? 'No English abstract is indexed in the retrieved PubMed record. The paper may have other-language material; check its original record.' : 'An abstract was not supplied with these search results. You can check the original PubMed record below.'))}</p>${p.abstract && !p.abstractSource ? `<p class="subtle">This abstract has not been freshly checked against PubMed. <a href="${esc(p.indexedURL)}" target="_blank" rel="noopener noreferrer">Verify at Europe PMC</a> or check the original PubMed abstract below.</p>` : ''}${p.abstractSource ? `<p class="subtle">Abstract source: ${esc(p.abstractSource)} · Retrieved ${esc(new Date(p.abstractRetrievedAt).toLocaleString('en-GB'))}. <a href="${esc(p.recordURL)}" target="_blank" rel="noopener noreferrer">Verify at PubMed</a></p>${p.abstractCopyright ? `<p class="subtle">${esc(p.abstractCopyright)}</p>` : ''}` : ''}${!p.abstract || p.abstractSource !== 'PubMed (NCBI)' ? `<button class="button secondary" id="paper-abstract-action" data-load-abstract="${esc(id)}" ${abstractRequests.has(id) ? 'disabled' : ''}>${abstractRequests.has(id) ? 'Loading original abstract…' : p.abstractStatus === 'notIndexed' ? 'Recheck PubMed abstract' : p.abstract ? 'Check original PubMed abstract' : 'Load original PubMed abstract'}</button>` : ''}<div class="notice">This is publication metadata and an indexed abstract, not an AI summary or a quality assessment. Full text may contain important methods, results and limitations omitted here.</div>`;
+}
+function updatePaperAbstract(id) {
+  const region=document.querySelector('#paper-abstract-region');
+  if(route!=='paper'||location.hash!==`#paper/${id.slice(4)}`||!region)return;
+  const paper=workspace.saved.find(p=>p.id===id)||paperMap.get(id);if(!paper)return;
+  const heldFocus=region.contains(document.activeElement);
+  region.innerHTML=paperAbstractContent(paper);
+  const warning=document.querySelector('#paper-source-warning');if(warning)warning.hidden=!paper.retracted;
+  if(heldFocus){const action=document.querySelector('#paper-abstract-action');(action && !action.disabled?action:document.querySelector('#paper-abstract-heading'))?.focus({preventScroll:true});}
+}
+function updatePaperSaveControl() {
+  const button=document.querySelector('.paper-record [data-save]');if(!button)return;
+  const saved=workspace.saved.some(p=>p.id===button.dataset.save);
+  button.innerHTML=`${icon('library')}${saved?'Remove from saved papers':'Save to my papers'}`;
 }
 async function retrieveAbstract(id) {
   const p = workspace.saved.find(p => p.id === id) || paperMap.get(id); if (!p || abstractRequests.has(id)) return;
   abstractErrors.delete(id);
   const epoch = workspaceEpoch;
-  const request = loadOriginalAbstract(p.pmid); abstractRequests.set(id, request); if(route==='paper')paperPage();
+  const request = loadOriginalAbstract(p.pmid); abstractRequests.set(id, request);updatePaperAbstract(id);
   try {
     const record = await request;
     if (workspaceEpoch !== epoch) return;
@@ -369,7 +393,7 @@ async function retrieveAbstract(id) {
   } catch (error) { abstractErrors.set(id, error.message); }
   finally {
     abstractRequests.delete(id);
-    if (route === 'paper' && location.hash === `#paper/${p.pmid}`) paperPage();
+    if (route === 'paper' && location.hash === `#paper/${p.pmid}`) updatePaperAbstract(id);
   }
 }
 function toggleSave(id) {
@@ -384,10 +408,9 @@ function toggleSave(id) {
     }
     workspace.saved.splice(at, 1); finishSave('Paper removed');
   } else { workspace.saved.unshift({ ...p, collection: '', notes: '', savedAt: new Date().toISOString() }); finishSave('Paper saved to your library'); }
-  if (route === 'paper') paperPage();
 }
 function finishSave(message) {
-  const ok = persist(); updateNav(); if (route === 'library') library(); else if (route === 'research') renderResults(); else if(route === 'paper')paperPage(); if (ok) toast(message);
+  const ok=persist();if(route==='paper'){document.querySelectorAll('.nav-item .count').forEach(el=>el.textContent=workspace.saved.length);updatePaperSaveControl();}else{updateNav();if(route==='library')library();else if(route==='research')renderResults();}if(ok)toast(message);
 }
 function library() {
   const collections = [...new Set(workspace.saved.map(p => p.collection).filter(Boolean))].sort();
@@ -459,10 +482,12 @@ function renderAnatomy(area) {
 }
 
 function learn() {
+  learningTabsCleanup?.();learningTabsCleanup=null;
   disposeAnatomy(); anatomyReady=false;
-  main.innerHTML = `${intro('LEARN WITH INTENTION', 'Understand more. Keep questioning.', 'Build the habits that connect anatomy, evidence and thoughtful practice.')}<div class="tabs" role="tablist" aria-label="Learning areas">${[['units', 'Starter units'], ['revision', 'My revision'], ['appraisal', 'Critical appraisal'], ['anatomy', 'Anatomy'], ['sources', 'Research sources']].map(([id, label]) => `<button class="tab ${learnTab === id ? 'active' : ''}" role="tab" tabindex="${learnTab===id?0:-1}" aria-selected="${learnTab === id}" data-learn-tab="${id}" id="tab-${id}" aria-controls="learning-content">${label}</button>`).join('')}</div><section id="learning-content" role="tabpanel" aria-labelledby="tab-${learnTab}"></section>`;
+  main.innerHTML = `${intro('LEARN WITH INTENTION', 'Understand more. Keep questioning.', 'Build the habits that connect anatomy, evidence and thoughtful practice.')}<div class="learning-tab-help"><p id="learn-tabs-hint" hidden>More learning areas are available sideways. Swipe the tab row or use the tab-scroll buttons.</p><div class="button-row" id="learn-tab-controls" hidden><button class="button secondary" id="learn-tabs-earlier" type="button" aria-label="Show earlier learning tabs">Earlier tabs</button><button class="button secondary" id="learn-tabs-more" type="button" aria-label="Show more learning tabs">More tabs</button></div></div><div class="tabs" role="tablist" aria-label="Learning areas">${[['units', 'Starter units'], ['revision', 'My revision'], ['appraisal', 'Critical appraisal'], ['anatomy', 'Anatomy'], ['sources', 'Research sources']].map(([id, label]) => `<button class="tab ${learnTab === id ? 'active' : ''}" role="tab" tabindex="${learnTab===id?0:-1}" aria-selected="${learnTab === id}" data-learn-tab="${id}" id="tab-${id}" aria-controls="learning-content">${label}</button>`).join('')}</div><section id="learning-content" role="tabpanel" aria-labelledby="tab-${learnTab}"></section>`;
   const tabs=document.querySelector('[role=tablist]');
-  tabs.onkeydown=e=>{const ids=['units','revision','appraisal','anatomy','sources'],index=ids.indexOf(learnTab);let next;if(e.key==='ArrowRight')next=(index+1)%ids.length;else if(e.key==='ArrowLeft')next=(index+ids.length-1)%ids.length;else if(e.key==='Home')next=0;else if(e.key==='End')next=ids.length-1;else return;e.preventDefault();learnTab=ids[next];learn();document.querySelector(`#tab-${learnTab}`).focus();};
+  learningTabsCleanup=setupScrollableTabs({tablist:tabs,selected:document.querySelector(`#tab-${learnTab}`),previous:document.querySelector('#learn-tabs-earlier'),next:document.querySelector('#learn-tabs-more'),controls:document.querySelector('#learn-tab-controls'),hint:document.querySelector('#learn-tabs-hint')});
+  tabs.onkeydown=e=>{const ids=['units','revision','appraisal','anatomy','sources'],index=ids.indexOf(learnTab);let next;if(e.key==='ArrowRight')next=(index+1)%ids.length;else if(e.key==='ArrowLeft')next=(index+ids.length-1)%ids.length;else if(e.key==='Home')next=0;else if(e.key==='End')next=ids.length-1;else return;e.preventDefault();learnTab=ids[next];learn();document.querySelector(`#tab-${learnTab}`).focus({preventScroll:true});};
   const area = document.querySelector('#learning-content');
   if (learnTab === 'units') renderStudentUnits(area);
   else if (learnTab === 'revision') { renderStudySets(area); }
@@ -864,6 +889,7 @@ function privacy() {
   };
 }
 function resetOpenRecords() {
+  problemReportDraft={category:'research',device:'Not specified',description:'',expected:''};
   activeAppraisal = null; activeTeaching = null; activeStudy = null; studyDraft = null; studyPractice = null;
   reflectionDraft = null; reflectionEditing = null; cpdFormOpen = false; workspaceFocus = null; workspaceMatches = [];
 }
@@ -944,6 +970,7 @@ function about() { openDialog('<span class="eyebrow">FROM STUDY TO PRACTICE</spa
 function render() {
   if(learningDownloadURL){URL.revokeObjectURL(learningDownloadURL);learningDownloadURL=null;}
   if (portfolioDownloadURL) { URL.revokeObjectURL(portfolioDownloadURL); portfolioDownloadURL = null; }
+  learningTabsCleanup?.();learningTabsCleanup=null;
   disposeAnatomy(); anatomyReady=false;
   route = /^paper\/[1-9]\d{0,8}$/.test(location.hash.slice(1)) ? 'paper' : (['appraisal','teaching','study','workspace-search'].includes(location.hash.slice(1)) || nav.some(([id]) => id === location.hash.slice(1))) ? location.hash.slice(1) : 'home';
   updateNav(); ({ home, research, library, learn, practice, cpd, fcp, appraisal, paper:paperPage, teaching: teachingEditor, study: studyEditor, 'workspace-search': workspaceSearchPage }[route])();
@@ -998,7 +1025,7 @@ document.addEventListener('click', e => {
     }
   }
   if ('libraryFilter' in target.dataset) { libraryFilter = target.dataset.libraryFilter; library(); }
-  if (target.dataset.learnTab) { learnTab = target.dataset.learnTab; learn(); document.querySelector(`#tab-${learnTab}`).focus(); }
+  if (target.dataset.learnTab) { learnTab = target.dataset.learnTab; learn(); document.querySelector(`#tab-${learnTab}`).focus({preventScroll:true}); }
   if ('answer' in target.dataset && !quizAnswered) {
     quizAnswered = true; const q = questions[quizIndex]; const answer = Number(target.dataset.answer);
     document.querySelectorAll('[data-answer]').forEach((b, i) => { b.disabled = true; if (i === q.correct) b.classList.add('correct'); else if (i === answer) b.classList.add('incorrect'); });
@@ -1065,6 +1092,7 @@ sync = new WorkspaceSync({
 });
 syncStatus(sync);
 sync.init();
+registerPendingSaveLifecycle({document,window,getSync:()=>sync});
 window.addEventListener('online', () => { if (sync.account && sync.pending && sync.status !== 'conflict') sync.flush(); });
 
 window.addEventListener('beforeunload', e => { if (sync?.pending || sync?.invalidPending || sync?.replacing || studyDraft?.dirty || (cpdFormOpen && reflectionDraft)) { e.preventDefault(); e.returnValue = ''; } });

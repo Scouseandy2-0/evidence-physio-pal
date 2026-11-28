@@ -263,3 +263,7 @@ Full suite remains 175 passing. Expanded app-event regression first failed for c
 ## Navigation help and diagnostic context
 
 183 automated tests, syntax and Worker build pass. Guide/release/report UI checks and privacy boundaries are recorded in docs/navigation-help-2026-11-28.md. Actual iPhone reliability is still open.
+
+## Next-five reading/reliability pass
+
+193 tests, syntax and production build pass. Source/reading stability, lifecycle recovery, tab overflow and report retention tests plus rendered checks/limits are in docs/next-five-reliability-2026-11-28.md. No physical-iPhone or independent-content sign-off is inferred.

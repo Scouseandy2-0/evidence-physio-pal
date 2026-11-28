@@ -5,9 +5,9 @@ Updated 28 November 2026. Finish the defined product before adding more major fe
 ## Saved checkpoint
 
 - GitHub repository: Scouseandy2-0/evidence-physio-pal; development branch: codex/physiosidekick-prototype; app source: sidekick/; draft PR #3. The original Lovable app remains separate.
-- Latest confirmed published application source: a4ebf2701addb6afae9eb956505e29be04612980 (version 31, owner-review release); deployment confirmed succeeded on 28 November. Andrew then enabled public link browsing for a friend without ChatGPT. Account records still require identity. The next workspace-polish candidate is not live until publication is confirmed.
+- Latest confirmed published application source: e3bd8b9c1ac535123c49afd1079d9846014e2c6f (version 38, navigation-help.1); deployment confirmed succeeded on 28 November. Public link browsing was enabled by Andrew for a friend without ChatGPT; account records still require identity. The next reading-reliability candidate is not live until publication is confirmed.
 - Last confirmed published changes: protected invalid/malformed cache recovery, retained source warnings, local date defaults, pagination retries/Stop search, focus/reflow and dated backups. The review-date-link iPhone retest remains open.
-- Latest developer baseline: 165 automated tests passed; production build and targeted desktop workflow checks passed.
+- Latest developer baseline: 193 automated tests passed; production build and targeted rendered workflow/layout checks passed. Actual iPhone/Mac/VoiceOver gates remain separate.
 - Binary skeleton/muscle assets are included with source attribution/licences; checksum-verified pinned download scripts remain available for restoration. Generated bundles, dependency directories, credentials, local databases and user files are not source-control backups.
 - BioDigital integration enquiry sent with Andrew’s authorisation. Reply/quote/demo pending; no paid licence or purchase agreed.
 
@@ -153,3 +153,15 @@ Evidence: docs/workspace-polish-2026-11-28.md. Remaining non-anatomy gates: actu
 Candidate release: 2026-11-28-navigation-help. Deployment outcome must be confirmed separately. Anatomy remains parked.
 
 - [x] Add Andrew’s iPhone sideways-Learn-tabs tip to Reading & iPhone setup, including Anatomy/Research sources and distinguishing normal swipes from VoiceOver gestures. Release 2026-11-28-navigation-help.1.
+
+## Next-five reliability pass — 28 November 2026
+
+Andrew explicitly authorised the next five recommendations. Anatomy remains parked.
+
+1. [x] Make horizontally hidden Learn tabs discoverable with overflow-only hints and Earlier/More controls; keep the selected tab visible without scrolling the document. Disconnect resize/scroll handlers when leaving.
+2. [x] Update original-abstract loading, error, provenance and source-warning state inside the existing paper page. Preserve surrounding heading/source links and announce status.
+3. [x] Save/remove a paper by updating the existing control and library count, keeping the record and focus intact. Preserve confirmation before removing notes/collection.
+4. [x] Attempt already queued saves on page-hidden/pagehide, preserving pending recovery data until a verified acknowledgement. No claim that browsers guarantee background completion; no submission of unqueued forms.
+5. [x] Keep unfinished report fields in memory across close/reopen during the current workspace visit. No automatic upload; reload or workspace reset clears the draft.
+
+193 tests and syntax/build checks pass. Rendered large-text 320px tabs, live original-abstract retrieval, stable Save control and report retention passed developer checks. See docs/next-five-reliability-2026-11-28.md. Actual iPhone paper-opening reliability remains open; independent content and physical-device checks are not closed. Candidate release: 2026-11-28-reading-reliability. Publication must be confirmed separately.
