@@ -139,3 +139,15 @@ Evidence: docs/workspace-polish-2026-11-28.md. Remaining non-anatomy gates: actu
 - [x] Move Back to research results below the paper rather than before its heading; use layout-frame heading focus with stale-navigation/user-focus guards.
 - [x] Verify loaded/loading/retry behaviour and return navigation in developer checks. Browser focused paper-heading and placed the return link after the article. Full suite remains 179 passing.
 - [ ] Actual iPhone VoiceOver check still open. Andrew’s latest description may refer to focus on the return link rather than actual route navigation; neither interpretation is treated as proven. Candidate: 2026-11-28-paper-entry.
+
+## Continue reliability work — 28 November 2026, afternoon
+
+- [x] Confirm version 36 published with paper heading first and return navigation after the article; actual iPhone result remains unverified.
+- [x] Put a short VoiceOver guide inside Reading & iPhone setup, including select/activate, paragraph/item navigation, three-finger scrolling and external-site boundaries.
+- [x] Display the active app release in the footer to distinguish an old open tab from the latest code.
+- [x] Add a bounded in-memory navigation trail to locally prepared reports, excluding queries, URLs, paper identifiers/titles, account identity and notes. Validate context again at report generation.
+- [x] Distinguish browsing without saving from trial and account modes in reports.
+- [x] Check real rendered guide and title→paper→return→report sequence. No automatic transmission occurs. Software suite now 183 passing.
+- [ ] Actual iPhone VoiceOver reliability remains open. A report captured after a failure may help distinguish activation of the return control from a route change without it; the current checks do not prove the root cause or a device fix.
+
+Candidate release: 2026-11-28-navigation-help. Deployment outcome must be confirmed separately. Anatomy remains parked.

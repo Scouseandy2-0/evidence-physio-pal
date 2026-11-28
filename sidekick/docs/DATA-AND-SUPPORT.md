@@ -24,3 +24,7 @@ Use **Report a problem** to prepare a release/page/save-status report, then copy
 The app's confirmed clear operation replaces active learning records with an empty workspace while retaining revision protection. It does not claim to erase the ChatGPT account, provider logs/backups, another device's stale copy, downloaded exports, or external services. The implementation cannot prove platform-wide retention/deletion periods. A complete public-launch erasure/retention route therefore remains open.
 
 Before wider recruitment or paid use, record the responsible operator/contact, actual hosting/log/backup retention and deletion processes, user request handling, final support channel/expectations and intended-audience terms. Do not infer those supplier facts from a test pass or invent an SLA. `TODO.md` and `V1-COMPLETION.md` keep those decisions open.
+
+## Local navigation diagnostics — 28 November 2026
+
+Problem reports can include the last 20 app page/control/focus events from the current visit. The journal is held only in memory, clears on reload/close and is not automatically submitted, written to the account database or placed in browser storage. It records fixed page/control categories and whether a click carried a pointer count; it does not infer that VoiceOver caused an event. Full URLs, paper identifiers/titles, research queries, account identity and learning notes are excluded from this automatic context. User-written report descriptions still need review for private information before sharing.

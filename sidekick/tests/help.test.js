@@ -26,3 +26,11 @@ test('one-pass version review exports declared observations and release boundari
  assert.match(result,new RegExp(appRelease));assert.match(result,/QA observation/);assert.match(result,/not clinical approval/);assert.match(result,/not submitted automatically/);assert.equal(versionReviewSteps.length,6);
  assert.throws(()=>buildVersionReview({device:'invented',notes:''}),/device/);assert.throws(()=>buildVersionReview({notes:'x'.repeat(8001)}),/8,000/);
 });
+
+
+test('reports distinguish browsing without saving, local trial and signed-in account storage',()=>{
+ const input={category:'accessibility',description:'Fictional software QA of the report.'};
+ const browsing=buildProblemReport(input,{mode:'browse',syncStatus:'unavailable'});assert.match(browsing,/Browsing without account saving/);assert.match(browsing,/Account saving: not enabled/);assert.doesNotMatch(browsing,/save status: unavailable/);
+ assert.match(buildProblemReport(input,{mode:'trial',syncStatus:'saved'}),/Trial save status: saved/);
+ assert.match(buildProblemReport(input,{mode:'account',syncStatus:'saved'}),/Account save status: saved/);
+});

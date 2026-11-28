@@ -259,3 +259,7 @@ Full suite remains 175 passing. Expanded app-event regression first failed for c
 ## Paper entry order — 28 November 2026
 
 179 tests pass after moving the return link below the record and deferring entry focus until layout. The five-paper regression asserts the article precedes return navigation; stale focus callbacks cannot override another route or user-focused control. Chromium observed paper-heading focused and return link last. Actual iPhone symptom remains unverified.
+
+## Navigation help and diagnostic context
+
+183 automated tests, syntax and Worker build pass. Guide/release/report UI checks and privacy boundaries are recorded in docs/navigation-help-2026-11-28.md. Actual iPhone reliability is still open.

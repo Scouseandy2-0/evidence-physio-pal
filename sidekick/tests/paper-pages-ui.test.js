@@ -12,7 +12,7 @@ async function app(hash,publicationFetch,run){
  const keys=['window','document','location','localStorage','fetch','FormData','requestAnimationFrame'],old=Object.fromEntries(keys.map(k=>[k,globalThis[k]]));
  let currentHash=hash,focus=null,scrolled=null;const calls=[];
  const location={get hash(){return currentHash;},set hash(value){currentHash=value.startsWith('#')?value:'#'+value;queueMicrotask(()=>window.dispatchEvent(new window.Event('hashchange')));}};
- Object.assign(globalThis,{window,document,location,FormData:class{constructor(form){this.form=form;}get(name){return this.form.querySelector(`[name="${name}"]`)?.value;}},localStorage:{getItem(){return null},setItem(){},removeItem(){}},requestAnimationFrame:fn=>setTimeout(fn,0)});
+ Object.assign(globalThis,{window,document,location,FormData:class{constructor(form){this.form=form;}get(name){return this.form.querySelector(`[name="${name}"]`)?.value;}*[Symbol.iterator](){for(const el of this.form.querySelectorAll("[name]"))yield[el.name,el.value];}},localStorage:{getItem(){return null},setItem(){},removeItem(){}},requestAnimationFrame:fn=>setTimeout(fn,0)});
  window.scrollY=420;window.scrollTo=(x,y)=>{scrolled=y;};window.matchMedia=()=>({matches:false});window.HTMLElement.prototype.focus=function(){focus=this;};Object.defineProperty(document,'activeElement',{get(){return focus;}});
  const selected=new WeakMap();Object.defineProperty(window.HTMLSelectElement.prototype,'value',{get(){return selected.get(this)??this.querySelector('option[selected]')?.getAttribute('value')??this.querySelector('option')?.getAttribute('value')??'';},set(v){selected.set(this,String(v));}});
  const dialog=document.querySelector('dialog');dialog.open=false;dialog.showModal=()=>{dialog.open=true;};dialog.close=()=>{dialog.open=false;};
@@ -32,6 +32,9 @@ test('five distinct paper titles open native pages, retain search state and retu
    await ctx.follow(document.querySelector('#paper-back'));assert.equal(ctx.location.hash,'#research');assert.equal(document.querySelectorAll('.paper-title').length,5);assert.equal(document.querySelector('#research-search input').value,'fictional topic');assert.equal(ctx.focus.dataset.detail,`MED:${id}`);assert.equal(ctx.scrolled,420);
   }
   assert.equal(ctx.calls.length,1);
+  document.querySelector('#report-button').click();document.querySelector('#problem-description').value='Opening a paper returned unexpectedly.';
+  document.querySelector('#problem-form').dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true}));
+  const report=document.querySelector('#problem-text').value;assert.match(report,/Activate paper-title on research/);assert.match(report,/Page research → paper/);assert.match(report,/Activate paper-return on paper/);assert.doesNotMatch(report,/Fictional paper|fictional topic|#paper\/123/);
  });
 });
 test('a directly opened paper URL retrieves only its exact PMID and remains unsaved',async()=>{
