@@ -52,3 +52,19 @@ test('backups and conflict merges preserve retrieved abstract provenance and cop
   assert.match(merged.saved[0].abstract, /METHODS/); assert.equal(merged.saved[0].notes, 'My own note');
   assert.equal(merged.saved[0].abstractSource, 'PubMed (NCBI)');
 });
+
+test('new source warnings reach linked appraisals, teaching and revision without rewriting notes or recall history',async()=>{
+ const {retainSourceWarning}=await import('../web/paper-details.js');
+ const source={pmid:'123',retracted:false,attachedAt:'original attachment',readingBasis:'abstract'};
+ const workspace={appraisals:[{paperId:'MED:123',findings:'My original reasoning',updatedAt:'original edit'}],teachingPlans:[{sources:[{...source},{pmid:'456',retracted:false}]}],studySets:[{cards:[{answer:'My answer',rating:'recalled',reviewedAt:'original review',source:{...source}}]}]};
+ assert.equal(retainSourceWarning(workspace,{id:'MED:123',pmid:'123',retracted:true}),true);
+ assert.equal(workspace.appraisals[0].sourceRetracted,true);assert.equal(workspace.teachingPlans[0].sources[0].retracted,true);assert.equal(workspace.studySets[0].cards[0].source.retracted,true);
+ assert.equal(workspace.appraisals[0].updatedAt,'original edit');assert.equal(workspace.studySets[0].cards[0].reviewedAt,'original review');assert.equal(workspace.studySets[0].cards[0].answer,'My answer');assert.equal(workspace.teachingPlans[0].sources[1].retracted,false);
+ assert.equal(retainSourceWarning(workspace,{id:'MED:123',pmid:'123',retracted:false}),false);assert.equal(workspace.appraisals[0].sourceRetracted,true);
+});
+test('merging a retracted device record retains its warning even without new abstract content',()=>{
+ const paper={id:'MED:123',pmid:'123',title:'Fixture',authorList:[],types:[],abstract:'Already populated'};
+ const remote={...emptyWorkspace(),saved:[paper]},device={...emptyWorkspace(),saved:[{...paper,retracted:true}]};
+ assert.equal(mergeWorkspaces(remote,device).saved[0].retracted,true);
+ assert.equal(mergeWorkspaces(device,remote).saved[0].retracted,true);
+});

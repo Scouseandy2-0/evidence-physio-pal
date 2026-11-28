@@ -95,6 +95,7 @@ export function mergeWorkspaces(remote, device, newId = () => crypto.randomUUID(
     const existing = papers.get(p.id);
     if (!existing) papers.set(p.id, p);
     else {
+      existing.retracted ||= p.retracted;
       if (!existing.abstract && p.abstractSource) {
         for (const key of ['abstract', 'abstractSource', 'abstractStatus', 'abstractRetrievedAt', 'abstractCopyright']) existing[key] = p[key];
         existing.retracted ||= p.retracted;

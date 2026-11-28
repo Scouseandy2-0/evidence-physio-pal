@@ -21,3 +21,7 @@ function checkedWorkspace(input) {
   if(new TextEncoder().encode(JSON.stringify(workspace)).length>2*1024*1024)throw new Error('The workspace exceeds the 2 MB account limit. Keep the original file and reduce a copy before importing.');
   return workspace;
 }
+
+export function backupFilename(now = new Date(), recovery = false) {
+  return `physiosidekick-${recovery ? 'device-recovery' : 'workspace'}-${now.toISOString().replace(/[:.]/g, '-')}.json`;
+}

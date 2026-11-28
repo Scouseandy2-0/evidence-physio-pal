@@ -3,15 +3,15 @@ import { regionalGuides, regionSources, nerveNotes, regionalStructures, regionMa
 import { studentUnits, studentSources, studentUnitCounts, studentUnitMarkdown, studentRevisionPrompt } from './student-units.js';
 import { learningPacks, learningPackCounts, teachingFromPack, learningPackMarkdown } from './learning-packs.js';
 import { v1Criteria, v1Audience, readinessReviewed } from './readiness.js';
-import { parseWorkspaceBackup, workspaceBackup, backupLimit } from './backup.js';
+import { parseWorkspaceBackup, workspaceBackup, backupLimit, backupFilename } from './backup.js';
 import { guideProgress, guideHidden, setGuideHidden, reportCategories, buildProblemReport } from './help.js';
 import { anatomySystems, filterAnatomy, anatomyResearchTerm, anatomyLearningDraft } from './anatomy.js';
 import { searchWorkspace, workspaceTypes } from './workspace-search.js';
 import { readingDefaults, loadReading, saveReading, applyReading } from './reading.js';
-import { filterReflections, portfolioSummary, portfolioHTML, portfolioMarkdown, followUpSummary, assignReviewDate } from './portfolio.js';
+import { filterReflections, portfolioSummary, portfolioHTML, portfolioMarkdown, followUpSummary, assignReviewDate, localDay } from './portfolio.js';
 import { newStudySet, cardFromNotes, saveStudyCard, rateStudyCard, studyMarkdown, filterStudyCards } from './study.js';
 import { newTeachingPlan, teachingSource, teachingMarkdown, suggestedAgenda, readingLabels } from './teaching.js';
-import { loadOriginalAbstract, applyOriginalAbstract } from './paper-details.js';
+import { loadOriginalAbstract, applyOriginalAbstract, retainSourceWarning } from './paper-details.js';
 import { newAppraisal, appraisalFields, basisLabels, reflectionFromAppraisal, appraisalMarkdown } from './appraisal.js';
 import { WorkspaceSync } from './sync.js';
 import { validateWorkspace, emptyWorkspace, hasRecords } from './workspace-data.js';
@@ -90,7 +90,8 @@ function toast(message) {
   clearTimeout(toastTimer); const el = document.querySelector('#toast'); el.textContent = message; el.classList.add('toast-show');
   toastTimer = setTimeout(() => el.classList.remove('toast-show'), 4500);
 }
-function openDialog(html) { if(learningDownloadURL){URL.revokeObjectURL(learningDownloadURL);learningDownloadURL=null;} dialog.dataset.paperId = ''; document.querySelector('#dialog-content').innerHTML = `<div class="dialog-body">${html}</div>`; if (!dialog.open) dialog.showModal(); const heading=dialog.querySelector('#dialog-title'); if(heading){heading.tabIndex=-1;heading.focus();} }
+let dialogReturnFocus = null;
+function openDialog(html) { if (!dialog.open) dialogReturnFocus = document.activeElement; if(learningDownloadURL){URL.revokeObjectURL(learningDownloadURL);learningDownloadURL=null;} dialog.dataset.paperId = ''; document.querySelector('#dialog-content').innerHTML = `<div class="dialog-body">${html}</div>`; if (!dialog.open) dialog.showModal(); const heading=dialog.querySelector('#dialog-title'); if(heading){heading.tabIndex=-1;heading.focus();} }
 function navigate(next) { if (location.hash === `#${next}`) render(); else location.hash = next; }
 function updateNav() {
   document.querySelector('#desktop-nav').innerHTML = nav.map(([id, label]) => `<a href="#${id}" class="nav-item ${route === id ? 'active' : ''}" ${route === id ? 'aria-current="page"' : ''}>${icon(id)}<span>${label}</span>${id === 'fcp' ? '<span class="premium">PREVIEW</span>' : ''}${id === 'library' ? `<span class="count">${workspace.saved.length}</span>` : ''}</a>`).join('');
@@ -226,7 +227,7 @@ async function runSearch(term, more = false) {
   term = term.trim();
   controller?.abort(); controller = new AbortController(); const current = ++requestNumber;
   const usedFilters = { ...(more ? searchState.usedFilters : filters) };
-  searchState = { ...searchState, term, loading: true, searched: true, error: '', usedFilters, ...(more ? {} : { papers: [], total: 0, nextCursor: '*', query: '', identifier: null, provider: '', note: '' }) };
+  searchState = { ...searchState, term, loading: true, searched: true, error: '', failedMore: false, cancelled: false, usedFilters, ...(more ? {} : { papers: [], total: 0, nextCursor: '*', query: '', identifier: null, provider: '', note: '' }) };
   if (route === 'research') { const input = document.querySelector('#research-search input'); if (input) input.value = term; renderResults(); }
   try {
     const data = await searchPapers(term, usedFilters, more ? searchState.nextCursor : '*', controller.signal);
@@ -234,27 +235,36 @@ async function runSearch(term, more = false) {
     const all = more ? [...searchState.papers, ...data.papers] : data.papers;
     searchState = { ...searchState, papers: [...new Map(all.map(p => [p.id, p])).values()], total: data.total, nextCursor: data.papers.length ? data.nextCursor : null, loading: false, query: data.query, provider: data.provider, note: data.note, identifier: data.identifier, searchedAt: new Date().toISOString() };
     data.papers.forEach(p => paperMap.set(p.id, p));
-  } catch (e) { if (current !== requestNumber || e.name === 'AbortError') return; searchState.loading = false; searchState.error = e.message || 'Search failed. Please try again.'; }
+  } catch (e) { if (current !== requestNumber || e.name === 'AbortError') return; searchState.loading = false; searchState.failedMore = more; searchState.error = e.message || 'Search failed. Please try again.'; }
   if (route === 'research') renderResults();
+}
+function cancelSearch() {
+  if (!searchState.loading) return;
+  controller?.abort(); requestNumber++;
+  searchState = { ...searchState, loading: false, cancelled: true, error: '', failedMore: false };
+  renderResults();
+  document.querySelector('#research-search input')?.focus();
 }
 function renderResults() {
   const el = document.querySelector('#results'); if (!el) return;
   el.setAttribute('aria-busy',String(searchState.loading));
-  const announcement=document.querySelector('#results-announcement');if(announcement)announcement.textContent=!searchState.searched?'':searchState.loading?'Searching publication records.':searchState.error?searchState.error:`${searchState.total.toLocaleString()} indexed ${searchState.total===1?'result':'results'}. ${searchState.papers.length} ${searchState.papers.length===1?'paper':'papers'} shown.`;
+  const announcement=document.querySelector('#results-announcement');if(announcement)announcement.textContent=!searchState.searched?'':searchState.loading?'Searching publication records.':searchState.cancelled?'Search stopped. Previously loaded papers are retained.':searchState.error?searchState.error:`${searchState.total.toLocaleString()} indexed ${searchState.total===1?'result':'results'}. ${searchState.papers.length} ${searchState.papers.length===1?'paper':'papers'} shown.`;
   if (!searchState.searched) { el.innerHTML = `<div class="empty">${icon('research')}<h3>Your next discovery starts here</h3><p>Search a topic or paper title, or paste a DOI, PMID or PubMed link. Use search options to narrow the words and author.</p><button class="button secondary" data-search="Knee osteoarthritis exercise">Try knee osteoarthritis</button></div>`; return; }
   const f = searchState.usedFilters || filters;
   let sourceLink=''; try { sourceLink=externalResearchLinks(searchState.term,f).europePMC; } catch {}
-  if (searchState.loading && !searchState.papers.length) { el.innerHTML = `<div class="loading"><span class="spinner"></span>Searching real publication records…</div><p class="subtle">The research index can be slow. ${sourceLink ? `<a href="${esc(sourceLink)}" target="_blank" rel="noopener noreferrer">Open the same search on Europe PMC</a> while this loads.` : ''}</p>`; return; }
+  if (searchState.loading && !searchState.papers.length) { el.innerHTML = `<div class="loading"><span class="spinner"></span>Searching real publication records…</div><button class="button secondary" id="cancel-search">Stop search</button><p class="subtle">The research index can be slow. ${sourceLink ? `<a href="${esc(sourceLink)}" target="_blank" rel="noopener noreferrer">Open the same search on Europe PMC</a> while this loads.` : ''}</p>`; document.querySelector('#cancel-search').onclick=cancelSearch; return; }
   const exact = searchState.identifier;
-  el.innerHTML = `${searchState.error ? `<div class="notice error">${esc(searchState.error)} <button class="text-button" id="retry-search">Retry search</button>${sourceLink ? `<p><a class="button secondary" href="${esc(sourceLink)}" target="_blank" rel="noopener noreferrer">Open this search on Europe PMC</a></p><small>The same keywords and filters are preserved. This opens the research index directly.</small>` : ''}</div>` : ''}
+  el.innerHTML = `${searchState.cancelled ? '<div class="notice">Search stopped. Previously loaded papers are kept. No new result count was returned. <button class="text-button" id="resume-search">Search again</button></div>' : ''}${searchState.loading ? '<button class="button secondary" id="cancel-search">Stop search</button>' : ''}${searchState.error ? `<div class="notice error">${esc(searchState.error)} <button class="text-button" id="retry-search">Retry search</button>${sourceLink ? `<p><a class="button secondary" href="${esc(sourceLink)}" target="_blank" rel="noopener noreferrer">Open this search on Europe PMC</a></p><small>The same keywords and filters are preserved. This opens the research index directly.</small>` : ''}</div>` : ''}
   ${exact ? `<div class="notice">Exact ${exact.kind} lookup: <strong>${esc(exact.value)}</strong>. Keyword, author, date, publication-type and access filters were ignored so they cannot hide this paper.</div>` : ''}
   ${searchState.note ? `<div class="notice">${esc(searchState.note)}</div>` : ''}
   ${searchState.query ? `<div class="result-toolbar"><strong>${searchState.total.toLocaleString()} indexed ${searchState.total === 1 ? 'result' : 'results'}</strong><span>${esc(searchState.provider || 'Europe PMC / PubMed')}<br>Relevance is not evidence quality</span></div>` : ''}
   ${searchState.query ? `<div class="search-tools"><button class="button secondary" id="save-search">${icon('library')}Save this search</button><button class="text-button" id="export-search">Export search record</button></div><details class="query-details"><summary>How this search was run</summary><p>${exact ? `Exact ${exact.kind} lookup` : esc(searchDescription(f))}. Sorted by ${f.sort === 'newest' && !exact ? 'newest first' : 'relevance'}.</p><code>${esc(searchState.query)}</code><p>Run ${esc(new Date(searchState.searchedAt).toLocaleString('en-GB'))}. This is a discovery search, not a comprehensive systematic-review strategy.</p></details>` : ''}
-  ${!searchState.papers.length && !searchState.error ? `<div class="empty">${icon('research')}<h3>${exact ? 'No indexed record found for this identifier' : 'No matching papers found'}</h3><p>${exact ? 'Check the identifier and try PubMed directly. This does not prove that the paper does not exist.' : 'Try fewer words, “Any word”, all indexed fields or reset the filters.'}</p>${exact ? `<a class="button secondary" href="https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(exact.value)}" target="_blank" rel="noopener noreferrer">Check PubMed</a>` : '<button class="button secondary" id="broaden-search">Broaden this search</button>'}</div>` : ''}
+  ${!searchState.papers.length && !searchState.error && !searchState.cancelled ? `<div class="empty">${icon('research')}<h3>${exact ? 'No indexed record found for this identifier' : 'No matching papers found'}</h3><p>${exact ? 'Check the identifier and try PubMed directly. This does not prove that the paper does not exist.' : 'Try fewer words, “Any word”, all indexed fields or reset the filters.'}</p>${exact ? `<a class="button secondary" href="https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(exact.value)}" target="_blank" rel="noopener noreferrer">Check PubMed</a>` : '<button class="button secondary" id="broaden-search">Broaden this search</button>'}</div>` : ''}
   <div class="paper-list">${searchState.papers.map(p => paperCard(p)).join('')}</div>
   ${searchState.nextCursor && searchState.papers.length < searchState.total && searchState.papers.length ? `<button id="load-more" class="button secondary" style="margin-top:20px" ${searchState.loading ? 'disabled' : ''}>${searchState.loading ? 'Loading…' : 'Load more papers'}</button>` : ''}`;
-  document.querySelector('#retry-search')?.addEventListener('click', () => runSearch(searchState.term));
+  document.querySelector('#cancel-search')?.addEventListener('click', cancelSearch);
+  document.querySelector('#resume-search')?.addEventListener('click', () => { filters = { ...searchState.usedFilters }; research(); runSearch(searchState.term); });
+  document.querySelector('#retry-search')?.addEventListener('click', () => { const more=searchState.failedMore; filters = { ...searchState.usedFilters }; research(); runSearch(searchState.term, more); });
   document.querySelector('#load-more')?.addEventListener('click', () => runSearch(searchState.term, true));
   document.querySelector('#broaden-search')?.addEventListener('click', () => { filters = { ...defaultFilters, match: 'any', field: 'all' }; research(); runSearch(searchState.term); });
   document.querySelector('#save-search')?.addEventListener('click', () => {
@@ -296,7 +306,9 @@ async function retrieveAbstract(id) {
     const latest = workspace.saved.find(paper => paper.id === id) || paperMap.get(id) || p;
     const updated = applyOriginalAbstract(latest, record); paperMap.set(id, updated);
     const saved = workspace.saved.find(paper => paper.id === id);
-    if (saved) { Object.assign(saved, updated); persist(); }
+    if (saved) Object.assign(saved, updated);
+    const warningChanged = retainSourceWarning(workspace, updated);
+    if (saved || warningChanged) persist();
     searchState.papers = searchState.papers.map(paper => paper.id === id ? applyOriginalAbstract(paper, record) : paper);
   } catch (error) { abstractErrors.set(id, error.message); }
   finally {
@@ -308,6 +320,7 @@ function toggleSave(id) {
   const p = paperMap.get(id); if (!p) return;
   const at = workspace.saved.findIndex(s => s.id === id);
   if (at >= 0) {
+    retainSourceWarning(workspace, workspace.saved[at]);
     const old = workspace.saved[at];
     if (old.notes || old.collection) {
       openDialog(`<h2 id="dialog-title">Remove this saved paper?</h2><p>Your collection assignment and paper notes will also be removed from your account workspace. Appraisals and linked CPD reflections are kept separately.</p><button class="button" id="confirm-unsave">Remove saved paper and notes</button>`);
@@ -622,7 +635,7 @@ function reviewDateDialog(id='') {
 function renderReflectionForm() {
   const r = reflectionDraft || workspace.reflections.find(r => r.id === reflectionEditing) || {};
   const area = document.querySelector('#reflection-form-area');
-  area.innerHTML = `<form id="reflection-form" class="card form-card" style="margin-bottom:20px"><h2>${r.id ? 'Edit your reflection' : 'Capture a reflection'}</h2>${r.appraisalId ? `<div class="notice">Draft from your own appraisal notes · ${esc(basisLabels[r.basis] || 'Reading basis not recorded')}. Check the wording and enter the time actually spent before saving. Later appraisal edits do not rewrite this reflection.</div>` : ''}<div class="field"><label for="reflection-title">Learning title</label><input id="reflection-title" name="title" value="${esc(r.title || '')}" maxlength="180" required></div><div class="form-row"><div class="field"><label for="reflection-date">Date</label><input id="reflection-date" name="date" type="date" value="${esc(r.date || new Date().toISOString().slice(0, 10))}" required></div><div class="field"><label for="reflection-minutes">Learning time in minutes</label><input id="reflection-minutes" name="minutes" type="number" min="1" max="1440" value="${(r.appraisalId || r.requireActualTime) ? esc(r.minutes || '') : Number(r.minutes || 15)}" required></div></div><div class="field"><label for="reflection-kind">Activity</label><select id="reflection-kind" name="kind"><option>Research reading</option><option>Teaching</option><option>Course or learning</option><option>Professional reflection</option></select></div><div class="field"><label for="reflection-learning">What did you learn, and why does it matter?</label><textarea id="reflection-learning" name="learning" maxlength="10000" required>${esc(r.learning || '')}</textarea></div><div class="field"><label for="reflection-action">What will you do next?</label><textarea id="reflection-action" name="action" maxlength="10000" required>${esc(r.action || '')}</textarea></div><div class="field"><label for="reflection-outcome">Outcome / follow-up (optional)</label><textarea id="reflection-outcome" name="outcome" maxlength="6000" placeholder="What happened after the learning action? Record what you observed and what remains uncertain.">${esc(r.outcome || '')}</textarea></div><div class="field"><label for="reflection-followup">Review date (optional)</label><input id="reflection-followup" name="followUpDate" type="date" value="${esc(r.followUpDate || '')}"><p class="subtle">Your chosen review date. This field does not create a reminder.</p></div><div class="field"><label for="reflection-source">Source or reference (optional)</label><input id="reflection-source" name="source" value="${esc(r.source || '')}" maxlength="1000" placeholder="Paper DOI, guideline or session title"></div><div class="button-row"><button class="button" type="submit">Save reflection</button><button class="button secondary" type="button" id="cancel-reflection">Cancel</button></div></form>`;
+  area.innerHTML = `<form id="reflection-form" class="card form-card" style="margin-bottom:20px"><h2>${r.id ? 'Edit your reflection' : 'Capture a reflection'}</h2>${r.appraisalId ? `<div class="notice">Draft from your own appraisal notes · ${esc(basisLabels[r.basis] || 'Reading basis not recorded')}. Check the wording and enter the time actually spent before saving. Later appraisal edits do not rewrite this reflection.</div>` : ''}<div class="field"><label for="reflection-title">Learning title</label><input id="reflection-title" name="title" value="${esc(r.title || '')}" maxlength="180" required></div><div class="form-row"><div class="field"><label for="reflection-date">Date</label><input id="reflection-date" name="date" type="date" value="${esc(r.date || localDay())}" required></div><div class="field"><label for="reflection-minutes">Learning time in minutes</label><input id="reflection-minutes" name="minutes" type="number" min="1" max="1440" value="${(r.appraisalId || r.requireActualTime) ? esc(r.minutes || '') : Number(r.minutes || 15)}" required></div></div><div class="field"><label for="reflection-kind">Activity</label><select id="reflection-kind" name="kind"><option>Research reading</option><option>Teaching</option><option>Course or learning</option><option>Professional reflection</option></select></div><div class="field"><label for="reflection-learning">What did you learn, and why does it matter?</label><textarea id="reflection-learning" name="learning" maxlength="10000" required>${esc(r.learning || '')}</textarea></div><div class="field"><label for="reflection-action">What will you do next?</label><textarea id="reflection-action" name="action" maxlength="10000" required>${esc(r.action || '')}</textarea></div><div class="field"><label for="reflection-outcome">Outcome / follow-up (optional)</label><textarea id="reflection-outcome" name="outcome" maxlength="6000" placeholder="What happened after the learning action? Record what you observed and what remains uncertain.">${esc(r.outcome || '')}</textarea></div><div class="field"><label for="reflection-followup">Review date (optional)</label><input id="reflection-followup" name="followUpDate" type="date" value="${esc(r.followUpDate || '')}"><p class="subtle">Your chosen review date. This field does not create a reminder.</p></div><div class="field"><label for="reflection-source">Source or reference (optional)</label><input id="reflection-source" name="source" value="${esc(r.source || '')}" maxlength="1000" placeholder="Paper DOI, guideline or session title"></div><div class="button-row"><button class="button" type="submit">Save reflection</button><button class="button secondary" type="button" id="cancel-reflection">Cancel</button></div></form>`;
   if (r.kind) document.querySelector('#reflection-kind').value = r.kind;
   document.querySelector('#reflection-form').addEventListener('input', e => {
     const data = Object.fromEntries(new FormData(e.currentTarget));
@@ -742,9 +755,13 @@ async function copyCitation(id) {
   try { await navigator.clipboard.writeText(citation(p)); toast('Citation copied · check your required referencing style'); }
   catch { openDialog(`<h2 id="dialog-title">Copy this citation</h2><p>${esc(citation(p))}</p><p class="subtle">Check against your university or publisher’s required referencing style.</p>`); }
 }
+function downloadWorkspaceBackup(recovery = false) {
+  const now = new Date();
+  download(backupFilename(now, recovery || !!sync.invalidPending), workspaceBackup(sync.invalidPending || sync.pending || workspace, now), 'application/json');
+}
 function privacy() {
   openDialog(`<span class="eyebrow">YOUR ACCOUNT WORKSPACE</span><h2 id="dialog-title">Your data & privacy</h2><p>Your papers, notes, saved searches, appraisals, teaching plans, revision sets and reflections are stored in the app’s account database, tied to your signed-in identity. The app keeps an account-specific device copy of pending changes so interrupted saves can be recovered.</p><p>Open the same private app on your iPhone or Mac and sign in with the same account. Data loads when you open the app; “Refresh from account” fetches newer changes. This is not live simultaneous editing.</p><p>Research keywords pass through the app server to Europe PMC, with PubMed (NCBI) as a backup. If the hosted connection fails, your browser can request Europe PMC directly without account cookies or identity. Problem-report text is prepared on this device for you to review and copy or download; it is not automatically submitted or stored in the account database. Publication metadata may be cached for five minutes. Opening a missing abstract can request that paper’s PMID from PubMed; a retrieved abstract and its source are kept when you save the paper. Your account identity is not forwarded to either research service. External resources use their own privacy policies, and fonts load from Google Fonts. Keep identifiable patient information out of this educational prototype.</p><div class="button-row"><button class="button" id="export-workspace">${icon('download')}Export workspace backup</button><button class="button secondary" id="choose-backup" type="button">Import a backup</button><input id="import-workspace" type="file" accept="application/json,.json" class="file-input"></div><p class="subtle" style="margin-top:15px">Import accepts a backup file up to 4 MB and a validated workspace up to the 2 MB account limit. It shows a summary before combining records, including pending device edits. It does not replace the account workspace. Conflicting notes are kept together and conflicting reflections become separate entries.</p>${sync?.pending ? '<div class="notice">This device has changes not yet confirmed by the account server. The export includes your current version.</div>' : ''}<p><a href="/signout-with-chatgpt?return_to=%2F" target="_top">Sign out of this app</a></p>`);
-  document.querySelector('#export-workspace').onclick = () => download('physiosidekick-workspace.json', workspaceBackup(sync.invalidPending || sync.pending || workspace), 'application/json');
+  document.querySelector('#export-workspace').onclick = () => downloadWorkspaceBackup();
   const section = document.createElement('section');
   section.innerHTML = `<h3>Clear saved learning records</h3><p>Remove all papers, notes, searches, appraisals, CPD reflections, teaching plans and revision sets from the active account workspace. Export a backup first if you want to keep a copy.</p><p>This does not close your ChatGPT account or erase platform logs, provider backups, downloaded files or copies on other devices. A revision marker remains to prevent older tabs silently restoring cleared records. Full account-erasure and retention arrangements remain unfinished.</p><button class="danger-button" id="clear-records" ${!sync?.account || sync.status !== 'saved' || sync.pending || sync.invalidPending ? 'disabled' : ''}>Review clearing all records</button><p class="subtle">Wait for Account saved and save or cancel open drafts before clearing. Close older tabs and refresh other devices afterwards. An explicit backup import or conflict merge can restore removed records.</p>`;
   document.querySelector('.dialog-body').append(section);
@@ -787,6 +804,7 @@ function reviewImport(data, legacy = false) {
   document.querySelector('#confirm-import').onclick = async () => { dialog.close(); await sync.combine(data, true, legacy);  };
 }
 function syncStatus(state) {
+  main.inert = state.recoveryRequired === true;
   document.querySelectorAll('[data-note],[data-collection]').forEach(el => { el.readOnly = state.status === 'loading' || state.combining; });
   const labels = { loading: 'Connecting…', saved: 'Account saved', pending: 'Changes pending', saving: 'Saving…', offline: 'Save interrupted', conflict: 'Changes need review', unavailable: 'Account unavailable', error: 'Save needs attention' };
   document.querySelector('#sync-status').textContent = labels[state.status] || state.status;
@@ -805,9 +823,10 @@ function syncStatus(state) {
   if (state.account) document.querySelector('.profile strong').textContent = state.account.name;
 }
 function conflictDialog() {
-  openDialog(`<h2 id="dialog-title">Keep both versions safe</h2><p>Your device has pending changes and the account has a newer version. No automatic overwrite has taken place.</p><p>You can combine both sets of records. Different notes are kept together and different versions of reflections, appraisals, teaching plans and study sets become separate entries. Removed records may return during a merge.</p><div class="button-row"><button class="button" id="merge-conflict">Combine both versions</button><button class="button secondary" id="export-pending">Export this device’s version</button></div>`);
+  openDialog(`<h2 id="dialog-title">Keep both versions safe</h2><p>${sync.invalidPending ? 'A device copy could not be validated. Editing is paused to keep it safe. Export the original, then import a corrected workspace backup or explicitly load the account version.' : 'Your device has pending changes and the account has a newer version. No automatic overwrite has taken place.'}</p><p>You can combine both sets of records. Different notes are kept together and different versions of reflections, appraisals, teaching plans and study sets become separate entries. Removed records may return during a merge.</p><div class="button-row"><button class="button" id="merge-conflict" ${sync.invalidPending ? 'disabled' : ''}>Combine both versions</button><button class="button secondary" id="export-pending">Export this device’s version</button>${sync.invalidPending ? '<button class="button secondary" id="import-corrected">Import corrected backup</button>' : ''}</div>`);
   document.querySelector('#merge-conflict').onclick = async () => { if (hasOpenDraft()) { toast('Save or cancel your open draft before combining records.'); return; } dialog.close(); await sync.combine(); };
-  document.querySelector('#export-pending').onclick = () => download('physiosidekick-pending-changes.json', JSON.stringify({ version: 7, workspace: sync.invalidPending || sync.pending || workspace }, null, 2), 'application/json');
+  document.querySelector('#import-corrected')?.addEventListener('click', privacy);
+  document.querySelector('#export-pending').onclick = () => downloadWorkspaceBackup(true);
   const button = document.createElement('button'); button.className = 'danger-button'; button.textContent = 'Review discarding this device’s changes';
   document.querySelector('.dialog-body').append(button);
   button.onclick = () => {
@@ -909,7 +928,7 @@ document.addEventListener('input', e => {
   paperMap.set(id, p); persist();
 });
 document.querySelector('.dialog-close').onclick = () => dialog.close();
-dialog.addEventListener('close',()=>{if(learningDownloadURL){URL.revokeObjectURL(learningDownloadURL);learningDownloadURL=null;}});
+dialog.addEventListener('close',()=>{const opener=dialogReturnFocus;dialogReturnFocus=null;if(!dialog.open){if(opener?.isConnected && !opener.closest('dialog'))opener.focus({preventScroll:true});else main.focus({preventScroll:true});}if(learningDownloadURL){URL.revokeObjectURL(learningDownloadURL);learningDownloadURL=null;}});
 dialog.addEventListener('click', e => { if (e.target === dialog) { const r = dialog.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dialog.close(); } });
 document.querySelector('#readiness-button').onclick=betaReadiness;
 document.querySelector('#guide-button').onclick=gettingStarted;

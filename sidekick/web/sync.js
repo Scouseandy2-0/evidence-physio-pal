@@ -26,16 +26,26 @@ export class WorkspaceSync {
       if (!data.account?.id || !Number.isSafeInteger(data.revision) || data.revision < 0) throw new Error('Unexpected account response.');
       const remote = validateWorkspace(data.workspace);
       this.account = data.account; this.revision = data.revision; this.updatedAt = data.updatedAt;
-      const cached = this.read(this.key);
+      let rawCache = null, cached = null;
+      try { rawCache = this.storage.getItem(this.key); } catch { this.cacheFailed = true; }
+      try {
+        cached = rawCache === null ? null : JSON.parse(rawCache);
+        if (cached !== null && (typeof cached !== 'object' || Array.isArray(cached) || !Number.isSafeInteger(cached.revision) || cached.revision < 0)) throw new Error('Unexpected cache envelope');
+        if (rawCache !== null && cached === null) throw new Error('Unexpected null cache');
+      } catch {
+        this.invalidPending = { recoveryReason: 'The device cache could not be parsed. Keep this original text for recovery; this is not an import-ready workspace.', rawDeviceCache: rawCache };
+        this.recoveryRequired = true; this.cache(); this.onData(remote);
+        this.emit('error', 'The device recovery cache could not be read. Account records are shown unchanged. Export the recovery copy and review recovery options before editing.'); return;
+      }
       if (cached?.invalidPending) {
-        this.invalidPending = cached.invalidPending;
+        this.invalidPending = cached.invalidPending; this.recoveryRequired = true;
         this.onData(remote); this.emit('error', 'A previous device version failed validation. Export it from Backups & privacy before correcting and importing it. The account copy is unchanged.'); return;
       }
       if (cached?.pending) {
         try { this.pending = validateWorkspace(cached.pending); }
         catch {
           // Keep the failed device snapshot exportable; never upload it or hide valid account records.
-          this.pending = null; this.invalidPending = structuredClone(cached.pending);
+          this.pending = null; this.invalidPending = structuredClone(cached.pending); this.recoveryRequired = true;
           this.cache(); this.onData(remote);
           this.emit('error', 'A pending device copy failed validation. Your account records are shown unchanged. Export the device recovery copy from Backups & privacy before correcting and importing it, or review recovery options to use the account version.');
           return;
@@ -53,10 +63,11 @@ export class WorkspaceSync {
     if (this.read(`${this.key}.imported`) !== fingerprint) this.needsImport = true;
     this.onStatus(this);
   }
-  queue(workspace) {
+  queue(workspace, { recovering = false } = {}) {
     if (!this.account || this.replacing) return false;
+    if (this.recoveryRequired && !recovering) { this.emit('error', 'Workspace editing is paused to protect a recovered device copy. Export it and review recovery options before continuing.'); return false; }
     try {
-      this.pending = validateWorkspace(workspace); this.invalidPending = null; this.sequence++;
+      this.pending = validateWorkspace(workspace); this.invalidPending = null; this.recoveryRequired = false; this.sequence++;
       this.cache();
       if (this.status === 'conflict') { this.onStatus(this); return true; }
       this.emit('pending'); clearTimeout(this.timer); this.timer = setTimeout(() => this.flush(), this.delay); return true;
@@ -129,7 +140,7 @@ export class WorkspaceSync {
       if (!Number.isSafeInteger(data.revision) || data.revision < this.revision) throw new Error('The account version could not be verified. Keep your recovery file and retry.');
       const base = importing && this.pending && this.pending !== device ? mergeWorkspaces(data.workspace, this.pending) : data.workspace;
       const merged = mergeWorkspaces(base, device);
-      this.revision = data.revision; this.emit('pending'); if(!this.queue(merged))return; this.onData(merged); this.combining = false; await this.flush();
+      this.revision = data.revision; this.emit('pending'); if(!this.queue(merged, { recovering: importing }))return; this.onData(merged); this.combining = false; await this.flush();
       if (acknowledgeLegacy && importing && this.status === 'saved' && !this.pending && !this.invalidPending) { this.needsImport = false; this.write(`${this.key}.imported`, JSON.stringify(this.legacy)); this.onStatus(this); }
     } catch (e) { this.emit('conflict', e.message); }
     finally { this.combining = false; this.onStatus(this); }
@@ -155,7 +166,7 @@ export class WorkspaceSync {
         records = validateWorkspace(data.workspace);
       }
       this.revision = data.revision; this.updatedAt = data.updatedAt;
-      this.pending = null; this.invalidPending = null; this.sequence++;
+      this.pending = null; this.invalidPending = null; this.recoveryRequired = false; this.sequence++;
       if (mode === 'clear') {
         this.legacy = null; this.needsImport = false;
         try { this.storage.removeItem(this.key); this.storage.removeItem(`${this.key}.imported`); this.storage.removeItem('physiosidekick.workspace.v1'); }

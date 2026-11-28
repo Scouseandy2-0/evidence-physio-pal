@@ -14,3 +14,12 @@ export function applyOriginalAbstract(paper, record) {
   if (paper.pmid !== record.pmid) throw new Error('Publication identifiers do not match.');
   return { ...paper, abstract: record.abstract, abstractStatus: record.abstractStatus, abstractSource: record.abstractSource, abstractRetrievedAt: record.abstractRetrievedAt, abstractCopyright: record.abstractCopyright, retracted: paper.retracted || record.retracted === true };
 }
+
+export function retainSourceWarning(workspace, paper) {
+  if (!paper.retracted) return false;
+  let changed = false;
+  for (const appraisal of workspace.appraisals) if (appraisal.paperId === paper.id && !appraisal.sourceRetracted) { appraisal.sourceRetracted = true; changed = true; }
+  const sources = [...workspace.teachingPlans.flatMap(plan => plan.sources), ...workspace.studySets.flatMap(set => set.cards.map(card => card.source))];
+  for (const source of sources) if (source.pmid === paper.pmid && !source.retracted) { source.retracted = true; changed = true; }
+  return changed;
+}

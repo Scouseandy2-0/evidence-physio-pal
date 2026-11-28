@@ -5,9 +5,9 @@ Updated 28 November 2026. Finish the defined product before adding more major fe
 ## Saved checkpoint
 
 - GitHub repository: Scouseandy2-0/evidence-physio-pal; development branch: codex/physiosidekick-prototype; app source: sidekick/; draft PR #3. The original Lovable app remains separate.
-- Latest published application source: 8ad04a3a9a2d2949b05f33245ea94d1f48634304. Review-date-link deployment confirmed succeeded; app remains owner-private.
-- Last runtime change: direct Set/Change review date, all-reflection picker, due/future visibility, clearer learning-date filters, date-field width constraints. Its iPhone retest is open.
-- Latest developer baseline: 154 automated tests passed; production build and targeted desktop workflow checks passed.
+- Latest confirmed published application source: 65c58e1ba9d90b8348e6a3c7558aaf51ea6fd1f7. Readiness/recovery deployment confirmed succeeded on 28 November; app remains owner-private.
+- Last confirmed published changes: pending-cache recovery, retained appraisal source warnings and search focus/filter-size repairs. The review-date-link iPhone retest remains open.
+- Latest developer baseline: 160 automated tests passed; production build and targeted desktop workflow checks passed.
 - Binary skeleton/muscle assets are included with source attribution/licences; checksum-verified pinned download scripts remain available for restoration. Generated bundles, dependency directories, credentials, local databases and user files are not source-control backups.
 - BioDigital integration enquiry sent with Andrew’s authorisation. Reply/quote/demo pending; no paid licence or purchase agreed.
 
@@ -77,3 +77,18 @@ Review register: docs/content-review-register.md. A developer source check is no
 Evidence: docs/readiness-pass-2026-11-28.md and docs/content-link-audit-2026-11-28.json. Candidate app release: 2026-11-28-readiness-recovery; publication outcome must be read from Sites, not inferred from this checklist. The last confirmed published source above remains the reference until this candidate succeeds.
 
 Next work still requires actual-device evidence for reported iPhone faults, anatomical/clinical review and a licensed full-atlas decision. BioDigital inbox check found no response on 28 November; no purchase or contract has been made.
+
+## Next-ten pass — 28 November 2026
+
+1. [x] Protect recovered invalid device copies from unrelated edits until explicit recovery.
+2. [x] Keep malformed device-cache text exportable rather than silently treating it as absent.
+3. [x] Preserve paper retraction flags in both conflict-merge directions.
+4. [x] Carry newly observed PubMed warnings into linked appraisals, teaching and revision references.
+5. [x] Default new reflection dates to the device calendar day.
+6. [x] Retry a failed results page with its original cursor/filters while keeping earlier results.
+7. [x] Add Stop search, cancellation announcements and late-response protection.
+8. [x] Restore dialog focus to its opener or the workspace fallback.
+9. [x] Fix enlarged research-filter layout; check 320px Chromium reflow across core screens.
+10. [x] Give normal/recovery backups distinct timestamped filenames matching export metadata.
+
+Detailed evidence and limits: docs/readiness-ten-2026-11-28.md. Full suite: 160 passing; live research audit: 10 scenarios passing. Candidate release: 2026-11-28-recovery-search-mobile. Publication outcome must be confirmed separately. All actual-iPhone and independent-review gates above remain open.

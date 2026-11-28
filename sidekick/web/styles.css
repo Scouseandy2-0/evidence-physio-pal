@@ -127,3 +127,11 @@ input[type="date"] { min-width:0; width:100%; max-width:100%; box-sizing:border-
 .searchbox input:focus-visible { outline:3px solid #4e729d; outline-offset:3px; border-radius:4px; }
 /* These more-specific filter rules previously overrode the mobile 1rem control size. */
 .filter-panel .field select { font-size:1rem; }
+
+/* Let enlarged labels and selected options fit in narrow research filters. */
+@media(max-width:650px) {
+  .filter-panel { grid-template-columns:repeat(auto-fit,minmax(min(100%,14rem),1fr)); }
+}
+@media(min-width:901px) {
+  .research-layout { grid-template-columns:minmax(14rem,.3fr) minmax(0,1fr); }
+}

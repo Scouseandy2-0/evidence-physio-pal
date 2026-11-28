@@ -25,3 +25,9 @@ test('unknown record types and workspaces over the account limit cannot be silen
  const workspace={...emptyWorkspace(),saved:Array.from({length:110},(_,i)=>({id:`MED:${i+1}`,pmid:String(i+1),title:'Software fixture',notes:'x'.repeat(20000)}))};
  assert.throws(()=>parseWorkspaceBackup(workspaceBackup(workspace)),/2 MB account limit/);
 });
+
+test('normal and recovery exports have distinct timestamped filenames safe for iPhone Files',async()=>{
+ const {backupFilename}=await import('../web/backup.js');const now=new Date('2026-11-28T01:45:12.123Z');
+ assert.equal(backupFilename(now),'physiosidekick-workspace-2026-11-28T01-45-12-123Z.json');
+ assert.equal(backupFilename(now,true),'physiosidekick-device-recovery-2026-11-28T01-45-12-123Z.json');
+});

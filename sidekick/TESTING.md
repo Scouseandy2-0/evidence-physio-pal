@@ -235,3 +235,7 @@ Chrome local preview used the new action to link tomorrow’s date to an existin
 ## 28 November developer readiness pass
 
 Release 2026-11-28-readiness-recovery: clean source restoration/install/build verified; invalid cached pending records remain recoverable while account records display; search keyboard outline and research filter text size repaired; 20 source links audited; connected learning/export checks and retained appraisal retraction warnings added. Full suite: 154 passed. See docs/readiness-pass-2026-11-28.md for exact evidence and limits, and TODO.md for remaining iPhone/independent-review gates. New source-link audit: npm run audit:content-links.
+
+## Recovery, search and mobile pass — 28 November 2026
+
+Release 2026-11-28-recovery-search-mobile protects recovered invalid/malformed caches, retains warnings in merges and linked evidence, uses local reflection dates, retries failed result pages, allows search cancellation, restores dialog focus, widens enlarged research controls and timestamps normal/recovery backups. 160 automated tests and the ten-scenario live public research audit passed. Detailed evidence, publication boundary and remaining device/review gates: docs/readiness-ten-2026-11-28.md and TODO.md.

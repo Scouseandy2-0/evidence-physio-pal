@@ -349,3 +349,21 @@ test('appraisal warnings survive an older tab removing the library paper and omi
  const stored=await(await workspaceAPI(req('warning-owner'),env)).json();
  assert.equal(stored.workspace.appraisals[0].sourceRetracted,true);assert.equal(stored.workspace.saved.length,0);
 });
+
+test('recovered invalid snapshots reject unrelated edits until explicit corrected import or account discard',async()=>{
+ const {create,storage}=syncEnvironment();const invalid={...emptyWorkspace(),reflections:[{...reflection(),date:'bad'}]};
+ storage.setItem('physiosidekick.account.a',JSON.stringify({revision:0,pending:invalid}));
+ const a=create();await a.sync.init();assert.equal(a.sync.recoveryRequired,true);
+ assert.equal(a.sync.queue({...emptyWorkspace(),reflections:[reflection('unrelated')]}),false);
+ assert.deepEqual(a.sync.invalidPending,invalid);assert.equal(a.sync.pending,null);await a.sync.flush();
+ const reload=create();await reload.sync.init();assert.deepEqual(reload.sync.invalidPending,invalid);
+ await a.sync.combine({...emptyWorkspace(),reflections:[reflection('corrected')]},true,false);assert.equal(a.sync.recoveryRequired,false);assert.equal(a.sync.status,'saved');
+});
+test('malformed cache text and unexpected envelopes stay recoverable without overwriting account data',async()=>{
+ for(const raw of ['{"revision":0,"pending":broken', 'null','[]','{"revision":"bad","pending":{}}']){
+  const {create,storage}=syncEnvironment();storage.setItem('physiosidekick.account.a',raw);
+  const a=create();await a.sync.init();assert.equal(a.sync.status,'error');assert.equal(a.sync.recoveryRequired,true);assert.equal(a.sync.invalidPending.rawDeviceCache,raw);assert.equal(a.data.reflections.length,0);
+  const again=create();await again.sync.init();assert.equal(again.sync.invalidPending.rawDeviceCache,raw);
+  assert.equal(await a.sync.replaceRecords('account',{revision:a.sync.revision,sequence:a.sync.sequence}),true);assert.equal(a.sync.recoveryRequired,false);assert.equal(a.sync.invalidPending,null);
+ }
+});
