@@ -1,5 +1,5 @@
 import {formatNavigationDiagnostics} from './navigation-diagnostics.js';
-export const appRelease = '2026-11-28-navigation-help';
+export const appRelease = '2026-11-28-navigation-help.1';
 export const guideKey = 'physiosidekick.guide.hidden.v1';
 export function guideProgress(workspace = {}) {
   return [

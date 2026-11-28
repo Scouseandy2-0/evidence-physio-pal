@@ -151,3 +151,5 @@ Evidence: docs/workspace-polish-2026-11-28.md. Remaining non-anatomy gates: actu
 - [ ] Actual iPhone VoiceOver reliability remains open. A report captured after a failure may help distinguish activation of the return control from a route change without it; the current checks do not prove the root cause or a device fix.
 
 Candidate release: 2026-11-28-navigation-help. Deployment outcome must be confirmed separately. Anatomy remains parked.
+
+- [x] Add Andrew’s iPhone sideways-Learn-tabs tip to Reading & iPhone setup, including Anatomy/Research sources and distinguishing normal swipes from VoiceOver gestures. Release 2026-11-28-navigation-help.1.
