@@ -29,6 +29,17 @@ test('failed next-page retry keeps earlier papers and uses the same cursor; stop
   await import('../web/app.js?readiness-ten-ui');await tick();
   document.querySelector('#research-search input').value='knee';submit();await tick();await tick();
   assert.equal(document.querySelectorAll('.paper-list .paper-card').length,1);
+  // Screen-reader activation need not put DOM focus on the paper-title button.
+  const paperTitle=document.querySelector('.paper-title'),originalRoute=location.hash;
+  document.querySelector('#research-search input').focus();paperTitle.click();
+  assert.equal(dialog.open,true);assert.equal(focused.id,'dialog-title');assert.equal(location.hash,originalRoute);
+  dialog.getBoundingClientRect=()=>({left:50,right:350,top:50,bottom:600});
+  const assistiveClick=new window.Event('click',{bubbles:true});
+  Object.defineProperties(assistiveClick,{detail:{value:0},clientX:{value:0},clientY:{value:0}});
+  dialog.dispatchEvent(assistiveClick);assert.equal(dialog.open,true,'coordinate-less activation must not dismiss the paper');
+  document.querySelector('.dialog-close').click();assert.equal(focused,paperTitle,'return to the activated title even if DOM focus was elsewhere');
+  assert.equal(paperTitle.getAttribute('type'),'button');assert.equal(paperTitle.getAttribute('aria-haspopup'),'dialog');
+
   mode='fail';document.querySelector('#load-more').click();await tick();await tick();
   assert.ok(document.querySelector('#retry-search'));assert.match(document.querySelector('.paper-list').textContent,/123/);
   mode='retry';document.querySelector('#retry-search').click();await tick();await tick();

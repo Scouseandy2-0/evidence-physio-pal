@@ -247,3 +247,7 @@ Release 2026-11-28-recovery-search-mobile protects recovered invalid/malformed c
 ## Non-anatomy reliability pass — 28 November 2026
 
 175 automated tests, syntax checks and production Worker build pass. Ten live research scenarios pass. Actual rendered trial, draft protection, teaching exports and 320px enlarged-text evidence are recorded in docs/workspace-polish-2026-11-28.md. Account/device/independent-review gates remain open.
+
+## VoiceOver paper dialog correction — 28 November 2026
+
+Full suite remains 175 passing. Expanded app-event regression first failed for coordinate-less dialog activation, then passed after the dismissal/focus correction. Local rendered Enter/Space opening and Close/Escape focus return passed. Actual-iPhone report, inference boundary and retest remain in docs/voiceover-paper-dialog-2026-11-28.md.

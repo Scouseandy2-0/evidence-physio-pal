@@ -119,3 +119,9 @@ Andrew asked to park anatomy and get the rest right. The comprehensive V1-A atla
 - [x] Run 175 automated tests and 10 live publication-audit scenarios, plus rendered trial save/reload/Word, real PMID/original-abstract lookup, draft-protection, teaching-copy/Word and review-date checks.
 
 Evidence: docs/workspace-polish-2026-11-28.md. Remaining non-anatomy gates: actual iPhone/Mac persistence and exports, VoiceOver, independent clinical/content review, reference-manager RIS import, final operator/support and supplier retention/erasure arrangements. These require evidence or decisions that developer tests cannot supply.
+
+## Reported iPhone VoiceOver paper-title issue — 28 November 2026
+
+- [x] Record Andrew’s specific passing text/control/three-finger scroll observations separately from the paper-title defect.
+- [x] Reproduce and remove coordinate-based dialog dismissal; return focus to the activated paper button; verify Enter/Space/Close/Escape and full test suite/build.
+- [ ] Retest double-tapped paper-title opening and closing on Andrew’s actual iPhone with VoiceOver. Candidate 2026-11-28-dialog-accessibility remains unconfirmed on the device. See docs/voiceover-paper-dialog-2026-11-28.md.

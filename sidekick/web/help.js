@@ -1,4 +1,4 @@
-export const appRelease = '2026-11-28-workspace-polish';
+export const appRelease = '2026-11-28-dialog-accessibility';
 export const guideKey = 'physiosidekick.guide.hidden.v1';
 export function guideProgress(workspace = {}) {
   return [

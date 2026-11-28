@@ -27,3 +27,10 @@ The filenames above identify evidence already supplied in the conversation; copi
 Andrew supplied IMG_7258.png from iPhone and reported that he could not link a due-date CPD follow-up. The screenshot shows portfolio filter controls and 0 of 1 reflections selected. It establishes a real iPhone usability report; it does not establish the hidden record’s exact current date or which filter excluded it. The displayed From/To fields filter learning dates and were not assignment controls.
 
 A direct Set review date action was added, with an all-record picker that remains usable when the current filters hide a reflection. It validates an actual review date, updates only the selected record, selects due/future view as appropriate, and focuses the updated record. Filter labels/empty guidance distinguish assignment from discovery. Date-input width constraints address the visible iPhone overflow risk. Automated and desktop checks pass; a successful retest on Andrew’s iPhone is still open.
+
+## Andrew’s VoiceOver observations — 28 November 2026
+
+- Paragraphs are read when touched. Tabs and the controls Andrew tried are spoken. This establishes those observations, not a complete screen-reader audit.
+- Three-finger scrolling moves through the page and announces page positions. Large one-screen increments are expected VoiceOver behaviour; the initial single-finger scrolling report is not treated as a confirmed app scrolling defect.
+- Andrew reported that double-tapping a research-paper title returned him to the preceding page. He explicitly confirmed double-tap activation. This remains a reported physical-iPhone defect until the corrected release is retested.
+- Developer regression reproduced a possible dismissal path: coordinate-less click on the open dialog was interpreted as an outside tap and closed it. Removed coordinate-based outside-tap dismissal, captured the title button as the explicit return-focus target and clarified dialog semantics. This does not prove the actual iPhone emitted that exact event. Evidence: voiceover-paper-dialog-2026-11-28.md.
