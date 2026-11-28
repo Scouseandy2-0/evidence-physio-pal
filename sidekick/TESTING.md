@@ -271,3 +271,7 @@ Full suite remains 175 passing. Expanded app-event regression first failed for c
 ## Owner iPhone retest — 28 November 2026
 
 Andrew now reports that iPhone VoiceOver seems to work as intended. The reported issue is apparently resolved in this latest use, subject to recurrence. This is an owner observation, not a comprehensive accessibility pass; exact wording, release context and boundaries are in docs/device-evidence.md. Documentation-only update; no new runtime behaviour or repeated software test run.
+
+## Draft protection — 28 November 2026
+
+198 tests pass, including new/edited reflection and revision queue-refusal rollback/retry, draft discard/keep, export/removal guards and route-preserving skip focus. Rendered Chromium checks and limits: docs/next-five-draft-protection-2026-11-28.md.

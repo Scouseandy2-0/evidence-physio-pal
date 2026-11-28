@@ -101,6 +101,11 @@ function toast(message) {
 }
 let dialogReturnFocus = null;
 function openDialog(html, opener = null) { if (!dialog.open) dialogReturnFocus = opener || document.activeElement; if(learningDownloadURL){URL.revokeObjectURL(learningDownloadURL);learningDownloadURL=null;} dialog.dataset.paperId = ''; document.querySelector('#dialog-content').innerHTML = `<div class="dialog-body">${html}</div>`; if (!dialog.open) dialog.showModal(); const heading=dialog.querySelector('#dialog-title'); if(heading){heading.tabIndex=-1;heading.focus();} }
+function confirmDraftDiscard(label, discard) {
+  openDialog(`<h2 id="dialog-title">Discard this ${label} draft?</h2><p>Your unfinished changes have not been saved. Keep editing to return to the draft.</p><div class="button-row"><button class="button" id="keep-draft">Keep editing</button><button class="danger-button" id="discard-draft">Discard draft</button></div>`);
+  document.querySelector('#keep-draft').onclick = () => dialog.close();
+  document.querySelector('#discard-draft').onclick = () => { dialog.close(); discard(); };
+}
 function navigate(next) { if (location.hash === `#${next}`) render(); else location.hash = next; }
 function updateNav() {
   document.querySelector('#desktop-nav').innerHTML = nav.map(([id, label]) => `<a href="#${id}" class="nav-item ${route === id ? 'active' : ''}" ${route === id ? 'aria-current="page"' : ''}>${icon(id)}<span>${label}</span>${id === 'fcp' ? '<span class="premium">PREVIEW</span>' : ''}${id === 'library' ? `<span class="count">${workspace.saved.length}</span>` : ''}</a>`).join('');
@@ -530,7 +535,7 @@ function studyEditor() {
   const editable = () => sync?.account && !sync.combining && sync.status !== 'loading';
   document.querySelector('#study-title').oninput = e => { if (!editable()) return; set.title = e.target.value; set.updatedAt = new Date().toISOString(); persist(); };
   document.querySelector('#new-study-card').onclick = () => { if (!editable()) return; if (set.cards.length >= 100) { toast('A study set can hold up to 100 cards.'); return; } if (studyDraft?.dirty) { toast('Save or cancel the current card first.'); return; } studyDraft = { setId: set.id, question: '', answer: '', sourceId: '', dirty: false }; renderStudyCardForm(set); };
-  document.querySelector('#export-study').onclick = () => download('physiosidekick-study-set.md', studyMarkdown(set), 'text/markdown');
+  document.querySelector('#export-study').onclick = () => { if(studyDraft?.dirty){toast('Save or cancel your card draft before exporting.');return;} download('physiosidekick-study-set.md', studyMarkdown(set), 'text/markdown'); };
   const practise = onlyAgain => { if (studyDraft?.dirty) { toast('Save or cancel the current card before practising.'); return; } studyPractice = { setId: set.id, ids: set.cards.filter(c => !onlyAgain || c.rating === 'again').map(c => c.id), at: 0, revealed: false }; studyEditor(); };
   document.querySelector('#practise-study').onclick = () => practise(false); document.querySelector('#practise-again').onclick = () => practise(true);
   document.querySelectorAll('[data-edit-card]').forEach(button => button.onclick = () => {
@@ -539,11 +544,13 @@ function studyEditor() {
   });
   document.querySelectorAll('[data-remove-card]').forEach(button => button.onclick = () => {
     if (!editable()) return;
+    if(studyDraft?.dirty){toast('Save or cancel your card draft before removing cards.');return;}
     openDialog('<h2 id="dialog-title">Remove this revision card?</h2><p>The card and its recall rating will be removed. Its saved paper and appraisal remain.</p><button class="button" id="confirm-card-remove">Remove card</button>');
     document.querySelector('#confirm-card-remove').onclick = () => { if (!editable()) return; set.cards = set.cards.filter(c => c.id !== button.dataset.removeCard); set.updatedAt = new Date().toISOString(); persist(); dialog.close(); studyDraft = null; studyEditor(); };
   });
   document.querySelector('#remove-study').onclick = () => {
     if (!editable()) return;
+    if(studyDraft?.dirty){toast('Save or cancel your card draft before removing the set.');return;}
     openDialog('<h2 id="dialog-title">Remove this study set?</h2><p>This removes its cards and recall ratings from your account workspace. Export it first to keep a copy. Papers, appraisals and CPD records remain.</p><button class="button" id="confirm-study-remove">Remove study set</button>');
     document.querySelector('#confirm-study-remove').onclick = () => { if (!editable()) return; workspace.studySets = workspace.studySets.filter(s => s.id !== set.id); activeStudy = null; studyDraft = null; persist(); dialog.close(); learnTab = 'revision'; navigate('learn'); };
   };
@@ -563,7 +570,7 @@ function renderStudyCardForm(set) {
     if (document.querySelector('#revision-answer').value.trim() || document.querySelector('#revision-question').value.trim()) { toast('This card already has text. Start a new card to bring in appraisal notes.'); return; }
     try { const notes = cardFromNotes(a); document.querySelector('#revision-question').value = notes.question; document.querySelector('#revision-answer').value = notes.answer; capture(); } catch(e) { toast(e.message); }
   };
-  document.querySelector('#cancel-study-card').onclick = () => { studyDraft = null; document.querySelector('#study-card-form').innerHTML = ''; };
+  document.querySelector('#cancel-study-card').onclick = () => { const discard=()=>{studyDraft = null; document.querySelector('#study-card-form').innerHTML = ''; document.querySelector('#new-study-card').focus();}; if(d.dirty)confirmDraftDiscard('revision card',discard);else discard(); };
   document.querySelector('#revision-card-form').onsubmit = e => {
     e.preventDefault(); if (!sync?.account || sync.combining || sync.status === 'loading') return; capture();
     const paper = workspace.saved.find(p => p.id === d.sourceId);
@@ -571,8 +578,11 @@ function renderStudyCardForm(set) {
     try {
       const source = existing && d.sourceId === `MED:${existing.source.pmid}` ? existing.source : undefined;
       const card = saveStudyCard({ question: d.question, answer: d.answer, paper, appraisal: a, source, existing });
-      if (existing) set.cards = set.cards.map(c => c.id === existing.id ? card : c); else set.cards.push(card);
-      set.updatedAt = new Date().toISOString(); persist(); studyDraft = null; studyEditor(); toast('Revision card queued for saving');
+      const previousCards=set.cards, previousUpdatedAt=set.updatedAt;
+      set.cards = existing ? set.cards.map(c => c.id === existing.id ? card : c) : [...set.cards,card];
+      set.updatedAt = new Date().toISOString();
+      if(!persist()){set.cards=previousCards;set.updatedAt=previousUpdatedAt;toast('The card could not be queued. Your draft is still open; check the save status before retrying.');return;}
+      studyDraft = null; studyEditor(); toast('Revision card queued for saving');
     } catch(e) { toast(e.message); }
   };
   document.querySelector('#revision-source').focus();
@@ -720,18 +730,27 @@ function renderReflectionForm() {
   const area = document.querySelector('#reflection-form-area');
   area.innerHTML = `<form id="reflection-form" class="card form-card" style="margin-bottom:20px"><h2>${r.id ? 'Edit your reflection' : 'Capture a reflection'}</h2>${r.appraisalId ? `<div class="notice">Draft from your own appraisal notes · ${esc(basisLabels[r.basis] || 'Reading basis not recorded')}. Check the wording and enter the time actually spent before saving. Later appraisal edits do not rewrite this reflection.</div>` : ''}<div class="field"><label for="reflection-title">Learning title</label><input id="reflection-title" name="title" value="${esc(r.title || '')}" maxlength="180" required></div><div class="form-row"><div class="field"><label for="reflection-date">Date</label><input id="reflection-date" name="date" type="date" value="${esc(r.date || localDay())}" required></div><div class="field"><label for="reflection-minutes">Learning time in minutes</label><input id="reflection-minutes" name="minutes" type="number" min="1" max="1440" value="${esc(r.minutes || '')}" required></div></div><div class="field"><label for="reflection-kind">Activity</label><select id="reflection-kind" name="kind"><option>Research reading</option><option>Teaching</option><option>Course or learning</option><option>Professional reflection</option></select></div><div class="field"><label for="reflection-learning">What did you learn, and why does it matter?</label><textarea id="reflection-learning" name="learning" maxlength="10000" required>${esc(r.learning || '')}</textarea></div><div class="field"><label for="reflection-action">What will you do next?</label><textarea id="reflection-action" name="action" maxlength="10000" required>${esc(r.action || '')}</textarea></div><div class="field"><label for="reflection-outcome">Outcome / follow-up (optional)</label><textarea id="reflection-outcome" name="outcome" maxlength="6000" placeholder="What happened after the learning action? Record what you observed and what remains uncertain.">${esc(r.outcome || '')}</textarea></div><div class="field"><label for="reflection-followup">Review date (optional)</label><input id="reflection-followup" name="followUpDate" type="date" value="${esc(r.followUpDate || '')}"><p class="subtle">Your chosen review date. This field does not create a reminder.</p></div><div class="field"><label for="reflection-source">Source or reference (optional)</label><input id="reflection-source" name="source" value="${esc(r.source || '')}" maxlength="1000" placeholder="Paper DOI, guideline or session title"></div><div class="button-row"><button class="button" type="submit">Save reflection</button><button class="button secondary" type="button" id="cancel-reflection">Cancel</button></div></form>`;
   if (r.kind) document.querySelector('#reflection-kind').value = r.kind;
-  document.querySelector('#reflection-form').addEventListener('input', e => {
+  const reflectionFields=()=>JSON.stringify([...document.querySelectorAll('#reflection-form [name]')].map(el=>[el.name,el.value]));
+  const initialFields=reflectionFields();
+  const captureReflection = e => {
     const data = Object.fromEntries(new FormData(e.currentTarget));
     reflectionDraft = { ...r, ...data, ...(r.id ? { id: r.id } : {}) };
-  });
-  document.querySelector('#cancel-reflection').onclick = () => { cpdFormOpen = false; reflectionEditing = null; reflectionDraft = null; area.innerHTML = ''; };
+  };
+  document.querySelector('#reflection-form').addEventListener('input',captureReflection);
+  document.querySelector('#reflection-form').addEventListener('change',captureReflection);
+  document.querySelector('#cancel-reflection').onclick = () => {
+    const discard=()=>{cpdFormOpen=false;reflectionEditing=null;reflectionDraft=null;area.innerHTML='';document.querySelector('#new-reflection').focus();};
+    if(reflectionFields()!==initialFields || reflectionDraft)confirmDraftDiscard('reflection',discard);else discard();
+  };
   document.querySelector('#reflection-form').onsubmit = e => {
     e.preventDefault(); const data = Object.fromEntries(new FormData(e.currentTarget));
     if (!data.title.trim() || !data.learning.trim() || !data.action.trim()) { toast('Please complete the title, learning and next step.'); return; }
     const entry = { ...data, ...(r.appraisalId ? { appraisalId: r.appraisalId, paperId: r.paperId, basis: r.basis } : {}), ...(r.sourceRetracted ? { sourceRetracted: true } : {}), id: r.id || crypto.randomUUID(), minutes: Number(data.minutes) };
     try { validateWorkspace({ ...workspace, reflections: [entry] }); } catch (e) { toast(e.message); return; }
+    const previous=workspace.reflections;
     workspace.reflections = r.id ? workspace.reflections.map(old => old.id === r.id ? entry : old) : [entry, ...workspace.reflections];
-    const ok = persist(); cpdFormOpen = false; reflectionEditing = null; reflectionDraft = null; cpd(); if (ok) toast('Reflection added to your workspace');
+    if(!persist()){workspace.reflections=previous;captureReflection(e);toast('The reflection could not be queued. Your draft is still open; check the save status before retrying.');return;}
+    cpdFormOpen = false; reflectionEditing = null; reflectionDraft = null; cpd(); toast('Reflection queued for saving');
   };
   document.querySelector('#reflection-title').focus();
 }
@@ -1047,6 +1066,7 @@ document.addEventListener('input', e => {
   if ('collection' in e.target.dataset) p.collection = e.target.value.trim();
   paperMap.set(id, p); persist();
 });
+document.querySelector('.skip').onclick = e => { e.preventDefault(); main.focus({preventScroll:true}); window.scrollTo(0,0); };
 document.querySelector('.dialog-close').onclick = () => dialog.close();
 dialog.addEventListener('close',()=>{const opener=dialogReturnFocus;dialogReturnFocus=null;if(!dialog.open){if(opener?.isConnected && !opener.closest('dialog'))opener.focus({preventScroll:true});else main.focus({preventScroll:true});}if(learningDownloadURL){URL.revokeObjectURL(learningDownloadURL);learningDownloadURL=null;}});
 // Close through explicit controls or native Escape. Assistive activation may have no pointer coordinates; never treat that as a backdrop tap.

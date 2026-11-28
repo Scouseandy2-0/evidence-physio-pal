@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {parseHTML} from 'linkedom';
 import {readFileSync} from 'node:fs';
 import {emptyWorkspace} from '../web/workspace-data.js';
+import {WorkspaceSync} from '../web/sync.js';
 const tick=()=>new Promise(r=>setImmediate(r));
 const payload=ids=>({hitCount:ids.length,resultList:{result:ids.map(id=>({source:'MED',id,title:`Fictional paper ${id}`,authorString:'QA Author'}))}});
 let serial=0;
@@ -79,5 +80,54 @@ test('save and unsave retain the same paper/button nodes, with queued work attem
 test('closing and reopening a problem report retains its draft without uploading it',async()=>{
  await app('#home',async()=>{throw Error('No publication request expected');},async ctx=>{
   const {document,window}=ctx;document.querySelector('#report-button').click();document.querySelector('#problem-description').value='Fictional retained report details';document.querySelector('#problem-expected').value='Stay on the selected paper';document.querySelector('#problem-form').dispatchEvent(new window.Event('input',{bubbles:true}));document.querySelector('.dialog-close').click();document.querySelector('#report-button').click();assert.equal(document.querySelector('#problem-description').value,'Fictional retained report details');assert.equal(document.querySelector('#problem-expected').value,'Stay on the selected paper');assert.equal(ctx.workspaceWrites,0);assert.equal(ctx.calls.length,0);
+ });
+});
+
+const submit=(ctx,id)=>ctx.document.querySelector(id).dispatchEvent(new ctx.window.Event('submit',{bubbles:true,cancelable:true}));
+const input=(ctx,id,value,type='input')=>{const el=ctx.document.querySelector(id);el.value=value;el.dispatchEvent(new ctx.window.Event(type,{bubbles:true}));};
+const flush=async ctx=>{ctx.window.dispatchEvent(new ctx.window.Event('pagehide'));await tick();await tick();};
+async function revisionDraft(ctx){
+ ctx.document.querySelector('.paper-record [data-save]').click();await flush(ctx);
+ ctx.location.hash='#learn';await tick();ctx.document.querySelector('[data-learn-tab="revision"]').click();ctx.document.querySelector('[data-new-study]').click();await tick();
+ ctx.document.querySelector('#new-study-card').click();input(ctx,'#revision-source','MED:456','change');input(ctx,'#revision-question','Fictional question?');input(ctx,'#revision-answer','Fictional verified answer');
+}
+test('skip link preserves the current page and focuses the workspace',async()=>{
+ await app('#research',async()=>Response.json(payload([])),async ctx=>{const event=new ctx.window.Event('click',{bubbles:true,cancelable:true});ctx.document.querySelector('.skip').dispatchEvent(event);assert.equal(event.defaultPrevented,true);assert.equal(ctx.location.hash,'#research');assert.equal(ctx.focus.id,'main');assert.equal(ctx.scrolled,0);});
+});
+test('changed reflection drafts require discard confirmation and Keep editing retains values across a page visit',async()=>{
+ await app('#cpd',async()=>Response.json(payload([])),async ctx=>{
+  ctx.document.querySelector('#new-reflection').click();input(ctx,'#reflection-title','Fictional unfinished reflection');input(ctx,'#reflection-kind','Teaching','change');
+  ctx.location.hash='#home';await tick();ctx.location.hash='#cpd';await tick();assert.equal(ctx.document.querySelector('#reflection-kind').value,'Teaching');ctx.document.querySelector('#cancel-reflection').click();assert.ok(ctx.document.querySelector('#keep-draft'));ctx.document.querySelector('#keep-draft').click();assert.equal(ctx.document.querySelector('#reflection-title').value,'Fictional unfinished reflection');
+  ctx.document.querySelector('#cancel-reflection').click();ctx.document.querySelector('#discard-draft').click();assert.equal(ctx.document.querySelector('#reflection-form'),null);assert.equal(ctx.workspaceWrites,0);
+ });
+});
+test('a refused reflection queue keeps the draft and a retry creates only one saved record',async()=>{
+ await app('#cpd',async()=>Response.json(payload([])),async ctx=>{
+  ctx.document.querySelector('#new-reflection').click();for(const [id,value] of [['title','Fictional reflection'],['date','2026-11-28'],['minutes','10'],['kind','Research reading'],['learning','Fictional learning'],['action','Fictional next step']])input(ctx,`#reflection-${id}`,value);
+  const queue=WorkspaceSync.prototype.queue;try{WorkspaceSync.prototype.queue=()=>false;submit(ctx,'#reflection-form');}finally{WorkspaceSync.prototype.queue=queue;}
+  assert.equal(ctx.document.querySelector('#reflection-learning').value,'Fictional learning');assert.match(ctx.document.querySelector('#toast').textContent,/could not be queued/);assert.equal(ctx.stored.reflections.length,0);
+  submit(ctx,'#reflection-form');await flush(ctx);assert.equal(ctx.document.querySelector('#reflection-form'),null);assert.equal(ctx.stored.reflections.length,1);assert.equal(ctx.stored.reflections[0].title,'Fictional reflection');
+  ctx.document.querySelector('[data-edit-reflection]').click();input(ctx,'#reflection-title','Changed title');
+  try{WorkspaceSync.prototype.queue=()=>false;submit(ctx,'#reflection-form');}finally{WorkspaceSync.prototype.queue=queue;}
+  assert.equal(ctx.document.querySelector('#reflection-title').value,'Changed title');await flush(ctx);assert.equal(ctx.stored.reflections[0].title,'Fictional reflection');
+  submit(ctx,'#reflection-form');await flush(ctx);assert.equal(ctx.stored.reflections.length,1);assert.equal(ctx.stored.reflections[0].title,'Changed title');
+ });
+});
+test('a refused revision queue retains text and retry does not duplicate the new card',async()=>{
+ await app('#paper/456',async()=>Response.json(payload(['456'])),async ctx=>{
+  await revisionDraft(ctx);const queue=WorkspaceSync.prototype.queue;try{WorkspaceSync.prototype.queue=()=>false;submit(ctx,'#revision-card-form');}finally{WorkspaceSync.prototype.queue=queue;}
+  assert.equal(ctx.document.querySelector('#revision-answer').value,'Fictional verified answer');assert.match(ctx.document.querySelector('#toast').textContent,/could not be queued/);
+  submit(ctx,'#revision-card-form');await flush(ctx);assert.equal(ctx.stored.studySets[0].cards.length,1);assert.equal(ctx.stored.studySets[0].cards[0].answer,'Fictional verified answer');
+  ctx.document.querySelector('[data-edit-card]').click();input(ctx,'#revision-answer','Edited answer');try{WorkspaceSync.prototype.queue=()=>false;submit(ctx,'#revision-card-form');}finally{WorkspaceSync.prototype.queue=queue;}
+  await flush(ctx);assert.equal(ctx.stored.studySets[0].cards[0].answer,'Fictional verified answer');assert.equal(ctx.document.querySelector('#revision-answer').value,'Edited answer');
+  submit(ctx,'#revision-card-form');await flush(ctx);assert.equal(ctx.stored.studySets[0].cards.length,1);assert.equal(ctx.stored.studySets[0].cards[0].answer,'Edited answer');
+ });
+});
+test('revision Markdown and deletion cannot silently omit or erase a dirty card draft',async()=>{
+ await app('#paper/456',async()=>Response.json(payload(['456'])),async ctx=>{
+  await revisionDraft(ctx);ctx.document.querySelector('#export-study').click();assert.match(ctx.document.querySelector('#toast').textContent,/before exporting/);assert.ok(ctx.document.querySelector('#revision-card-form'));
+  ctx.document.querySelector('#remove-study').click();assert.match(ctx.document.querySelector('#toast').textContent,/before removing/);assert.equal(ctx.document.querySelector('dialog').open,false);
+  ctx.document.querySelector('#cancel-study-card').click();assert.ok(ctx.document.querySelector('#keep-draft'));ctx.document.querySelector('#keep-draft').click();assert.equal(ctx.document.querySelector('#revision-question').value,'Fictional question?');
+  ctx.document.querySelector('#cancel-study-card').click();ctx.document.querySelector('#discard-draft').click();assert.equal(ctx.document.querySelector('#revision-card-form'),null);await flush(ctx);assert.equal(ctx.stored.studySets[0].cards.length,0);
  });
 });
