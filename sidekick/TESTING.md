@@ -255,3 +255,7 @@ Full suite remains 175 passing. Expanded app-event regression first failed for c
 ## Full-page papers after failed VoiceOver retest
 
 179 automated tests, syntax checks and Worker build pass. Paper-popup interaction checks are superseded by native page-link/return/reload/retry tests. Five real records passed both Enter and pointer checks in rendered Chromium. Actual-iPhone and external PubMed findings remain open; see docs/paper-pages-2026-11-28.md.
+
+## Paper entry order — 28 November 2026
+
+179 tests pass after moving the return link below the record and deferring entry focus until layout. The five-paper regression asserts the article precedes return navigation; stale focus callbacks cannot override another route or user-focused control. Chromium observed paper-heading focused and return link last. Actual iPhone symptom remains unverified.

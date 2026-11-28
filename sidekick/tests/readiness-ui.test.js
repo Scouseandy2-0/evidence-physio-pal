@@ -31,7 +31,7 @@ test('failed next-page retry keeps earlier papers and uses the same cursor; stop
   assert.equal(document.querySelectorAll('.paper-list .paper-card').length,1);
   // Paper titles are real page links; opening no longer uses a popup.
   const paperTitle=document.querySelector('.paper-title'),originalRoute=location.hash;
-  paperTitle.click();location.hash=paperTitle.getAttribute('href');window.dispatchEvent(new window.Event('hashchange'));
+  paperTitle.click();location.hash=paperTitle.getAttribute('href');window.dispatchEvent(new window.Event('hashchange'));await new Promise(r=>setTimeout(r,5));
   assert.equal(!!dialog.open,false);assert.equal(focused.id,'paper-heading');assert.equal(location.hash,'#paper/123');
   assert.match(document.querySelector('[data-paper-record]').textContent,/Fictional paper 123/);
   const back=document.querySelector('#paper-back');back.click();location.hash=back.getAttribute('href');window.dispatchEvent(new window.Event('hashchange'));

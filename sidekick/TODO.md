@@ -132,3 +132,10 @@ Evidence: docs/workspace-polish-2026-11-28.md. Remaining non-anatomy gates: actu
 - [x] Replace paper popups with native full-page record links and explicit result/library return; keep result filters/position/focus, exact-PMID reload and retry states.
 - [x] Verify five distinct records by keyboard and pointer in Chromium; fix multiline title tap gaps. Full suite now 179 passing.
 - [ ] Actual iPhone VoiceOver retest across several records, scrolling and return. External PubMed scrolling remains unverified separately. Evidence: docs/paper-pages-2026-11-28.md.
+
+## Paper entry reading order — 28 November 2026
+
+- [x] Record Andrew’s confirmed PubMed scrolling and paragraph-navigation observations.
+- [x] Move Back to research results below the paper rather than before its heading; use layout-frame heading focus with stale-navigation/user-focus guards.
+- [x] Verify loaded/loading/retry behaviour and return navigation in developer checks. Browser focused paper-heading and placed the return link after the article. Full suite remains 179 passing.
+- [ ] Actual iPhone VoiceOver check still open. Andrew’s latest description may refer to focus on the return link rather than actual route navigation; neither interpretation is treated as proven. Candidate: 2026-11-28-paper-entry.

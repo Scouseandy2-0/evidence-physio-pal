@@ -40,3 +40,9 @@ A direct Set review date action was added, with an all-record picker that remain
 Andrew reported the dialog correction worked only once across five different papers; the paper-opening defect is therefore reopened, not passed. He also reported scrolling difficulty on an external PubMed page. No successful PubMed/Safari reproduction is recorded, and that separate website is not controlled by PhysioSidekick.
 
 The successor candidate replaces paper popups with native full-page links and explicit return navigation. Desktop/DOM checks do not supersede Andrew’s iPhone observations. Physical-device retest remains open. See paper-pages-2026-11-28.md.
+
+## VoiceOver follow-up clarification — 28 November 2026
+
+Andrew confirmed three-finger scrolling works on PubMed and one-finger right-swipe moves between paragraphs. Those specific external-site navigation checks are now confirmed by his report. He said selecting a title once and then double-tapping anywhere works better, but the occasional backward behaviour remains. When asked to identify the current flow, he said it takes him to “Back to research results”. That establishes the described return control, but does not prove whether the browser actually changed routes or VoiceOver landed on its link.
+
+Successor candidate 2026-11-28-paper-entry moves the return control below the record in loaded/loading/error states and schedules heading focus after layout, skipping stale callbacks or a newly focused control. Regression/browser checks pass; actual iPhone behaviour remains open.

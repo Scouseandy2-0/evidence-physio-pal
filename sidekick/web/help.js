@@ -1,4 +1,4 @@
-export const appRelease = '2026-11-28-paper-pages';
+export const appRelease = '2026-11-28-paper-entry';
 export const guideKey = 'physiosidekick.guide.hidden.v1';
 export function guideProgress(workspace = {}) {
   return [

@@ -17,7 +17,7 @@ async function app(hash,publicationFetch,run){
  const selected=new WeakMap();Object.defineProperty(window.HTMLSelectElement.prototype,'value',{get(){return selected.get(this)??this.querySelector('option[selected]')?.getAttribute('value')??this.querySelector('option')?.getAttribute('value')??'';},set(v){selected.set(this,String(v));}});
  const dialog=document.querySelector('dialog');dialog.open=false;dialog.showModal=()=>{dialog.open=true;};dialog.close=()=>{dialog.open=false;};
  globalThis.fetch=async(url,options={})=>{if(url==='/api/workspace')return Response.json({account:{id:'qa'},revision:0,workspace:emptyWorkspace()});calls.push({url,options});return publicationFetch(url,options);};
- const follow=async link=>{link.click();location.hash=link.getAttribute('href');await tick();};
+ const follow=async link=>{link.click();location.hash=link.getAttribute('href');await tick();await new Promise(r=>setTimeout(r,5));};
  try{await import(`../web/app.js?paper-pages-${serial++}`);await tick();await tick();await run({window,document,location,calls,follow,get focus(){return focus;},get scrolled(){return scrolled;}});}
  finally{for(const key of keys){if(old[key]===undefined)delete globalThis[key];else globalThis[key]=old[key];}}
 }
@@ -27,7 +27,7 @@ test('five distinct paper titles open native pages, retain search state and retu
   const {document,window}=ctx;document.querySelector('#research-search input').value='fictional topic';document.querySelector('#research-search').dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true}));await tick();await tick();
   for(const id of ids){
    const title=[...document.querySelectorAll('.paper-title')].find(a=>a.dataset.detail===`MED:${id}`);assert.equal(title.tagName,'A');assert.equal(title.getAttribute('aria-haspopup'),null);
-   await ctx.follow(title);assert.equal(ctx.location.hash,`#paper/${id}`);assert.equal(document.querySelector('dialog').open,false);assert.equal(document.querySelector('#paper-heading').textContent,`Fictional paper ${id}`);assert.equal(ctx.focus.id,'paper-heading');
+   await ctx.follow(title);assert.equal(ctx.location.hash,`#paper/${id}`);assert.equal(document.querySelector('dialog').open,false);assert.equal(document.querySelector('#paper-heading').textContent,`Fictional paper ${id}`);assert.equal(ctx.focus.id,'paper-heading');assert.equal(document.querySelector('main').firstElementChild.getAttribute('data-paper-record'),`MED:${id}`);assert.equal(document.querySelector('main').lastElementChild.querySelector('a').id,'paper-back');
    const source=[...document.querySelectorAll('.paper-record a')].find(a=>a.textContent==='Open PubMed record (new tab)');assert.equal(source.getAttribute('href'),`https://pubmed.ncbi.nlm.nih.gov/${id}/`);assert.equal(source.getAttribute('target'),'_blank');
    await ctx.follow(document.querySelector('#paper-back'));assert.equal(ctx.location.hash,'#research');assert.equal(document.querySelectorAll('.paper-title').length,5);assert.equal(document.querySelector('#research-search input').value,'fictional topic');assert.equal(ctx.focus.dataset.detail,`MED:${id}`);assert.equal(ctx.scrolled,420);
   }

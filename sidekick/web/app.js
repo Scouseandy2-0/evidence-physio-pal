@@ -295,6 +295,18 @@ function paperCard(p, savedView = false) {
   <div class="paper-actions"><a class="text-button" data-detail="${esc(p.id)}" data-paper-link href="#paper/${esc(p.pmid)}">Read record</a><a href="${esc(p.recordURL)}" target="_blank" rel="noopener noreferrer">PubMed</a>${p.fullText ? `<a class="full-text-link" href="${esc(p.fullText)}" target="_blank" rel="noopener noreferrer">Read free full text</a>` : ''}${p.doi ? `<a href="${esc(doiURL(p.doi))}" target="_blank" rel="noopener noreferrer">Publisher / DOI</a>` : ''}<button class="save-button ${saved ? 'saved' : ''}" data-save="${esc(p.id)}" aria-label="${saved ? 'Remove saved paper' : 'Save paper'}: ${esc(p.title)}">${icon('library')}${saved ? 'Saved' : 'Save'}</button></div>
   ${savedView ? `<div class="saved-extra"><div class="button-row"><button class="button secondary" data-appraise="${esc(p.id)}">${workspace.appraisals.some(a => a.paperId === p.id) ? 'Continue appraisal' : 'Appraise this paper'}</button></div><div class="saved-grid"><div class="field"><label for="collection-${p.pmid}">Collection</label><input id="collection-${p.pmid}" value="${esc(p.collection || '')}" data-collection="${esc(p.id)}" placeholder="e.g. Shoulder assignment" maxlength="80" list="collection-options"></div><div class="field"><label>Reference</label><button class="button secondary" data-copy="${esc(p.id)}">Copy citation</button></div></div><div class="field"><label for="note-${p.pmid}">Your notes</label><textarea id="note-${p.pmid}" data-note="${esc(p.id)}" maxlength="10000" placeholder="What did you learn? No identifiable patient information.">${esc(p.notes || '')}</textarea></div><button class="button secondary" data-save-notes="${esc(p.id)}">Save collection & notes</button></div>` : ''}</article>`;
 }
+function focusPaperHeading() {
+  const heading=document.querySelector('#paper-heading');if(!heading)return;
+  const pageDocument=heading.ownerDocument,viewLocation=location,expectedHash=location.hash;
+  const priorFocus=pageDocument.activeElement;
+  // Let layout and the accessibility tree settle before moving reading focus.
+  requestAnimationFrame(()=>{
+    if(route!=='paper'||viewLocation.hash!==expectedHash||!heading.isConnected||dialog.open)return;
+    const active=pageDocument.activeElement;
+    if(active!==priorFocus && active!==pageDocument.body && active!==main && active!==heading)return;
+    heading.focus({preventScroll:true});
+  });
+}
 function paperDetail(id) {
   const match=/^MED:([1-9]\d{0,8})$/.exec(id);if(!match)return;
   if(route!=='paper')paperReturn={route,id,scrollY:window.scrollY || 0};
@@ -307,14 +319,14 @@ function paperPage() {
   const back=`<a class="button secondary" id="paper-back" href="#${returnRoute}">${returnRoute==='library'?'Back to saved papers':returnRoute==='workspace-search'?'Back to workspace results':'Back to research results'}</a>`;
   if(!p){
     const error=paperLookup?.pmid===pmid?paperLookup.error:'';
-    main.innerHTML=`${back}<section class="card" style="margin-top:20px"><h1 id="paper-heading" tabindex="-1">Paper details</h1><p role="status">${error?esc(error):'Loading the original indexed record…'}</p>${error?'<button class="button secondary" id="retry-paper-record">Retry paper lookup</button>':''}<p><a href="https://pubmed.ncbi.nlm.nih.gov/${pmid}/" target="_blank" rel="noopener noreferrer">Open original PubMed record (new tab)</a></p></section>`;
+    main.innerHTML=`<section class="card"><h1 id="paper-heading" tabindex="-1">Paper details</h1><p role="status">${error?esc(error):'Loading the original indexed record…'}</p>${error?'<button class="button secondary" id="retry-paper-record">Retry paper lookup</button>':''}<p><a href="https://pubmed.ncbi.nlm.nih.gov/${pmid}/" target="_blank" rel="noopener noreferrer">Open original PubMed record (new tab)</a></p></section><div class="button-row" style="margin-top:20px">${back}</div>`;
     document.querySelector('#retry-paper-record')?.addEventListener('click',()=>{paperLookup=null;paperPage();});
     if(!paperLookup || paperLookup.pmid!==pmid)loadPaperPage(pmid);
     return;
   }
   paperMap.set(p.id,p);
   const focusedAbstract=document.activeElement?.id==='paper-abstract-action';
-  main.innerHTML=`<div class="button-row" style="margin-bottom:20px">${back}</div><article class="card paper-record" data-paper-record="${esc(id)}">${paperRecordContent(p)}</article>`;
+  main.innerHTML=`<article class="card paper-record" data-paper-record="${esc(id)}">${paperRecordContent(p)}</article><nav class="button-row" aria-label="Return from paper" style="margin-top:20px">${back}</nav>`;
   if(focusedAbstract)document.querySelector('#paper-abstract-action')?.focus({preventScroll:true});
 }
 async function loadPaperPage(pmid){
@@ -324,7 +336,7 @@ async function loadPaperPage(pmid){
     if(paperLookup!==task)return;
     task.paper=data.papers.find(p=>p.pmid===pmid)||null;
     if(!task.paper)throw new Error('No matching indexed record was returned. Retry or open the original PubMed record.');
-    if(route==='paper' && location.hash===`#paper/${pmid}`){paperMap.set(task.paper.id,task.paper);paperPage();document.querySelector('#paper-heading')?.focus({preventScroll:true});}
+    if(route==='paper' && location.hash===`#paper/${pmid}`){paperMap.set(task.paper.id,task.paper);paperPage();focusPaperHeading();}
   }catch(error){if(paperLookup!==task||error.name==='AbortError')return;task.error=error.message;if(route==='paper' && location.hash===`#paper/${pmid}`)paperPage();}
 }
 function paperRecordContent(p){
@@ -1023,7 +1035,7 @@ document.addEventListener('click',e=>{const link=e.target.closest('a[data-paper-
 window.addEventListener('hashchange', () => {
   const wasPaper=route==='paper';if(dialog.open)dialog.close();render();
   if(wasPaper && route===paperReturn.route){window.scrollTo(0,paperReturn.scrollY);const opener=[...document.querySelectorAll('.paper-title')].find(el=>el.dataset.detail===paperReturn.id);(opener || main).focus({preventScroll:true});}
-  else{window.scrollTo(0,0);(route==='paper'?document.querySelector('#paper-heading'):main)?.focus({preventScroll:true});}
+  else{window.scrollTo(0,0);if(route==='paper')focusPaperHeading();else main.focus({preventScroll:true});}
 });
 document.querySelector('#sync-status').onclick = accountDialog;
 render();
