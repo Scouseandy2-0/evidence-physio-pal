@@ -27,3 +27,7 @@ Only fictional local preview/session records were used. Andrew’s hosted learni
 ## Still open
 
 Independent student/FCP review, actual hosted iPhone/Mac saving and exports, VoiceOver, reference-manager RIS import, final operator/support and platform log/backup retention/erasure arrangements remain open. Full-atlas completion is explicitly parked. This release improves usable workflows; it does not certify the product or claim everything is complete.
+
+## Hosted check
+
+Version 32 was published successfully and the actual public URL was opened without account sign-in. Explicit trial start and exact PMID 31316228 research returned the correct source record. No hosted account records were changed. The final small onboarding wording correction presents anonymous access as “Choose how to save”, rather than an account error; its successor publication is recorded by Sites separately.

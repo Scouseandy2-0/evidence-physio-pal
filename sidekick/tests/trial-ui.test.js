@@ -15,7 +15,7 @@ test('anonymous visitor explicitly starts a trial, saves a reflection locally an
  const selects=new WeakMap();Object.defineProperty(window.HTMLSelectElement.prototype,'value',{get(){return selects.get(this)??this.querySelector('option[selected]')?.getAttribute('value')??this.querySelector('option')?.getAttribute('value')??this.querySelector('option')?.textContent??'';},set(v){selects.set(this,String(v));}});
  const dialog=document.querySelector('dialog');dialog.showModal=()=>{dialog.open=true;};dialog.close=()=>{dialog.open=false;};
  try{
-  await import('../web/app.js?trial-workflow-ui');await tick();assert.ok(document.querySelector('#start-trial'));assert.equal(values.size,0);
+  await import('../web/app.js?trial-workflow-ui');await tick();assert.ok(document.querySelector('#start-trial'));assert.equal(document.querySelector('#sync-status').textContent,'Choose how to save');assert.doesNotMatch(document.querySelector('#sync-banner').textContent,/unavailable/);assert.equal(values.size,0);
   document.querySelector('#start-trial').click();await tick();assert.equal(document.querySelector('#sync-status').textContent,'Trial saved in this tab');assert.match(document.querySelector('#sync-banner').textContent,/No trial records are uploaded/);
   document.querySelector('#new-reflection').click();
   for(const [id,value]of Object.entries({'reflection-title':'Fictional trial reflection','reflection-date':'2026-11-28','reflection-minutes':'12','reflection-learning':'Fictional QA learning','reflection-action':'Check original source','reflection-followup':'2026-11-29'}))document.querySelector('#'+id).value=value;
