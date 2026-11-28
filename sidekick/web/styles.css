@@ -139,3 +139,7 @@ input[type="date"] { min-width:0; width:100%; max-width:100%; box-sizing:border-
 .paper-list>.card{min-width:0;overflow-wrap:anywhere}
 .reflection-meta,.reflection-actions{flex-wrap:wrap}
 .reflection-meta .badge{max-width:100%;white-space:normal}
+/* Keep the full multiline title area actionable, including space between lines. */
+.paper-title{display:block}
+.paper-record{min-width:0;overflow-wrap:anywhere}
+.paper-record h1{font-size:clamp(1.5rem,4vw,2rem);line-height:1.3;letter-spacing:-.4px}

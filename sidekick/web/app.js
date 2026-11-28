@@ -56,6 +56,8 @@ let sync;
 let route = location.hash.slice(1) || 'home';
 let paperMap = new Map(workspace.saved.map(p => [p.id, p]));
 let workspaceEpoch = 0;
+let paperReturn = { route:'research', id:'', scrollY:0 };
+let paperLookup = null;
 let filters = { ...defaultFilters };
 let searchState = { term: '', papers: [], total: 0, nextCursor: '*', error: '', searched: false, loading: false };
 let controller;
@@ -99,7 +101,7 @@ function updateNav() {
   document.querySelector('#desktop-nav').innerHTML = nav.map(([id, label]) => `<a href="#${id}" class="nav-item ${route === id ? 'active' : ''}" ${route === id ? 'aria-current="page"' : ''}>${icon(id)}<span>${label}</span>${id === 'fcp' ? '<span class="premium">PREVIEW</span>' : ''}${id === 'library' ? `<span class="count">${workspace.saved.length}</span>` : ''}</a>`).join('');
   const mobile = [['home', 'Home'], ['research', 'Research'], ['learn', 'Learn'], ['cpd', 'CPD'], ['fcp', 'FCP']];
   document.querySelector('#mobile-nav').innerHTML = mobile.map(([id, label]) => `<a href="#${id}" class="${route === id ? 'active' : ''}" ${route === id ? 'aria-current="page"' : ''}>${icon(id)}<span>${label}</span></a>`).join('');
-  document.querySelector('#breadcrumb').textContent = nav.find(([id]) => route === id)?.[1] || (route === 'appraisal' ? 'Paper appraisal' : route === 'teaching' ? 'Teaching session' : route === 'study' ? 'My revision' : route === 'workspace-search' ? 'Search workspace' : 'Overview');
+  document.querySelector('#breadcrumb').textContent = nav.find(([id]) => route === id)?.[1] || (route === 'paper' ? 'Paper details' : route === 'appraisal' ? 'Paper appraisal' : route === 'teaching' ? 'Teaching session' : route === 'study' ? 'My revision' : route === 'workspace-search' ? 'Search workspace' : 'Overview');
 }
 function intro(eyebrow, title, description, action = '') {
   return `<div class="page-intro"><span class="eyebrow">${eyebrow}</span><div class="title-row"><h1>${title}</h1>${action}</div><p>${description}</p></div>`;
@@ -288,26 +290,57 @@ function paperCard(p, savedView = false) {
   const saved = workspace.saved.some(s => s.id === p.id);
   const type = p.types?.find(t => /systematic review|meta-analysis|randomized controlled trial/i.test(t)) || p.types?.[0] || 'Indexed publication';
   return `<article class="card paper-card" data-paper="${esc(p.id)}"><div class="paper-tags"><span class="badge neutral">Indexed: ${esc(type)}</span><span class="badge ${p.openAccess ? 'oa' : ''}">${p.fullText ? 'Free full-text link indexed' : p.openAccess ? 'Open access indexed · link unavailable' : 'Free access not confirmed'}</span>${p.retracted ? '<span class="badge" style="background:#ffe9e2;color:#a03f28">Retracted publication</span>' : ''}</div>
-  <h3><button type="button" class="paper-title" data-detail="${esc(p.id)}" aria-haspopup="dialog" aria-controls="detail-dialog">${esc(p.title)}</button></h3><div class="paper-meta">${esc(p.authors || 'Authors not supplied')}<br>${esc(p.journal || 'Journal not supplied')} · ${esc(p.year || 'Date not supplied')}</div>
+  <h3><a class="paper-title" data-detail="${esc(p.id)}" data-paper-link href="#paper/${esc(p.pmid)}">${esc(p.title)}</a></h3><div class="paper-meta">${esc(p.authors || 'Authors not supplied')}<br>${esc(p.journal || 'Journal not supplied')} · ${esc(p.year || 'Date not supplied')}</div>
   <p class="paper-abstract">${esc(p.abstract || (p.abstractStatus === 'notIndexed' ? 'No English abstract is indexed in the retrieved PubMed record. Open the original source for details.' : 'Abstract not loaded in these search results. Open the record to check the original indexed abstract.'))}</p>
-  <div class="paper-actions"><button class="text-button" data-detail="${esc(p.id)}">Read record</button><a href="${esc(p.recordURL)}" target="_blank" rel="noopener noreferrer">PubMed</a>${p.fullText ? `<a class="full-text-link" href="${esc(p.fullText)}" target="_blank" rel="noopener noreferrer">Read free full text</a>` : ''}${p.doi ? `<a href="${esc(doiURL(p.doi))}" target="_blank" rel="noopener noreferrer">Publisher / DOI</a>` : ''}<button class="save-button ${saved ? 'saved' : ''}" data-save="${esc(p.id)}" aria-label="${saved ? 'Remove saved paper' : 'Save paper'}: ${esc(p.title)}">${icon('library')}${saved ? 'Saved' : 'Save'}</button></div>
+  <div class="paper-actions"><a class="text-button" data-detail="${esc(p.id)}" data-paper-link href="#paper/${esc(p.pmid)}">Read record</a><a href="${esc(p.recordURL)}" target="_blank" rel="noopener noreferrer">PubMed</a>${p.fullText ? `<a class="full-text-link" href="${esc(p.fullText)}" target="_blank" rel="noopener noreferrer">Read free full text</a>` : ''}${p.doi ? `<a href="${esc(doiURL(p.doi))}" target="_blank" rel="noopener noreferrer">Publisher / DOI</a>` : ''}<button class="save-button ${saved ? 'saved' : ''}" data-save="${esc(p.id)}" aria-label="${saved ? 'Remove saved paper' : 'Save paper'}: ${esc(p.title)}">${icon('library')}${saved ? 'Saved' : 'Save'}</button></div>
   ${savedView ? `<div class="saved-extra"><div class="button-row"><button class="button secondary" data-appraise="${esc(p.id)}">${workspace.appraisals.some(a => a.paperId === p.id) ? 'Continue appraisal' : 'Appraise this paper'}</button></div><div class="saved-grid"><div class="field"><label for="collection-${p.pmid}">Collection</label><input id="collection-${p.pmid}" value="${esc(p.collection || '')}" data-collection="${esc(p.id)}" placeholder="e.g. Shoulder assignment" maxlength="80" list="collection-options"></div><div class="field"><label>Reference</label><button class="button secondary" data-copy="${esc(p.id)}">Copy citation</button></div></div><div class="field"><label for="note-${p.pmid}">Your notes</label><textarea id="note-${p.pmid}" data-note="${esc(p.id)}" maxlength="10000" placeholder="What did you learn? No identifiable patient information.">${esc(p.notes || '')}</textarea></div><button class="button secondary" data-save-notes="${esc(p.id)}">Save collection & notes</button></div>` : ''}</article>`;
 }
-function paperDetail(id, opener = null) {
-  const p = workspace.saved.find(p => p.id === id) || paperMap.get(id); if (!p) return;
-  openDialog(`<span class="eyebrow">ORIGINAL PUBLICATION RECORD</span><h2 id="dialog-title">${esc(p.title)}</h2><p class="paper-meta">${esc(p.authors)}<br>${esc(p.journal)} · ${esc(p.year)}</p>
+function paperDetail(id) {
+  const match=/^MED:([1-9]\d{0,8})$/.exec(id);if(!match)return;
+  if(route!=='paper')paperReturn={route,id,scrollY:window.scrollY || 0};
+  if(dialog.open)dialog.close();navigate(`paper/${match[1]}`);
+}
+function paperPage() {
+  const pmid=/^#paper\/([1-9]\d{0,8})$/.exec(location.hash)?.[1];
+  const id=`MED:${pmid}`,p=workspace.saved.find(p=>p.id===id)||paperMap.get(id)||(paperLookup?.pmid===pmid?paperLookup.paper:null);
+  const returnRoute=['research','library','workspace-search'].includes(paperReturn.route)?paperReturn.route:'research';
+  const back=`<a class="button secondary" id="paper-back" href="#${returnRoute}">${returnRoute==='library'?'Back to saved papers':returnRoute==='workspace-search'?'Back to workspace results':'Back to research results'}</a>`;
+  if(!p){
+    const error=paperLookup?.pmid===pmid?paperLookup.error:'';
+    main.innerHTML=`${back}<section class="card" style="margin-top:20px"><h1 id="paper-heading" tabindex="-1">Paper details</h1><p role="status">${error?esc(error):'Loading the original indexed record…'}</p>${error?'<button class="button secondary" id="retry-paper-record">Retry paper lookup</button>':''}<p><a href="https://pubmed.ncbi.nlm.nih.gov/${pmid}/" target="_blank" rel="noopener noreferrer">Open original PubMed record (new tab)</a></p></section>`;
+    document.querySelector('#retry-paper-record')?.addEventListener('click',()=>{paperLookup=null;paperPage();});
+    if(!paperLookup || paperLookup.pmid!==pmid)loadPaperPage(pmid);
+    return;
+  }
+  paperMap.set(p.id,p);
+  const focusedAbstract=document.activeElement?.id==='paper-abstract-action';
+  main.innerHTML=`<div class="button-row" style="margin-bottom:20px">${back}</div><article class="card paper-record" data-paper-record="${esc(id)}">${paperRecordContent(p)}</article>`;
+  if(focusedAbstract)document.querySelector('#paper-abstract-action')?.focus({preventScroll:true});
+}
+async function loadPaperPage(pmid){
+  paperLookup?.controller?.abort();const task={pmid,controller:new AbortController(),error:'',paper:null};paperLookup=task;
+  try{
+    const data=await searchPapers(pmid,{...defaultFilters},'*',task.controller.signal);
+    if(paperLookup!==task)return;
+    task.paper=data.papers.find(p=>p.pmid===pmid)||null;
+    if(!task.paper)throw new Error('No matching indexed record was returned. Retry or open the original PubMed record.');
+    if(route==='paper' && location.hash===`#paper/${pmid}`){paperMap.set(task.paper.id,task.paper);paperPage();document.querySelector('#paper-heading')?.focus({preventScroll:true});}
+  }catch(error){if(paperLookup!==task||error.name==='AbortError')return;task.error=error.message;if(route==='paper' && location.hash===`#paper/${pmid}`)paperPage();}
+}
+function paperRecordContent(p){
+  const id=p.id;
+  return `<span class="eyebrow">ORIGINAL PUBLICATION RECORD</span><h1 id="paper-heading" tabindex="-1">${esc(p.title)}</h1><p class="paper-meta">${esc(p.authors)}<br>${esc(p.journal)} · ${esc(p.year)}</p>
   ${p.retracted ? '<div class="notice error">This record is marked as a retracted publication. Investigate the retraction notice before using its findings.</div>' : ''}
-  <div class="identifier">PMID: ${esc(p.pmid)}${p.doi ? `<br>DOI: ${esc(p.doi)}` : ''}</div><div class="button-row"><a class="button" href="${esc(p.recordURL)}" target="_blank" rel="noopener noreferrer">Open PubMed record</a>${p.fullText ? `<a class="button secondary" href="${esc(p.fullText)}" target="_blank" rel="noopener noreferrer">Open free full text</a>` : p.doi ? `<a class="button secondary" href="${esc(doiURL(p.doi))}" target="_blank" rel="noopener noreferrer">Check publisher access</a>` : ''}</div>
-  <section class="access-panel"><h3>Get the full paper</h3>${p.fullText ? `<p>A free full-text link is listed by the index. The provider controls access and the version available.</p><div class="button-row">${(p.fullTextLinks?.length ? p.fullTextLinks : [{ url: p.fullText, style: 'full text', provider: 'Indexed source' }]).map(l => `<a class="button secondary" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.style === 'pdf' ? 'PDF' : l.style === 'html' ? 'Full text' : l.style)} · ${esc(l.provider.replaceAll('_', ' '))}</a>`).join('')}</div>` : `<p>A free full-text link is not confirmed here. That does not necessarily mean the paper is paywalled.</p><ol><li>Open the publisher/DOI or PubMed record and check its full-text links.</li><li>If asked to pay, try your university, NHS or employer library’s institutional sign-in.</li><li>Ask your library about document supply or an authorised author manuscript.</li></ol>`}</section><h3>Indexed abstract</h3><p class="abstract-full">${esc(p.abstract || (p.abstractStatus === 'notIndexed' ? 'No English abstract is indexed in the retrieved PubMed record. The paper may have other-language material; check its original record.' : 'An abstract was not supplied with these search results. You can check the original PubMed record below.'))}</p>${p.abstract && !p.abstractSource ? `<p class="subtle">This abstract has not been freshly checked against PubMed. <a href="${esc(p.indexedURL)}" target="_blank" rel="noopener noreferrer">Verify at Europe PMC</a> or check the original PubMed abstract below.</p>` : ''}${p.abstractSource ? `<p class="subtle">Abstract source: ${esc(p.abstractSource)} · Retrieved ${esc(new Date(p.abstractRetrievedAt).toLocaleString('en-GB'))}. <a href="${esc(p.recordURL)}" target="_blank" rel="noopener noreferrer">Verify at PubMed</a></p>${p.abstractCopyright ? `<p class="subtle">${esc(p.abstractCopyright)}</p>` : ''}` : ''}${!p.abstract || p.abstractSource !== 'PubMed (NCBI)' ? `<button class="button secondary" data-load-abstract="${esc(id)}" ${abstractRequests.has(id) ? 'disabled' : ''}>${abstractRequests.has(id) ? 'Loading original abstract…' : p.abstractStatus === 'notIndexed' ? 'Recheck PubMed abstract' : p.abstract ? 'Check original PubMed abstract' : 'Load original PubMed abstract'}</button>` : ''}${abstractErrors.has(id) ? `<div class="notice error">${esc(abstractErrors.get(id))}</div>` : ''}<div class="notice">This is publication metadata and an indexed abstract, not an AI summary or a quality assessment. Full text may contain important methods, results and limitations omitted here.</div>
-  <div class="button-row"><button class="button" data-appraise="${esc(p.id)}">Appraise this paper</button></div><details class="indexed-types"><summary>Indexed publication labels</summary><p>These labels are supplied by the research index. They can be incomplete and do not verify the study design or quality. Check the paper’s methods before classifying it yourself.</p><ul>${(p.types?.length ? p.types : ['No publication labels supplied']).map(type=>`<li>${esc(type)}</li>`).join('')}</ul></details><h3>Before applying the findings</h3><ul><li>Does the population and setting match your question?</li><li>How was the study designed, and what could bias its findings?</li><li>How large and uncertain are the effects, and were harms reported?</li><li>Have you read the full text, or only the abstract?</li></ul>
-  <div class="button-row"><button class="button secondary" data-save="${esc(p.id)}">${icon('library')}${workspace.saved.some(s => s.id === id) ? 'Remove from saved papers' : 'Save to my papers'}</button><button class="button secondary" data-copy="${esc(p.id)}">Copy citation</button></div><p class="subtle" style="margin-top:20px">Record retrieved ${esc(new Date(p.retrievedAt).toLocaleDateString('en-GB'))}. <a href="${esc(p.indexedURL)}" target="_blank" rel="noopener noreferrer">View Europe PMC record</a>. Bibliographic details may be updated by the source.</p>`, opener);
-  dialog.dataset.paperId = id;
+  <div class="identifier">PMID: ${esc(p.pmid)}${p.doi ? `<br>DOI: ${esc(p.doi)}` : ''}</div><div class="button-row"><a class="button" href="${esc(p.recordURL)}" target="_blank" rel="noopener noreferrer">Open PubMed record (new tab)</a>${p.fullText ? `<a class="button secondary" href="${esc(p.fullText)}" target="_blank" rel="noopener noreferrer">Open free full text</a>` : p.doi ? `<a class="button secondary" href="${esc(doiURL(p.doi))}" target="_blank" rel="noopener noreferrer">Check publisher access</a>` : ''}</div>
+  <p class="subtle">PubMed and full-text links open a separate website in a new browser tab.</p><section class="access-panel"><h2>Get the full paper</h2>${p.fullText ? `<p>A free full-text link is listed by the index. The provider controls access and the version available.</p><div class="button-row">${(p.fullTextLinks?.length ? p.fullTextLinks : [{ url: p.fullText, style: 'full text', provider: 'Indexed source' }]).map(l => `<a class="button secondary" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.style === 'pdf' ? 'PDF' : l.style === 'html' ? 'Full text' : l.style)} · ${esc(l.provider.replaceAll('_', ' '))}</a>`).join('')}</div>` : `<p>A free full-text link is not confirmed here. That does not necessarily mean the paper is paywalled.</p><ol><li>Open the publisher/DOI or PubMed record and check its full-text links.</li><li>If asked to pay, try your university, NHS or employer library’s institutional sign-in.</li><li>Ask your library about document supply or an authorised author manuscript.</li></ol>`}</section><h2>Indexed abstract</h2><p class="abstract-full">${esc(p.abstract || (p.abstractStatus === 'notIndexed' ? 'No English abstract is indexed in the retrieved PubMed record. The paper may have other-language material; check its original record.' : 'An abstract was not supplied with these search results. You can check the original PubMed record below.'))}</p>${p.abstract && !p.abstractSource ? `<p class="subtle">This abstract has not been freshly checked against PubMed. <a href="${esc(p.indexedURL)}" target="_blank" rel="noopener noreferrer">Verify at Europe PMC</a> or check the original PubMed abstract below.</p>` : ''}${p.abstractSource ? `<p class="subtle">Abstract source: ${esc(p.abstractSource)} · Retrieved ${esc(new Date(p.abstractRetrievedAt).toLocaleString('en-GB'))}. <a href="${esc(p.recordURL)}" target="_blank" rel="noopener noreferrer">Verify at PubMed</a></p>${p.abstractCopyright ? `<p class="subtle">${esc(p.abstractCopyright)}</p>` : ''}` : ''}${!p.abstract || p.abstractSource !== 'PubMed (NCBI)' ? `<button class="button secondary" id="paper-abstract-action" data-load-abstract="${esc(id)}" ${abstractRequests.has(id) ? 'disabled' : ''}>${abstractRequests.has(id) ? 'Loading original abstract…' : p.abstractStatus === 'notIndexed' ? 'Recheck PubMed abstract' : p.abstract ? 'Check original PubMed abstract' : 'Load original PubMed abstract'}</button>` : ''}${abstractErrors.has(id) ? `<div class="notice error">${esc(abstractErrors.get(id))}</div>` : ''}<div class="notice">This is publication metadata and an indexed abstract, not an AI summary or a quality assessment. Full text may contain important methods, results and limitations omitted here.</div>
+  <div class="button-row"><button class="button" data-appraise="${esc(p.id)}">Appraise this paper</button></div><details class="indexed-types"><summary>Indexed publication labels</summary><p>These labels are supplied by the research index. They can be incomplete and do not verify the study design or quality. Check the paper’s methods before classifying it yourself.</p><ul>${(p.types?.length ? p.types : ['No publication labels supplied']).map(type=>`<li>${esc(type)}</li>`).join('')}</ul></details><h2>Before applying the findings</h2><ul><li>Does the population and setting match your question?</li><li>How was the study designed, and what could bias its findings?</li><li>How large and uncertain are the effects, and were harms reported?</li><li>Have you read the full text, or only the abstract?</li></ul>
+  <div class="button-row"><button class="button secondary" data-save="${esc(p.id)}">${icon('library')}${workspace.saved.some(s => s.id === id) ? 'Remove from saved papers' : 'Save to my papers'}</button><button class="button secondary" data-copy="${esc(p.id)}">Copy citation</button></div><p class="subtle" style="margin-top:20px">Record retrieved ${esc(new Date(p.retrievedAt).toLocaleDateString('en-GB'))}. <a href="${esc(p.indexedURL)}" target="_blank" rel="noopener noreferrer">View Europe PMC record</a>. Bibliographic details may be updated by the source.</p>`;
 }
 async function retrieveAbstract(id) {
   const p = workspace.saved.find(p => p.id === id) || paperMap.get(id); if (!p || abstractRequests.has(id)) return;
   abstractErrors.delete(id);
   const epoch = workspaceEpoch;
-  const request = loadOriginalAbstract(p.pmid); abstractRequests.set(id, request); paperDetail(id);
+  const request = loadOriginalAbstract(p.pmid); abstractRequests.set(id, request); if(route==='paper')paperPage();
   try {
     const record = await request;
     if (workspaceEpoch !== epoch) return;
@@ -322,7 +355,7 @@ async function retrieveAbstract(id) {
   } catch (error) { abstractErrors.set(id, error.message); }
   finally {
     abstractRequests.delete(id);
-    if (dialog.open && dialog.dataset.paperId === id) paperDetail(id);
+    if (route === 'paper' && location.hash === `#paper/${p.pmid}`) paperPage();
   }
 }
 function toggleSave(id) {
@@ -337,10 +370,10 @@ function toggleSave(id) {
     }
     workspace.saved.splice(at, 1); finishSave('Paper removed');
   } else { workspace.saved.unshift({ ...p, collection: '', notes: '', savedAt: new Date().toISOString() }); finishSave('Paper saved to your library'); }
-  if (dialog.open) paperDetail(id);
+  if (route === 'paper') paperPage();
 }
 function finishSave(message) {
-  const ok = persist(); updateNav(); if (route === 'library') library(); else if (route === 'research') renderResults(); if (ok) toast(message);
+  const ok = persist(); updateNav(); if (route === 'library') library(); else if (route === 'research') renderResults(); else if(route === 'paper')paperPage(); if (ok) toast(message);
 }
 function library() {
   const collections = [...new Set(workspace.saved.map(p => p.collection).filter(Boolean))].sort();
@@ -898,9 +931,9 @@ function render() {
   if(learningDownloadURL){URL.revokeObjectURL(learningDownloadURL);learningDownloadURL=null;}
   if (portfolioDownloadURL) { URL.revokeObjectURL(portfolioDownloadURL); portfolioDownloadURL = null; }
   disposeAnatomy(); anatomyReady=false;
-  route = (['appraisal','teaching','study','workspace-search'].includes(location.hash.slice(1)) || nav.some(([id]) => id === location.hash.slice(1))) ? location.hash.slice(1) : 'home';
-  updateNav(); ({ home, research, library, learn, practice, cpd, fcp, appraisal, teaching: teachingEditor, study: studyEditor, 'workspace-search': workspaceSearchPage }[route])();
-  document.title = `${(nav.find(([id]) => id === route)?.[1] || (route === 'teaching' ? 'Teaching session' : route === 'study' ? 'My revision' : route === 'workspace-search' ? 'Search workspace' : 'Paper appraisal'))} · PhysioSidekick`;
+  route = /^paper\/[1-9]\d{0,8}$/.test(location.hash.slice(1)) ? 'paper' : (['appraisal','teaching','study','workspace-search'].includes(location.hash.slice(1)) || nav.some(([id]) => id === location.hash.slice(1))) ? location.hash.slice(1) : 'home';
+  updateNav(); ({ home, research, library, learn, practice, cpd, fcp, appraisal, paper:paperPage, teaching: teachingEditor, study: studyEditor, 'workspace-search': workspaceSearchPage }[route])();
+  document.title = `${(nav.find(([id]) => id === route)?.[1] || (route === 'paper' ? (document.querySelector('#paper-heading')?.textContent || 'Paper details') : route === 'teaching' ? 'Teaching session' : route === 'study' ? 'My revision' : route === 'workspace-search' ? 'Search workspace' : 'Paper appraisal'))} · PhysioSidekick`;
   if (workspaceFocus) requestAnimationFrame(applyWorkspaceFocus);
 }
 document.addEventListener('click', e => {
@@ -986,7 +1019,12 @@ document.querySelector('#open-workspace-search').innerHTML = icon('research');
 document.querySelector('#open-workspace-search').onclick = () => navigate('workspace-search');
 document.querySelector('#open-library').innerHTML = icon('library');
 document.querySelector('#open-library').onclick = () => navigate('library');
-window.addEventListener('hashchange', () => { if (dialog.open) dialog.close(); render(); window.scrollTo(0, 0); main.focus({ preventScroll: true }); });
+document.addEventListener('click',e=>{const link=e.target.closest('a[data-paper-link]');if(link && route!=='paper')paperReturn={route,id:link.dataset.detail,scrollY:window.scrollY || 0};},true);
+window.addEventListener('hashchange', () => {
+  const wasPaper=route==='paper';if(dialog.open)dialog.close();render();
+  if(wasPaper && route===paperReturn.route){window.scrollTo(0,paperReturn.scrollY);const opener=[...document.querySelectorAll('.paper-title')].find(el=>el.dataset.detail===paperReturn.id);(opener || main).focus({preventScroll:true});}
+  else{window.scrollTo(0,0);(route==='paper'?document.querySelector('#paper-heading'):main)?.focus({preventScroll:true});}
+});
 document.querySelector('#sync-status').onclick = accountDialog;
 render();
 function receiveWorkspace(data) { workspaceEpoch++; if (sync && !sync.account) { resetOpenRecords(); dialog.close(); } workspace = data; paperMap = new Map([...searchState.papers, ...workspace.saved].map(p => [p.id,p])); render(); }

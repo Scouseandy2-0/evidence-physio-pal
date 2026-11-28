@@ -34,3 +34,9 @@ A direct Set review date action was added, with an all-record picker that remain
 - Three-finger scrolling moves through the page and announces page positions. Large one-screen increments are expected VoiceOver behaviour; the initial single-finger scrolling report is not treated as a confirmed app scrolling defect.
 - Andrew reported that double-tapping a research-paper title returned him to the preceding page. He explicitly confirmed double-tap activation. This remains a reported physical-iPhone defect until the corrected release is retested.
 - Developer regression reproduced a possible dismissal path: coordinate-less click on the open dialog was interpreted as an outside tap and closed it. Removed coordinate-based outside-tap dismissal, captured the title button as the explicit return-focus target and clarified dialog semantics. This does not prove the actual iPhone emitted that exact event. Evidence: voiceover-paper-dialog-2026-11-28.md.
+
+## VoiceOver retest failed — 28 November 2026
+
+Andrew reported the dialog correction worked only once across five different papers; the paper-opening defect is therefore reopened, not passed. He also reported scrolling difficulty on an external PubMed page. No successful PubMed/Safari reproduction is recorded, and that separate website is not controlled by PhysioSidekick.
+
+The successor candidate replaces paper popups with native full-page links and explicit return navigation. Desktop/DOM checks do not supersede Andrew’s iPhone observations. Physical-device retest remains open. See paper-pages-2026-11-28.md.

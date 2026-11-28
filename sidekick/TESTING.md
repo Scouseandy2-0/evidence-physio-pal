@@ -251,3 +251,7 @@ Release 2026-11-28-recovery-search-mobile protects recovered invalid/malformed c
 ## VoiceOver paper dialog correction — 28 November 2026
 
 Full suite remains 175 passing. Expanded app-event regression first failed for coordinate-less dialog activation, then passed after the dismissal/focus correction. Local rendered Enter/Space opening and Close/Escape focus return passed. Actual-iPhone report, inference boundary and retest remain in docs/voiceover-paper-dialog-2026-11-28.md.
+
+## Full-page papers after failed VoiceOver retest
+
+179 automated tests, syntax checks and Worker build pass. Paper-popup interaction checks are superseded by native page-link/return/reload/retry tests. Five real records passed both Enter and pointer checks in rendered Chromium. Actual-iPhone and external PubMed findings remain open; see docs/paper-pages-2026-11-28.md.
