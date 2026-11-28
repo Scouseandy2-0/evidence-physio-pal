@@ -122,3 +122,8 @@ button{min-height:44px}
 input[type="date"] { min-width:0; width:100%; max-width:100%; box-sizing:border-box; }
 .form-row > .field { min-width:0; }
 #review-date-form input,#review-date-form select { font-size:1rem; min-height:44px; }
+
+/* Keep the text-input focus visible after searchbox reset rules. */
+.searchbox input:focus-visible { outline:3px solid #4e729d; outline-offset:3px; border-radius:4px; }
+/* These more-specific filter rules previously overrode the mobile 1rem control size. */
+.filter-panel .field select { font-size:1rem; }

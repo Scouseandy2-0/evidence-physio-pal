@@ -47,3 +47,26 @@ test('review-date views include today, preserve outcomes as separate records, an
  for(const result of [portfolioMarkdown(workspace,{review:'due'},now),portfolioHTML(workspace,{review:'due'},now),portfolioSections(workspace,{review:'due'},now).map(s=>s.text).join('\n')]){assert.match(result,/Due fixture/);assert.doesNotMatch(result,/Future fixture|Undated fixture/);assert.match(result,/evaluated 2026-11-27/);}
  assert.equal(JSON.stringify(records),before);assert.throws(()=>filterReflections(records,{review:'completed'}),/valid/);
 });
+
+test('appraisal learning survives save/reload, library removal and later edits with warnings and recorded time intact',async()=>{
+ const {validateWorkspace}=await import('../web/workspace-data.js');
+ const {reflectionFromAppraisal,appraisalMarkdown}=await import('../web/appraisal.js');
+ const {cardFromNotes,rateStudyCard}=await import('../web/study.js');
+ const {portfolioSummary,portfolioEvidence}=await import('../web/portfolio.js');
+ const appraisal={...newAppraisal(paper,'connected-appraisal',now),basis:'abstract',findings:'Original uncertain finding',limitations:'Only abstract reviewed',nextStep:'Read the full text'};
+ const reflection={...reflectionFromAppraisal(appraisal),id:'connected-reflection',date:'2026-11-27',minutes:17};
+ const teaching={...newTeachingPlan({},'connected-teaching',now),sources:[teachingSource(paper,appraisal)],minutes:90};
+ const revision=newStudySet('connected-revision',now);revision.cards=[rateStudyCard(saveStudyCard({...cardFromNotes(appraisal),paper,appraisal,id:'connected-card',now}),'recalled',now)];
+ let workspace=validateWorkspace(JSON.parse(JSON.stringify({...emptyWorkspace(),saved:[paper],appraisals:[appraisal],reflections:[reflection],teachingPlans:[teaching],studySets:[revision]})));
+ workspace.saved=[];workspace.appraisals[0].findings='Later revised finding';
+ workspace=validateWorkspace(JSON.parse(JSON.stringify(workspace)));
+ assert.match(workspace.reflections[0].learning,/Original uncertain finding/);assert.doesNotMatch(workspace.reflections[0].learning,/Later revised/);
+ assert.match(workspace.studySets[0].cards[0].answer,/Original uncertain finding/);
+ assert.equal(workspace.teachingPlans[0].sources[0].readingBasis,'abstract');
+ assert.equal(portfolioSummary(workspace.reflections).minutes,17);assert.equal(portfolioEvidence(workspace,workspace.reflections).papers[0].retracted,true);
+ for(const text of [appraisalMarkdown(workspace.appraisals[0]),portfolioMarkdown(workspace),portfolioHTML(workspace),portfolioSections(workspace,{},now).map(s=>s.text).join('\n')]) assert.match(text,/WARNING.*retracted/);
+ for(const [kind,record] of [['appraisal',workspace.appraisals[0]],['teaching',workspace.teachingPlans[0]],['revision',workspace.studySets[0]]]){
+  const word=await learningWord(kind,record,now),xml=strFromU8(unzipSync(word)['word/document.xml']);
+  assert.match(xml,/WARNING.*retracted/);assert.match(xml,/Abstract only/);
+ }
+});

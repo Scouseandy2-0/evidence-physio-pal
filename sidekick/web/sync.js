@@ -32,7 +32,14 @@ export class WorkspaceSync {
         this.onData(remote); this.emit('error', 'A previous device version failed validation. Export it from Backups & privacy before correcting and importing it. The account copy is unchanged.'); return;
       }
       if (cached?.pending) {
-        this.pending = validateWorkspace(cached.pending);
+        try { this.pending = validateWorkspace(cached.pending); }
+        catch {
+          // Keep the failed device snapshot exportable; never upload it or hide valid account records.
+          this.pending = null; this.invalidPending = structuredClone(cached.pending);
+          this.cache(); this.onData(remote);
+          this.emit('error', 'A pending device copy failed validation. Your account records are shown unchanged. Export the device recovery copy from Backups & privacy before correcting and importing it, or review recovery options to use the account version.');
+          return;
+        }
         this.onData(this.pending);
         if (cached.revision !== this.revision) { this.emit('conflict', 'Another device has a newer version. Your pending version is kept here.'); return; }
         this.emit('pending'); await this.flush();

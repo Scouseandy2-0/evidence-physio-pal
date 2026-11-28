@@ -38,3 +38,9 @@ Student unit version 2026-11-27.2 updates the anatomy-scope question and model-c
 | Tap-to-inspect reference notes | 2026-11-27.1 | 41 muscle and 25 bone-family profiles (50 paired skeletal structures); other selections explicitly catalogue-only | Original factual summaries and section links mapped in docs/anatomy-inspector-review.md; no mesh attachment coordinates inferred | Prepared drafts; independent anatomical review pending |
 
 Inspector reference version 2026-11-27.2 adds five scapular/back profiles (46 muscle groups now populated; 50 skeletal structures unchanged). Source links and unresolved coverage are recorded in anatomy-inspector-review.md. The V1-A acceptance requirement now explicitly demands comprehensive MSK coverage and per-structure reference content; current partial counts do not satisfy it.
+
+## Link availability recheck — 28 November 2026
+
+The repeatable public-GET audit in scripts/audit-content-links.mjs checked 20 distinct student/FCP source URLs. Eighteen returned HTTP 200, including the previously inaccessible NICE recommendation pages. The NLM PubMed guide timed out; the internal anatomy-coverage page is private and was deliberately not fetched as a public resource. Exact statuses, redirect destinations, page titles and affected units/packs are recorded in content-link-audit-2026-11-28.json.
+
+This supersedes the earlier direct-access failure observations for link availability only. It does not approve the source-to-claim mappings, establish that a guideline is the latest applicable version, close the PubMed-guide recheck, or replace professional review. All pending review states above remain pending.

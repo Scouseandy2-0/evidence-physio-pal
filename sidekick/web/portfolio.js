@@ -23,7 +23,7 @@ export function portfolioEvidence(workspace, reflections) {
   const paperIds = new Set(reflections.map(r=>r.paperId?.match(/^MED:(\d{1,9})$/)?.[1] || r.source?.match(/^https:\/\/pubmed\.ncbi\.nlm\.nih\.gov\/(\d{1,9})\/?$/)?.[1]).filter(Boolean));
   const papers = [...paperIds].map(pmid => {
     const paper = workspace.saved.find(p=>p.pmid===pmid), a = appraisals.find(a=>a.pmid===pmid);
-    return { pmid, title: paper?.title || a?.title || `PubMed record ${pmid}`, citation: a?.citation || '', url: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`, retracted: paper?.retracted === true };
+    return { pmid, title: paper?.title || a?.title || `PubMed record ${pmid}`, citation: a?.citation || '', url: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`, retracted: paper?.retracted === true || a?.sourceRetracted === true };
   });
   return { appraisals, papers, missingAppraisals: [...ids].filter(id=>!appraisals.some(a=>a.id===id)) };
 }

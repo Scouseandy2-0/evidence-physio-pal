@@ -1,0 +1,210 @@
+{
+  "checkedAt": "2026-11-28T01:24:19.179Z",
+  "scope": "Link availability and redirects only; not independent content review or clinical approval.",
+  "sources": [
+    {
+      "url": "https://pubmed.ncbi.nlm.nih.gov/help/",
+      "title": "NLM · PubMed User Guide",
+      "usedBy": [
+        "finding-papers"
+      ],
+      "state": "connection_unverified",
+      "reason": "TimeoutError"
+    },
+    {
+      "url": "https://casp-uk.net/study-designs/",
+      "title": "Critical Appraisal Study Designs - CASP",
+      "usedBy": [
+        "study-design",
+        "anatomy-evidence"
+      ],
+      "status": 200,
+      "finalURL": "https://casp-uk.net/study-designs/",
+      "state": "reachable"
+    },
+    {
+      "url": "https://casp-uk.net/what-is-critical-appraisal/",
+      "title": "What is critical appraisal? - CASP - Critical Appraisal Skills Programme",
+      "usedBy": [
+        "appraisal-uncertainty"
+      ],
+      "status": 200,
+      "finalURL": "https://casp-uk.net/what-is-critical-appraisal/",
+      "state": "reachable"
+    },
+    {
+      "url": "https://casp-uk.net/casp-tools-checklists/",
+      "title": "CASP Checklists - Critical Appraisal Skills Programme",
+      "usedBy": [
+        "appraisal-uncertainty"
+      ],
+      "status": 200,
+      "finalURL": "https://casp-uk.net/casp-tools-checklists/",
+      "state": "reachable"
+    },
+    {
+      "url": "https://www.cochrane.org/evidence/what-are-systematic-reviews",
+      "title": "What are systematic reviews? | Cochrane",
+      "usedBy": [
+        "study-design"
+      ],
+      "status": 200,
+      "finalURL": "https://www.cochrane.org/evidence/what-are-systematic-reviews",
+      "state": "reachable"
+    },
+    {
+      "url": "https://www.cochrane.org/authors/handbooks-and-manuals/handbook/current/chapter-03",
+      "title": "Chapter 3: Defining the criteria for including studies and how they will be grouped for the synthesis | Cochrane",
+      "usedBy": [
+        "study-design",
+        "anatomy-evidence"
+      ],
+      "status": 200,
+      "finalURL": "https://www.cochrane.org/authors/handbooks-and-manuals/handbook/current/chapter-03",
+      "state": "reachable"
+    },
+    {
+      "url": "https://www.cochrane.org/authors/handbooks-and-manuals/handbook/current/chapter-15",
+      "title": "Chapter 15: Interpreting results and drawing conclusions | Cochrane",
+      "usedBy": [
+        "interpreting-results",
+        "appraisal-uncertainty"
+      ],
+      "status": 200,
+      "finalURL": "https://www.cochrane.org/authors/handbooks-and-manuals/handbook/current/chapter-15",
+      "state": "reachable"
+    },
+    {
+      "url": "https://www.cochrane.org/authors/handbooks-and-manuals/handbook/current/chapter-14",
+      "title": "Chapter 14: Completing ‘Summary of findings’ tables and grading the certainty of the evidence | Cochrane",
+      "usedBy": [
+        "interpreting-results",
+        "appraisal-uncertainty"
+      ],
+      "status": 200,
+      "finalURL": "https://www.cochrane.org/authors/handbooks-and-manuals/handbook/current/chapter-14",
+      "state": "reachable"
+    },
+    {
+      "url": "https://openstax.org/books/anatomy-and-physiology-2e/pages/9-5-types-of-body-movements",
+      "title": "9.5 Types of Body Movements - Anatomy and Physiology 2e | OpenStax",
+      "usedBy": [
+        "anatomy-evidence"
+      ],
+      "status": 200,
+      "finalURL": "https://openstax.org/books/anatomy-and-physiology-2e/pages/9-5-types-of-body-movements",
+      "state": "reachable"
+    },
+    {
+      "url": "https://physiosidekick-workspace.andrew-lockhart.chatgpt.site/anatomy-coverage.md",
+      "title": "PhysioSidekick · Model coverage and source notes",
+      "usedBy": [
+        "anatomy-evidence"
+      ],
+      "state": "private_app_resource",
+      "note": "Check through the signed-in app; not treated as a failed public source."
+    },
+    {
+      "url": "https://www.nice.org.uk/guidance/ng226/chapter/Recommendations",
+      "title": "Recommendations | Osteoarthritis in over 16s: diagnosis and management | Guidance | NICE",
+      "usedBy": [
+        "knee-oa-evidence"
+      ],
+      "status": 200,
+      "finalURL": "https://www.nice.org.uk/guidance/ng226/chapter/Recommendations",
+      "state": "reachable"
+    },
+    {
+      "url": "https://www.nice.org.uk/guidance/ng226/chapter/rationale-and-impact",
+      "title": "Rationale and impact | Osteoarthritis in over 16s: diagnosis and management | Guidance | NICE",
+      "usedBy": [
+        "knee-oa-evidence"
+      ],
+      "status": 200,
+      "finalURL": "https://www.nice.org.uk/guidance/ng226/chapter/rationale-and-impact",
+      "state": "reachable"
+    },
+    {
+      "url": "https://www.nice.org.uk/guidance/ng59/chapter/Recommendations",
+      "title": "Recommendations | Low back pain and sciatica in over 16s: assessment and management | Guidance | NICE",
+      "usedBy": [
+        "low-back-pain-evidence",
+        "diagnostic-uncertainty"
+      ],
+      "status": 200,
+      "finalURL": "https://www.nice.org.uk/guidance/ng59/chapter/Recommendations",
+      "state": "reachable"
+    },
+    {
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7905504/",
+      "title": "pmc.ncbi.nlm.nih.gov",
+      "usedBy": [
+        "shoulder-pain-reasoning"
+      ],
+      "status": 203,
+      "finalURL": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7905504/",
+      "state": "reachable"
+    },
+    {
+      "url": "https://bess.ac.uk/bess-boa-primary-intermediate-care-shoulder-pain-guidelines/",
+      "title": "BESS/BOA Primary &#038; Intermediate Care Shoulder Pain Guidelines &#8211; British Elbow &amp; Shoulder Society",
+      "usedBy": [
+        "shoulder-pain-reasoning"
+      ],
+      "status": 200,
+      "finalURL": "https://bess.ac.uk/bess-boa-primary-intermediate-care-shoulder-pain-guidelines/",
+      "state": "reachable"
+    },
+    {
+      "url": "https://www.nice.org.uk/guidance/ng100/chapter/Recommendations",
+      "title": "Recommendations | Rheumatoid arthritis in adults: management | Guidance | NICE",
+      "usedBy": [
+        "inflammatory-presentations"
+      ],
+      "status": 200,
+      "finalURL": "https://www.nice.org.uk/guidance/ng100/chapter/Recommendations",
+      "state": "reachable"
+    },
+    {
+      "url": "https://www.nice.org.uk/guidance/ng65/chapter/recommendations",
+      "title": "Recommendations | Spondyloarthritis in over 16s: diagnosis and management | Guidance | NICE",
+      "usedBy": [
+        "inflammatory-presentations"
+      ],
+      "status": 200,
+      "finalURL": "https://www.nice.org.uk/guidance/ng65/chapter/recommendations",
+      "state": "reachable"
+    },
+    {
+      "url": "https://www.hcpc-uk.org/standards/standards-of-conduct-performance-and-ethics/",
+      "title": "Standards of conduct, performance and ethics | The HCPC",
+      "usedBy": [
+        "diagnostic-uncertainty",
+        "safety-netting-referral"
+      ],
+      "status": 200,
+      "finalURL": "https://www.hcpc-uk.org/standards/standards-of-conduct-performance-and-ethics/",
+      "state": "reachable"
+    },
+    {
+      "url": "https://www.nice.org.uk/guidance/ng12/chapter/recommendations-on-patient-support-safety-netting-and-the-diagnostic-process",
+      "title": "Recommendations on patient support, safety netting and the diagnostic process | Suspected cancer: recognition and referral | Guidance | NICE",
+      "usedBy": [
+        "safety-netting-referral"
+      ],
+      "status": 200,
+      "finalURL": "https://www.nice.org.uk/guidance/ng12/chapter/recommendations-on-patient-support-safety-netting-and-the-diagnostic-process",
+      "state": "reachable"
+    },
+    {
+      "url": "https://www.nice.org.uk/guidance/ng12/evidence/full-guideline-pdf-2676000277",
+      "title": "NICE NG12 evidence: full guideline",
+      "usedBy": [
+        "safety-netting-referral"
+      ],
+      "status": 200,
+      "finalURL": "https://www.nice.org.uk/guidance/ng12/evidence/full-guideline-pdf-2676000277",
+      "state": "reachable"
+    }
+  ]
+}

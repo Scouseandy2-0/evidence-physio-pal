@@ -39,6 +39,10 @@ export async function workspaceAPI(request, env) {
       if (old?.followUpDate && !Object.hasOwn(raw,'followUpDate') && old.followUpDate < reflection.date) return json({ error: 'This activity has a newer follow-up record. Reload the app before changing its date.' }, 409);
       if (old) for (const key of ['outcome','followUpDate']) if (!Object.hasOwn(raw,key)) reflection[key] = old[key] || '';
     }
+    // Retain historical source warnings when an older tab omits them or removes its library copy.
+    for (const appraisal of workspace.appraisals) {
+      if (prior?.appraisals?.some(a => a.id === appraisal.id && a.sourceRetracted) || prior?.saved?.some(p => p.id === appraisal.paperId && p.retracted)) appraisal.sourceRetracted = true;
+    }
     for (const paper of workspace.saved) {
       const old = prior?.saved?.find(p => p.id === paper.id);
       if (!paper.abstractSource && old?.abstractSource && paper.abstract === old.abstract) {

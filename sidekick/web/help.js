@@ -1,4 +1,4 @@
-export const appRelease = '2026-11-27-link-review-date';
+export const appRelease = '2026-11-28-readiness-recovery';
 export const guideKey = 'physiosidekick.guide.hidden.v1';
 export function guideProgress(workspace = {}) {
   return [

@@ -49,7 +49,7 @@ export function validateWorkspace(input) {
     if (!a || !/^[a-zA-Z0-9_-]{1,100}$/.test(a.id) || !/^\d{1,9}$/.test(a.pmid) || a.paperId !== `MED:${a.pmid}`) fail('Invalid appraisal identifier.');
     if (!Number.isFinite(Date.parse(a.updatedAt))) fail('Invalid appraisal time.');
     if (!['notRead', 'abstract', 'fullText'].includes(a.basis)) fail('Invalid appraisal reading basis.');
-    const result = { id: a.id, paperId: a.paperId, pmid: a.pmid, basis: a.basis, title: str(a.title, 4000, 'appraisal paper title', true), citation: str(a.citation, 20000, 'appraisal citation'), design: str(a.design, 200, 'study design'), updatedAt: str(a.updatedAt, 100, 'appraisal time') };
+    const result = { id: a.id, paperId: a.paperId, pmid: a.pmid, sourceRetracted: a.sourceRetracted === true || saved.some(p => p.id === a.paperId && p.retracted), basis: a.basis, title: str(a.title, 4000, 'appraisal paper title', true), citation: str(a.citation, 20000, 'appraisal citation'), design: str(a.design, 200, 'study design'), updatedAt: str(a.updatedAt, 100, 'appraisal time') };
     for (const key of ['question', 'findings', 'strengths', 'limitations', 'applicability', 'uncertainties', 'nextStep']) result[key] = str(a[key], 5000, 'appraisal notes');
     return result;
   });

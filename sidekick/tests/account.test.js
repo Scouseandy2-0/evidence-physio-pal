@@ -329,3 +329,23 @@ test('refresh under a changed identity removes previously displayed account reco
  a.sync.fetcher=async()=>Response.json({account:{id:'other-owner'},revision:0,workspace:emptyWorkspace()});
  await a.sync.refresh();assert.equal(a.sync.account,null);assert.equal(a.sync.status,'unavailable');assert.deepEqual(a.data,emptyWorkspace());
 });
+
+test('an invalid pending cache stays exportable while valid account records remain visible',async()=>{
+ const {create,storage}=syncEnvironment();const original=create();await original.sync.init();original.sync.queue({...emptyWorkspace(),reflections:[reflection('account-copy')]});await original.sync.flush();
+ const invalid={...emptyWorkspace(),reflections:[{...reflection('device-recovery'),date:'2026-02-31'}]};storage.setItem('physiosidekick.account.a',JSON.stringify({revision:1,pending:invalid,invalidPending:null}));
+ const restored=create();await restored.sync.init();assert.equal(restored.sync.status,'error');assert.equal(restored.data.reflections[0].id,'account-copy');assert.deepEqual(restored.sync.invalidPending,invalid);assert.equal(restored.sync.pending,null);assert.deepEqual(JSON.parse(storage.getItem('physiosidekick.account.a')).invalidPending,invalid);
+ await restored.sync.flush();const other=create({storage:memory()});await other.sync.init();assert.equal(other.data.reflections[0].id,'account-copy');
+ await restored.sync.combine({...emptyWorkspace(),reflections:[reflection('device-recovery')]},true,false);assert.equal(restored.sync.status,'saved');assert.deepEqual(restored.data.reflections.map(r=>r.id).sort(),['account-copy','device-recovery']);
+});
+
+test('appraisal warnings survive an older tab removing the library paper and omitting the warning field', async()=>{
+ const {newAppraisal}=await import('../web/appraisal.js');
+ const env={DB:database()},p={...paper(),retracted:true};
+ const appraisal=newAppraisal(p,'warning-appraisal',new Date('2026-11-28'));
+ const first={...emptyWorkspace(),saved:[p],appraisals:[appraisal]};
+ assert.equal((await workspaceAPI(req('warning-owner','PUT',{revision:0,workspace:first}),env)).status,200);
+ const older=structuredClone(first);older.saved=[];delete older.appraisals[0].sourceRetracted;
+ assert.equal((await workspaceAPI(req('warning-owner','PUT',{revision:1,workspace:older}),env)).status,200);
+ const stored=await(await workspaceAPI(req('warning-owner'),env)).json();
+ assert.equal(stored.workspace.appraisals[0].sourceRetracted,true);assert.equal(stored.workspace.saved.length,0);
+});
