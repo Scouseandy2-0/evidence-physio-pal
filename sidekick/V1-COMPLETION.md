@@ -57,3 +57,9 @@ Use the V1 IDs in work notes and release summaries. Mark implementation, develop
 ## Recorded anatomy scope clarification — 27 November 2026
 
 Andrew clarified that the anatomy area must be substantially more complete than the current selected-muscle preview. V1-A now requires comprehensive whole-body musculoskeletal coverage and useful source-linked reference information for every selectable muscle/bone; the seven named MSK regions are a navigation minimum, not the atlas boundary. The existing 177 muscle groups combine 428 upstream source meshes and include paired sides/parts. Neither number establishes a complete individual-muscle inventory. Current supplied references cover 46 muscle groups and 50 skeletal structures, with missing records explicit and all notes pending review. These partial assets do not meet the revised criterion. No arbitrary count increase, duplicated left/right label or hidden incomplete entry can satisfy the requirement.
+
+## Integrated owner-review build — 28 November 2026
+
+Developer work now includes a primary-source pass across all five student units and six FCP drafts (version 2026-11-28.1; 25 student questions and 18 FCP discussion self-checks), a 419-entry source-selection/reference inventory with explicit gaps, mandatory actual-time entry, retained reflection warnings, native fonts and a single owner-review journey/notes export. The six packs and five units remain pending independent review; the inventory does not satisfy comprehensive V1-A coverage.
+
+The owner requested a coherent version to review rather than checks after each small change. The private owner-review build therefore offers one walkthrough with disclosed gaps; it is not feature-complete V1, a paid/public launch or closure of the table above. Exact developer/browser evidence and remaining external/device gates are in docs/OWNER-REVIEW-READINESS.md.

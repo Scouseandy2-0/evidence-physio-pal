@@ -32,3 +32,7 @@ Nerve coverage is navigable source-linked text, with no nerve mesh or 3D nerve p
 The model geometry is unchanged from these pinned assets. PhysioSidekick adds selection, regional groupings, accessible lists and original learning notes. No anatomical mesh was generated. Hash checks and ID mappings verify the imported files; they do not constitute expert review.
 
 The model is a partial preview, not the required comprehensive human musculoskeletal atlas. Reference notes currently cover 46 muscle groups and 50 skeletal structures; missing notes remain explicitly identified. Source meshes, paired sides, heads and selectable groups are different units and must not be used interchangeably as a muscle count.
+
+## Named selection/reference audit — 28 November 2026
+
+The downloadable CSV in this section lists every imported selectable entry, its source identity/mesh IDs, source group/region, draft reference fields, explicit omissions, source URLs and pending review state. There are 419 selectable entries: 242 skeletal structures (50 with draft references, 192 without) and 177 muscle groups (46 with draft references, 131 without). Six skeletal reference entries explicitly omit full attachment information. None has a recorded independent anatomical approval. This audits the current imported selection catalogue; it is not an independent complete-body inventory or a count of individual-side muscles/bones.

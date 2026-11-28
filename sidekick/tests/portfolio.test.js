@@ -41,3 +41,12 @@ test('follow-up fields round-trip and conflicting observed outcomes are preserve
  assert.throws(()=>validateWorkspace({...emptyWorkspace(),reflections:[{...record,outcome:'x'.repeat(6001)}]}));
  const merged=mergeWorkspaces(w,{...w,reflections:[{...record,outcome:'Different device observation'}]},()=> 'preserved-reflection');assert.equal(merged.reflections.length,2);
 });
+
+test('reflection source warning survives removal of both its library paper and appraisal',async()=>{
+ const {reflectionFromAppraisal}=await import('../web/appraisal.js');
+ const appraisal={...a(),sourceRetracted:true,basis:'abstract',findings:'My uncertain finding',nextStep:'Check the notice'};
+ const reflection={...reflectionFromAppraisal(appraisal),id:'retained-warning',date:'2026-11-28',minutes:12};
+ const workspace=validateWorkspace({...emptyWorkspace(),reflections:[reflection]});
+ assert.equal(workspace.reflections[0].sourceRetracted,true);assert.equal(portfolioEvidence(workspace,workspace.reflections).papers[0].retracted,true);
+ assert.match(portfolioMarkdown(workspace),/WARNING.*retracted/);assert.match(portfolioHTML(workspace),/WARNING.*retracted/);assert.match(portfolioMarkdown(workspace),/appraisal notes unavailable/);
+});

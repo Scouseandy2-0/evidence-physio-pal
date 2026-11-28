@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-11-28T01:24:19.179Z",
+  "checkedAt": "2026-11-28T11:25:03.762Z",
   "scope": "Link availability and redirects only; not independent content review or clinical approval.",
   "sources": [
     {
@@ -30,6 +30,16 @@
       ],
       "status": 200,
       "finalURL": "https://casp-uk.net/what-is-critical-appraisal/",
+      "state": "reachable"
+    },
+    {
+      "url": "https://casp-uk.net/casp-checklists/CASP-checklist-randomised-controlled-trials-RCT-2024.pdf",
+      "title": "CASP · Randomised Controlled Trials checklist (original PDF)",
+      "usedBy": [
+        "appraisal-uncertainty"
+      ],
+      "status": 200,
+      "finalURL": "https://casp-uk.net/casp-checklists/CASP-checklist-randomised-controlled-trials-RCT-2024.pdf",
       "state": "reachable"
     },
     {

@@ -239,3 +239,7 @@ Release 2026-11-28-readiness-recovery: clean source restoration/install/build ve
 ## Recovery, search and mobile pass — 28 November 2026
 
 Release 2026-11-28-recovery-search-mobile protects recovered invalid/malformed caches, retains warnings in merges and linked evidence, uses local reflection dates, retries failed result pages, allows search cancellation, restores dialog focus, widens enlarged research controls and timestamps normal/recovery backups. 160 automated tests and the ten-scenario live public research audit passed. Detailed evidence, publication boundary and remaining device/review gates: docs/readiness-ten-2026-11-28.md and TODO.md.
+
+## Integrated owner-review pass — 28 November 2026
+
+165 tests pass, including the named anatomy inventory, reflection warning retention after linked records are removed, older-tab account protection, explicit new-reflection minutes and one-pass review notes/navigation. Syntax/build passed; targeted DOM checks passed again after correcting same-route review links. Rendered local paper→appraisal→CPD→save/reload→Word and FCP-copy→Word journeys passed; anatomy used the explicitly labelled one-structure software fallback. Largest-text 320px review-dialog layout had no horizontal overflow. These are not actual iPhone/Mac or VoiceOver checks. See docs/OWNER-REVIEW-READINESS.md for exact evidence and unresolved gates.

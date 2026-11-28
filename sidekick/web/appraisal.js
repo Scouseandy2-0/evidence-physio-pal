@@ -19,5 +19,5 @@ export function reflectionFromAppraisal(a) {
   if (a.basis === 'notRead' || !a.findings.trim() || !a.nextStep.trim()) throw new Error('Record what you read, your findings and your next learning step before creating a reflection.');
   const learning = [`${a.sourceRetracted ? 'WARNING: source marked as retracted in the saved index record. Investigate the retraction notice.\n\n' : ''}Reading basis: ${basisLabels[a.basis]}`, ...appraisalFields.filter(([key]) => key !== 'nextStep' && a[key]?.trim()).map(([key, label]) => `${label}:\n${a[key]}`)].join('\n\n');
   if (learning.length > 10000) throw new Error('Your appraisal is longer than a CPD reflection can hold. Export the appraisal, then create a shorter reflection in My CPD.');
-  return { title: `Appraisal: ${a.title}`.slice(0, 180), kind: 'Research reading', learning, action: a.nextStep, source: `https://pubmed.ncbi.nlm.nih.gov/${a.pmid}/`, appraisalId: a.id, paperId: a.paperId, basis: a.basis };
+  return { title: `Appraisal: ${a.title}`.slice(0, 180), kind: 'Research reading', learning, action: a.nextStep, source: `https://pubmed.ncbi.nlm.nih.gov/${a.pmid}/`, appraisalId: a.id, paperId: a.paperId, basis: a.basis, ...(a.sourceRetracted ? { sourceRetracted: true } : {}) };
 }

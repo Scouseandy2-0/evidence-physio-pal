@@ -5,9 +5,9 @@ Updated 28 November 2026. Finish the defined product before adding more major fe
 ## Saved checkpoint
 
 - GitHub repository: Scouseandy2-0/evidence-physio-pal; development branch: codex/physiosidekick-prototype; app source: sidekick/; draft PR #3. The original Lovable app remains separate.
-- Latest confirmed published application source: 65c58e1ba9d90b8348e6a3c7558aaf51ea6fd1f7. Readiness/recovery deployment confirmed succeeded on 28 November; app remains owner-private.
-- Last confirmed published changes: pending-cache recovery, retained appraisal source warnings and search focus/filter-size repairs. The review-date-link iPhone retest remains open.
-- Latest developer baseline: 160 automated tests passed; production build and targeted desktop workflow checks passed.
+- Latest confirmed published application source: 147758b54ac688e1e525ace272c37b7e2f2dd258. Recovery/search/mobile deployment confirmed succeeded on 28 November; app remains owner-private.
+- Last confirmed published changes: protected invalid/malformed cache recovery, retained source warnings, local date defaults, pagination retries/Stop search, focus/reflow and dated backups. The review-date-link iPhone retest remains open.
+- Latest developer baseline: 165 automated tests passed; production build and targeted desktop workflow checks passed.
 - Binary skeleton/muscle assets are included with source attribution/licences; checksum-verified pinned download scripts remain available for restoration. Generated bundles, dependency directories, credentials, local databases and user files are not source-control backups.
 - BioDigital integration enquiry sent with Andrew’s authorisation. Reply/quote/demo pending; no paid licence or purchase agreed.
 
@@ -92,3 +92,16 @@ Next work still requires actual-device evidence for reported iPhone faults, anat
 10. [x] Give normal/recovery backups distinct timestamped filenames matching export metadata.
 
 Detailed evidence and limits: docs/readiness-ten-2026-11-28.md. Full suite: 160 passing; live research audit: 10 scenarios passing. Candidate release: 2026-11-28-recovery-search-mobile. Publication outcome must be confirmed separately. All actual-iPhone and independent-review gates above remain open.
+
+## Integrated owner-review pass — 28 November 2026
+
+- [x] Complete a developer primary-source pass across all five student units/25 questions and all six FCP drafts. Version 2026-11-28.1 retains independent-review-pending labels; six packs now contain 18 structured discussion self-checks.
+- [x] Audit every imported anatomical selection by source identity, reference fields, explicit omissions and review state; provide CSV export. This audits current assets, not full-body completeness.
+- [x] Require explicitly entered time for every new reflection; keep existing records unchanged.
+- [x] Retain source warnings in reflection metadata/exports after both linked paper and appraisal removal, including older-tab saves.
+- [x] Add one Review this version journey and consolidated downloadable owner notes, with same-page navigation and visit-lifetime text retention.
+- [x] Remove external font requests, verify native-font layout and update data/support facts.
+- [x] Verify connected paper/appraisal/reflection/save/reload/Word and teaching-copy/Word journeys in the local rendered app; check anatomy inspector/software fallback and narrow enlarged review layout.
+- [x] Prepare one-pass review guide and evidence/state matrix: docs/PRIVATE-REVIEW-GUIDE.md, docs/OWNER-REVIEW-READINESS.md and docs/DATA-AND-SUPPORT.md.
+
+Candidate release: 2026-11-28-owner-review; publication outcome must be read separately. 165 tests pass. Actual iPhone/Mac/VoiceOver, independent content approval, full licensed anatomy and final public-launch data/support arrangements remain open. Review the integrated build when wanted; no per-change check is requested.

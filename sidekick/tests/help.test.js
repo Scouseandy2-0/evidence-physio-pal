@@ -19,3 +19,10 @@ test('invalid report categories, missing descriptions and excessive input fail w
  for(const input of [{category:'bad',description:'Description here'},{category:'other',description:'short'},{category:'other',description:'x'.repeat(2001)},{category:'other',description:'Description here',expected:'x'.repeat(1001)}])assert.throws(()=>buildProblemReport(input));
  const r=buildProblemReport({category:'other',description:'Description here',device:'private device string'}, {route:'https://private.invalid/query',syncStatus:'unknown-private-value'});assert.match(r,/Page: unknown/);assert.match(r,/Device \(chosen by me\): Not specified/);assert.ok(!r.includes('private.invalid'));
 });
+
+test('one-pass version review exports declared observations and release boundaries without inventing approval',async()=>{
+ const {buildVersionReview,versionReviewSteps,appRelease}=await import('../web/help.js');
+ const result=buildVersionReview({device:'iPhone or iPad',notes:'QA observation: date controls need checking'},new Date('2026-11-28T11:00:00Z'));
+ assert.match(result,new RegExp(appRelease));assert.match(result,/QA observation/);assert.match(result,/not clinical approval/);assert.match(result,/not submitted automatically/);assert.equal(versionReviewSteps.length,6);
+ assert.throws(()=>buildVersionReview({device:'invented',notes:''}),/device/);assert.throws(()=>buildVersionReview({notes:'x'.repeat(8001)}),/8,000/);
+});

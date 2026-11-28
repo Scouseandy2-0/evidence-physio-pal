@@ -12,7 +12,8 @@
     "pretest": "node scripts/fetch-anatomy-model.mjs && node scripts/fetch-muscle-model.mjs",
     "anatomy:fetch": "node scripts/fetch-anatomy-model.mjs",
     "audit:research": "node scripts/audit-research.mjs",
-    "audit:content-links": "node scripts/audit-content-links.mjs"
+    "audit:content-links": "node scripts/audit-content-links.mjs",
+    "audit:anatomy": "node scripts/audit-anatomy-coverage.mjs"
   },
   "devDependencies": {
     "docx": "9.16.1",

@@ -2,6 +2,11 @@
 
 Working name, pending trademark clearance. Owner: Andrew Lockhart. Started 27 November 2026.
 
+
+## Current integrated review build
+
+Release 2026-11-28-owner-review provides **Review this version** on Overview and in the footer, joining the main workflows and one downloadable set of review notes. See [owner review readiness](docs/OWNER-REVIEW-READINESS.md), [single review guide](docs/PRIVATE-REVIEW-GUIDE.md), and [data/support facts](docs/DATA-AND-SUPPORT.md). Five student units and six FCP drafts have a developer source pass; independent approval and full anatomy remain open. 165 automated tests pass. Named current-model inventory: npm run audit:anatomy. Publication is confirmed separately.
+
 ## Fixed V1 scope
 
 [V1-COMPLETION.md](V1-COMPLETION.md) is the authoritative first-version checklist and build order. It supersedes the earlier open-ended delivery roadmap below. Complete the defined content areas before inviting whole-product usability assessment; clinical/anatomical review of completed material remains necessary.

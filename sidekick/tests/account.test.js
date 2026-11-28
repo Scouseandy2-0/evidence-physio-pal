@@ -367,3 +367,11 @@ test('malformed cache text and unexpected envelopes stay recoverable without ove
   assert.equal(await a.sync.replaceRecords('account',{revision:a.sync.revision,sequence:a.sync.sequence}),true);assert.equal(a.sync.recoveryRequired,false);assert.equal(a.sync.invalidPending,null);
  }
 });
+
+test('old tabs cannot strip a retained reflection retraction warning after linked records are removed',async()=>{
+ const env={DB:database()},workspace={...emptyWorkspace(),reflections:[{...reflection('sticky-source'),paperId:'MED:123',appraisalId:'gone-appraisal',basis:'abstract',sourceRetracted:true}]};
+ assert.equal((await workspaceAPI(req('warning-reflection','PUT',{revision:0,workspace}),env)).status,200);
+ delete workspace.reflections[0].sourceRetracted;
+ assert.equal((await workspaceAPI(req('warning-reflection','PUT',{revision:1,workspace}),env)).status,200);
+ const stored=await(await workspaceAPI(req('warning-reflection'),env)).json();assert.equal(stored.workspace.reflections[0].sourceRetracted,true);
+});

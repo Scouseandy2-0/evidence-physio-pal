@@ -41,11 +41,15 @@ test('failed next-page retry keeps earlier papers and uses the same cursor; stop
   assert.match(document.querySelector('#results').textContent,/No new result count/);assert.doesNotMatch(document.querySelector('#results').textContent,/No matching papers|0 indexed/);
   const opener=document.querySelector('#data-button');opener.focus();opener.click();assert.equal(focused.id,'dialog-title');document.querySelector('.dialog-close').click();assert.equal(focused,opener);
   opener.focus();opener.click();opener.remove();document.querySelector('.dialog-close').click();assert.equal(focused.id,'main');
+  document.querySelector('#readiness-button').click();assert.equal(document.querySelector('#dialog-title').textContent,'Review this version');
+  document.querySelector('#version-review-notes').value='One consolidated review note';document.querySelector('#version-review-form').dispatchEvent(new window.Event('input',{bubbles:true}));document.querySelector('[data-review-route="research"]').click();assert.equal(dialog.open,false);assert.ok(document.querySelector('#research-search'));
+  document.querySelector('#readiness-button').click();assert.equal(document.querySelector('#version-review-notes').value,'One consolidated review note');document.querySelector('.dialog-close').click();
+
   const oldTimezone=process.env.TZ;process.env.TZ='Europe/London';
   try {
     const NativeDate=prior.Date;globalThis.Date=class extends NativeDate {constructor(...args){super(...(args.length?args:['2026-06-01T23:30:00Z']));}};
     location.hash='#cpd';window.dispatchEvent(new window.Event('hashchange'));document.querySelector('#new-reflection').click();
-    assert.equal(document.querySelector('#reflection-date').value,'2026-06-02');document.querySelector('#cancel-reflection').click();
+    assert.equal(document.querySelector('#reflection-date').value,'2026-06-02');assert.equal(document.querySelector('#reflection-minutes').value,'');document.querySelector('#cancel-reflection').click();
   } finally { if(oldTimezone===undefined)delete process.env.TZ;else process.env.TZ=oldTimezone;globalThis.Date=prior.Date; }
 
  }finally{for(const k of keys){if(prior[k]===undefined)delete globalThis[k];else globalThis[k]=prior[k];}}
