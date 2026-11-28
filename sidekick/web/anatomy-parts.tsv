@@ -1,0 +1,244 @@
+fma	source_label	display_name	region	subgroup	source_triangles	runtime_triangles
+FMA52734	frontal bone	Frontal bone	Skull	Cranial bones	33062	2048
+FMA52788	right parietal bone	Right parietal bone	Skull	Cranial bones	29734	2300
+FMA52789	left parietal bone	Left parietal bone	Skull	Cranial bones	30250	2340
+FMA52735	occipital bone	Occipital bone	Skull	Cranial bones	27812	2284
+FMA52738	right temporal bone	Right temporal bone	Skull	Cranial bones	11274	1582
+FMA52739	left temporal bone	Left temporal bone	Skull	Cranial bones	11208	1578
+FMA52736	sphenoid bone	Sphenoid bone	Skull	Cranial bones	15322	1616
+FMA52740	ethmoid	Ethmoid bone	Skull	Cranial bones	7774	1168
+FMA53647	right nasal bone	Right nasal bone	Skull	Facial bones	1024	450
+FMA53645	right lacrimal bone	Right lacrimal bone	Skull	Facial bones	1114	400
+FMA52892	right zygomatic bone	Right zygomatic bone	Skull	Facial bones	4612	860
+FMA53649	right maxilla	Right maxilla	Skull	Facial bones	14148	1140
+FMA53655	right palatine bone	Right palatine bone	Skull	Facial bones	3592	692
+FMA54737	right inferior nasal concha	Right inferior nasal concha	Skull	Facial bones	1616	494
+FMA53648	left nasal bone	Left nasal bone	Skull	Facial bones	1124	444
+FMA53646	left lacrimal bone	Left lacrimal bone	Skull	Facial bones	1152	400
+FMA52893	left zygomatic bone	Left zygomatic bone	Skull	Facial bones	4560	860
+FMA53650	left maxilla	Left maxilla	Skull	Facial bones	14506	1160
+FMA53656	left palatine bone	Left palatine bone	Skull	Facial bones	3642	722
+FMA54738	left inferior nasal concha	Left inferior nasal concha	Skull	Facial bones	1484	462
+FMA9710	vomer	Vomer	Skull	Facial bones	2422	772
+FMA52748	mandible	Mandible	Skull	Facial bones	21658	1810
+FMA52749	hyoid bone	Hyoid bone	Skull		5534	692
+FMA12519	atlas	Atlas (C1)	Vertebral column	Cervical vertebrae	6172	1186
+FMA12520	axis	Axis (C2)	Vertebral column	Cervical vertebrae	6870	1008
+FMA12521	third cervical vertebra	Third cervical vertebra (C3)	Vertebral column	Cervical vertebrae	5278	962
+FMA12522	fourth cervical vertebra	Fourth cervical vertebra (C4)	Vertebral column	Cervical vertebrae	4224	952
+FMA12523	fifth cervical vertebra	Fifth cervical vertebra (C5)	Vertebral column	Cervical vertebrae	4754	998
+FMA12524	sixth cervical vertebra	Sixth cervical vertebra (C6)	Vertebral column	Cervical vertebrae	6350	1064
+FMA12525	seventh cervical vertebra	Seventh cervical vertebra (C7)	Vertebral column	Cervical vertebrae	5222	1188
+FMA9165	first thoracic vertebra	First thoracic vertebra (T1)	Vertebral column	Thoracic vertebrae	5614	1254
+FMA9187	second thoracic vertebra	Second thoracic vertebra (T2)	Vertebral column	Thoracic vertebrae	8360	1264
+FMA9209	third thoracic vertebra	Third thoracic vertebra (T3)	Vertebral column	Thoracic vertebrae	8910	1280
+FMA9248	fourth thoracic vertebra	Fourth thoracic vertebra (T4)	Vertebral column	Thoracic vertebrae	8930	1286
+FMA9922	fifth thoracic vertebra	Fifth thoracic vertebra (T5)	Vertebral column	Thoracic vertebrae	9834	1304
+FMA9945	sixth thoracic vertebra	Sixth thoracic vertebra (T6)	Vertebral column	Thoracic vertebrae	4896	1358
+FMA9968	seventh thoracic vertebra	Seventh thoracic vertebra (T7)	Vertebral column	Thoracic vertebrae	10740	1366
+FMA9991	eighth thoracic vertebra	Eighth thoracic vertebra (T8)	Vertebral column	Thoracic vertebrae	5206	1376
+FMA10014	ninth thoracic vertebra	Ninth thoracic vertebra (T9)	Vertebral column	Thoracic vertebrae	11286	1374
+FMA10037	tenth thoracic vertebra	Tenth thoracic vertebra (T10)	Vertebral column	Thoracic vertebrae	11928	1416
+FMA10059	eleventh thoracic vertebra	Eleventh thoracic vertebra (T11)	Vertebral column	Thoracic vertebrae	5652	1298
+FMA10081	twelfth thoracic vertebra	Twelfth thoracic vertebra (T12)	Vertebral column	Thoracic vertebrae	6038	1256
+FMA13072	first lumbar vertebra	First lumbar vertebra (L1)	Vertebral column	Lumbar vertebrae	12946	1450
+FMA13073	second lumbar vertebra	Second lumbar vertebra (L2)	Vertebral column	Lumbar vertebrae	6946	1474
+FMA13074	third lumbar vertebra	Third lumbar vertebra (L3)	Vertebral column	Lumbar vertebrae	14750	1484
+FMA13075	fourth lumbar vertebra	Fourth lumbar vertebra (L4)	Vertebral column	Lumbar vertebrae	15426	1512
+FMA13076	fifth lumbar vertebra	Fifth lumbar vertebra (L5)	Vertebral column	Lumbar vertebrae	17282	1654
+FMA16202	sacrum	Sacrum	Vertebral column		44416	2516
+FMA25058	intervertebral disk of axis	Intervertebral disc C2–C3	Vertebral column	Intervertebral discs	3014	400
+FMA13896	intervertebral disk of third cervical vertebra	Intervertebral disc C3–C4	Vertebral column	Intervertebral discs	3032	400
+FMA13897	intervertebral disk of fourth cervical vertebra	Intervertebral disc C4–C5	Vertebral column	Intervertebral discs	3516	400
+FMA13898	intervertebral disk of fifth cervical vertebra	Intervertebral disc C5–C6	Vertebral column	Intervertebral discs	3444	400
+FMA13899	intervertebral disk of sixth cervical vertebra	Intervertebral disc C6–C7	Vertebral column	Intervertebral discs	3238	410
+FMA13900	intervertebral disk of seventh cervical vertebra	Intervertebral disc C7–T1	Vertebral column	Intervertebral discs	3912	440
+FMA10458	intervertebral disk of first thoracic vertebra	Intervertebral disc T1–T2	Vertebral column	Intervertebral discs	4280	448
+FMA13495	intervertebral disk of second thoracic vertebra	Intervertebral disc T2–T3	Vertebral column	Intervertebral discs	4970	480
+FMA13500	intervertebral disk of third thoracic vertebra	Intervertebral disc T3–T4	Vertebral column	Intervertebral discs	5174	490
+FMA13501	intervertebral disk of fourth thoracic vertebra	Intervertebral disc T4–T5	Vertebral column	Intervertebral discs	6308	512
+FMA13502	intervertebral disk of fifth thoracic vertebra	Intervertebral disc T5–T6	Vertebral column	Intervertebral discs	7336	520
+FMA13503	intervertebral disk of sixth thoracic vertebra	Intervertebral disc T6–T7	Vertebral column	Intervertebral discs	9058	560
+FMA13504	intervertebral disk of seventh thoracic vertebra	Intervertebral disc T7–T8	Vertebral column	Intervertebral discs	10386	596
+FMA13505	intervertebral disk of eighth thoracic vertebra	Intervertebral disc T8–T9	Vertebral column	Intervertebral discs	10202	604
+FMA13506	intervertebral disk of ninth thoracic vertebra	Intervertebral disc T9–T10	Vertebral column	Intervertebral discs	5040	626
+FMA13507	intervertebral disk of tenth thoracic vertebra	Intervertebral disc T10–T11	Vertebral column	Intervertebral discs	11534	660
+FMA13508	intervertebral disk of eleventh thoracic vertebra	Intervertebral disc T11–T12	Vertebral column	Intervertebral discs	14280	702
+FMA13509	intervertebral disk of twelfth thoracic vertebra	Intervertebral disc T12–L1	Vertebral column	Intervertebral discs	14538	726
+FMA16033	intervertebral disk of first lumbar vertebra	Intervertebral disc L1–L2	Vertebral column	Intervertebral discs	14152	694
+FMA16034	intervertebral disk of second lumbar vertebra	Intervertebral disc L2–L3	Vertebral column	Intervertebral discs	13602	710
+FMA16035	intervertebral disk of third lumbar vertebra	Intervertebral disc L3–L4	Vertebral column	Intervertebral discs	14270	710
+FMA16036	intervertebral disk of fourth lumbar vertebra	Intervertebral disc L4–L5	Vertebral column	Intervertebral discs	14490	790
+FMA16037	intervertebral disk of fifth lumbar vertebra	Intervertebral disc L5–S1	Vertebral column	Intervertebral discs	16178	856
+FMA7486	manubrium	Manubrium of sternum	Thorax	Sternum	11882	1096
+FMA7487	body of sternum	Body of sternum	Thorax	Sternum	19916	1578
+FMA7488	xiphoid process	Xiphoid process	Thorax	Sternum	4086	406
+FMA7857	right first rib	Right first rib	Thorax	Right ribs	14194	1248
+FMA7882	right second rib	Right second rib	Thorax	Right ribs	23694	1930
+FMA7909	right third rib	Right third rib	Thorax	Right ribs	30860	2314
+FMA7957	right fourth rib	Right fourth rib	Thorax	Right ribs	38488	2714
+FMA8066	right fifth rib	Right fifth rib	Thorax	Right ribs	41634	2964
+FMA8175	right sixth rib	Right sixth rib	Thorax	Right ribs	44634	3136
+FMA8229	right seventh rib	Right seventh rib	Thorax	Right ribs	43146	3062
+FMA8283	right eighth rib	Right eighth rib	Thorax	Right ribs	36646	2928
+FMA8364	right ninth rib	Right ninth rib	Thorax	Right ribs	34278	2720
+FMA8445	right tenth rib	Right tenth rib	Thorax	Right ribs	31010	2580
+FMA8531	right eleventh rib	Right eleventh rib	Thorax	Right ribs	22428	2142
+FMA8533	right twelfth rib	Right twelfth rib	Thorax	Right ribs	13262	1464
+FMA7987	left first rib	Left first rib	Thorax	Left ribs	15464	1248
+FMA8012	left second rib	Left second rib	Thorax	Left ribs	25304	1942
+FMA8039	left third rib	Left third rib	Thorax	Left ribs	31212	2314
+FMA8148	left fourth rib	Left fourth rib	Thorax	Left ribs	37922	2716
+FMA8093	left fifth rib	Left fifth rib	Thorax	Left ribs	41568	2964
+FMA8202	left sixth rib	Left sixth rib	Thorax	Left ribs	44434	3134
+FMA8256	left seventh rib	Left seventh rib	Thorax	Left ribs	44062	3062
+FMA8310	left eighth rib	Left eighth rib	Thorax	Left ribs	37134	2928
+FMA8391	left ninth rib	Left ninth rib	Thorax	Left ribs	36020	2720
+FMA8472	left tenth rib	Left tenth rib	Thorax	Left ribs	31758	2578
+FMA8532	left eleventh rib	Left eleventh rib	Thorax	Left ribs	22826	2140
+FMA8534	left twelfth rib	Left twelfth rib	Thorax	Left ribs	13726	1464
+FMA7875	right first costal cartilage	Right first costal cartilage	Thorax	Costal cartilages	2342	1186
+FMA7886	right second costal cartilage	Right second costal cartilage	Thorax	Costal cartilages	2540	520
+FMA7913	right third costal cartilage	Right third costal cartilage	Thorax	Costal cartilages	2694	556
+FMA7976	right fourth costal cartilage	Right fourth costal cartilage	Thorax	Costal cartilages	3486	734
+FMA8070	right fifth costal cartilage	Right fifth costal cartilage	Thorax	Costal cartilages	4830	912
+FMA8194	right sixth costal cartilage	Right sixth costal cartilage	Thorax	Costal cartilages	6078	1172
+FMA8248	right seventh costal cartilage	Right seventh costal cartilage	Thorax	Costal cartilages	10492	2774
+BP28	right costal cartilage	Right lower costal cartilages	Thorax	Costal cartilages	19156	2044
+FMA8005	left first costal cartilage	Left first costal cartilage	Thorax	Costal cartilages	2204	510
+FMA8031	left second costal cartilage	Left second costal cartilage	Thorax	Costal cartilages	2350	520
+FMA8058	left third costal cartilage	Left third costal cartilage	Thorax	Costal cartilages	2428	544
+FMA8167	left fourth costal cartilage	Left fourth costal cartilage	Thorax	Costal cartilages	3220	732
+FMA8112	left fifth costal cartilage	Left fifth costal cartilage	Thorax	Costal cartilages	4536	910
+FMA8221	left sixth costal cartilage	Left sixth costal cartilage	Thorax	Costal cartilages	5966	1170
+FMA8275	left seventh costal cartilage	Left seventh costal cartilage	Thorax	Costal cartilages	9902	1604
+BP24	left costal cartilage	Left lower costal cartilages	Thorax	Costal cartilages	18942	2048
+FMA13322	right clavicle	Right clavicle	Right upper limb	Shoulder girdle	5112	2090
+FMA13395	right scapula	Right scapula	Right upper limb	Shoulder girdle	113256	2662
+FMA23130	right humerus	Right humerus	Right upper limb	Arm and forearm	16268	3928
+FMA23464	right radius	Right radius	Right upper limb	Arm and forearm	2804	2804
+FMA23467	right ulna	Right ulna	Right upper limb	Arm and forearm	3592	3180
+FMA24435	right scaphoid	Right scaphoid	Right upper limb	Carpal bones	1074	400
+FMA24437	right lunate	Right lunate	Right upper limb	Carpal bones	864	400
+FMA24439	right triquetral	Right triquetral	Right upper limb	Carpal bones	704	400
+FMA24441	right pisiform	Right pisiform	Right upper limb	Carpal bones	396	396
+FMA24443	right trapezium	Right trapezium	Right upper limb	Carpal bones	1026	400
+FMA23725	right trapezoid	Right trapezoid	Right upper limb	Carpal bones	616	400
+FMA24446	right capitate	Right capitate	Right upper limb	Carpal bones	1284	412
+FMA24448	right hamate	Right hamate	Right upper limb	Carpal bones	1150	404
+FMA24464	right first metacarpal bone	Right first metacarpal bone	Right upper limb	Metacarpal bones	2434	734
+FMA24466	right second metacarpal bone	Right second metacarpal bone	Right upper limb	Metacarpal bones	3218	952
+FMA24468	right third metacarpal bone	Right third metacarpal bone	Right upper limb	Metacarpal bones	3018	892
+FMA24470	right fourth metacarpal bone	Right fourth metacarpal bone	Right upper limb	Metacarpal bones	2306	802
+FMA24472	right fifth metacarpal bone	Right fifth metacarpal bone	Right upper limb	Metacarpal bones	2178	764
+FMA24450	proximal phalanx of right thumb	Right thumb, proximal phalanx	Right upper limb	Phalanges of the hand	1368	526
+FMA24451	proximal phalanx of right index finger	Right index finger, proximal phalanx	Right upper limb	Phalanges of the hand	1664	594
+FMA24452	proximal phalanx of right middle finger	Right middle finger, proximal phalanx	Right upper limb	Phalanges of the hand	1968	642
+FMA24453	proximal phalanx of right ring finger	Right ring finger, proximal phalanx	Right upper limb	Phalanges of the hand	1620	592
+FMA24454	proximal phalanx of right little finger	Right little finger, proximal phalanx	Right upper limb	Phalanges of the hand	1208	500
+FMA24455	middle phalanx of right index finger	Right index finger, middle phalanx	Right upper limb	Phalanges of the hand	1140	400
+FMA24456	middle phalanx of right middle finger	Right middle finger, middle phalanx	Right upper limb	Phalanges of the hand	1476	446
+FMA24457	middle phalanx of right ring finger	Right ring finger, middle phalanx	Right upper limb	Phalanges of the hand	1350	436
+FMA24458	middle phalanx of right little finger	Right little finger, middle phalanx	Right upper limb	Phalanges of the hand	900	400
+FMA24459	distal phalanx of right thumb	Right thumb, distal phalanx	Right upper limb	Phalanges of the hand	1040	400
+FMA24460	distal phalanx of right index finger	Right index finger, distal phalanx	Right upper limb	Phalanges of the hand	656	400
+FMA24461	distal phalanx of right middle finger	Right middle finger, distal phalanx	Right upper limb	Phalanges of the hand	640	400
+FMA24462	distal phalanx of right ring finger	Right ring finger, distal phalanx	Right upper limb	Phalanges of the hand	452	400
+FMA24463	distal phalanx of right little finger	Right little finger, distal phalanx	Right upper limb	Phalanges of the hand	466	400
+FMA13323	left clavicle	Left clavicle	Left upper limb	Shoulder girdle	5140	2090
+FMA13396	left scapula	Left scapula	Left upper limb	Shoulder girdle	121816	2662
+FMA23131	left humerus	Left humerus	Left upper limb	Arm and forearm	16492	3928
+FMA23465	left radius	Left radius	Left upper limb	Arm and forearm	2714	2714
+FMA23468	left ulna	Left ulna	Left upper limb	Arm and forearm	3538	3180
+FMA24436	left scaphoid	Left scaphoid	Left upper limb	Carpal bones	1070	400
+FMA24438	left lunate	Left lunate	Left upper limb	Carpal bones	866	400
+FMA24440	left triquetral	Left triquetral	Left upper limb	Carpal bones	698	400
+FMA24442	left pisiform	Left pisiform	Left upper limb	Carpal bones	396	396
+FMA24444	left trapezium	Left trapezium	Left upper limb	Carpal bones	1058	400
+FMA24445	left trapezoid	Left trapezoid	Left upper limb	Carpal bones	612	400
+FMA24447	left capitate	Left capitate	Left upper limb	Carpal bones	1278	400
+FMA24449	left hamate	Left hamate	Left upper limb	Carpal bones	1130	406
+FMA24465	left first metacarpal bone	Left first metacarpal bone	Left upper limb	Metacarpal bones	2480	734
+FMA24467	left second metacarpal bone	Left second metacarpal bone	Left upper limb	Metacarpal bones	3264	952
+FMA24469	left third metacarpal bone	Left third metacarpal bone	Left upper limb	Metacarpal bones	3040	892
+FMA24471	left fourth metacarpal bone	Left fourth metacarpal bone	Left upper limb	Metacarpal bones	2270	802
+FMA24473	left fifth metacarpal bone	Left fifth metacarpal bone	Left upper limb	Metacarpal bones	2146	764
+FMA65470	proximal phalanx of left thumb	Left thumb, proximal phalanx	Left upper limb	Phalanges of the hand	1314	526
+FMA71915	proximal phalanx of left index finger	Left index finger, proximal phalanx	Left upper limb	Phalanges of the hand	1684	594
+FMA71908	proximal phalanx of left middle finger	Left middle finger, proximal phalanx	Left upper limb	Phalanges of the hand	1974	640
+FMA71916	proximal phalanx of left ring finger	Left ring finger, proximal phalanx	Left upper limb	Phalanges of the hand	1616	590
+FMA66791	proximal phalanx of left little finger	Left little finger, proximal phalanx	Left upper limb	Phalanges of the hand	1178	498
+FMA23938	middle phalanx of left index finger	Left index finger, middle phalanx	Left upper limb	Phalanges of the hand	1138	400
+FMA23940	middle phalanx of left middle finger	Left middle finger, middle phalanx	Left upper limb	Phalanges of the hand	1496	444
+FMA23942	middle phalanx of left ring finger	Left ring finger, middle phalanx	Left upper limb	Phalanges of the hand	1344	434
+FMA23944	middle phalanx of left little finger	Left little finger, middle phalanx	Left upper limb	Phalanges of the hand	884	400
+FMA23951	distal phalanx of left thumb	Left thumb, distal phalanx	Left upper limb	Phalanges of the hand	988	400
+FMA23953	distal phalanx of left index finger	Left index finger, distal phalanx	Left upper limb	Phalanges of the hand	650	400
+FMA23955	distal phalanx of left middle finger	Left middle finger, distal phalanx	Left upper limb	Phalanges of the hand	634	400
+FMA23957	distal phalanx of left ring finger	Left ring finger, distal phalanx	Left upper limb	Phalanges of the hand	448	400
+FMA23959	distal phalanx of left little finger	Left little finger, distal phalanx	Left upper limb	Phalanges of the hand	454	400
+FMA16586	right hip bone	Right hip bone	Pelvis		9716	3366
+FMA16587	left hip bone	Left hip bone	Pelvis		9470	3366
+FMA24474	right femur	Right femur	Right lower limb	Thigh and leg	12990	5524
+FMA24486	right patella	Right patella	Right lower limb	Thigh and leg	1334	744
+FMA24477	right tibia	Right tibia	Right lower limb	Thigh and leg	6850	4332
+FMA24480	right fibula	Right fibula	Right lower limb	Thigh and leg	4622	4248
+FMA24482	right talus	Right talus	Right lower limb	Tarsal bones	5962	944
+FMA24497	right calcaneus	Right calcaneus	Right lower limb	Tarsal bones	5448	1198
+FMA24500	navicular bone of right foot	Right navicular	Right lower limb	Tarsal bones	3022	630
+FMA24528	right cuboid bone	Right cuboid	Right lower limb	Tarsal bones	3634	658
+FMA24521	right medial cuneiform bone	Right medial cuneiform	Right lower limb	Tarsal bones	4114	612
+FMA24523	right intermediate cuneiform bone	Right intermediate cuneiform	Right lower limb	Tarsal bones	1948	448
+FMA24525	right lateral cuneiform bone	Right lateral cuneiform	Right lower limb	Tarsal bones	2702	522
+FMA24507	right first metatarsal bone	Right first metatarsal bone	Right lower limb	Metatarsal bones	4886	938
+FMA24509	right second metatarsal bone	Right second metatarsal bone	Right lower limb	Metatarsal bones	3258	1024
+FMA24511	right third metatarsal bone	Right third metatarsal bone	Right lower limb	Metatarsal bones	3030	980
+FMA24513	right fourth metatarsal bone	Right fourth metatarsal bone	Right lower limb	Metatarsal bones	2918	970
+FMA24515	right fifth metatarsal bone	Right fifth metatarsal bone	Right lower limb	Metatarsal bones	3432	1024
+FMA43253	proximal phalanx of right big toe	Right big toe, proximal phalanx	Right lower limb	Phalanges of the foot	2106	546
+FMA32634	proximal phalanx of right second toe	Right second toe, proximal phalanx	Right lower limb	Phalanges of the foot	1362	428
+FMA32636	proximal phalanx of right third toe	Right third toe, proximal phalanx	Right lower limb	Phalanges of the foot	1222	424
+FMA32638	proximal phalanx of right fourth toe	Right fourth toe, proximal phalanx	Right lower limb	Phalanges of the foot	1094	404
+FMA32640	proximal phalanx of right little toe	Right little toe, proximal phalanx	Right lower limb	Phalanges of the foot	1148	400
+FMA32642	middle phalanx of right second toe	Right second toe, middle phalanx	Right lower limb	Phalanges of the foot	652	400
+FMA32644	middle phalanx of right third toe	Right third toe, middle phalanx	Right lower limb	Phalanges of the foot	634	400
+FMA32646	middle phalanx of right fourth toe	Right fourth toe, middle phalanx	Right lower limb	Phalanges of the foot	520	400
+FMA230986	middle phalanx of right little toe	Right little toe, middle phalanx	Right lower limb	Phalanges of the foot	294	294
+FMA32650	distal phalanx of right big toe	Right big toe, distal phalanx	Right lower limb	Phalanges of the foot	1606	416
+FMA32652	distal phalanx of right second toe	Right second toe, distal phalanx	Right lower limb	Phalanges of the foot	466	400
+FMA32654	distal phalanx of right third toe	Right third toe, distal phalanx	Right lower limb	Phalanges of the foot	334	334
+FMA32656	distal phalanx of right fourth toe	Right fourth toe, distal phalanx	Right lower limb	Phalanges of the foot	362	362
+FMA32658	distal phalanx of right little toe	Right little toe, distal phalanx	Right lower limb	Phalanges of the foot	274	274
+FMA45097	sesamoid bone of right foot	Right sesamoid bones of the foot	Right lower limb		576	400
+FMA24475	left femur	Left femur	Left lower limb	Thigh and leg	13202	5524
+FMA24487	left patella	Left patella	Left lower limb	Thigh and leg	1338	742
+FMA24478	left tibia	Left tibia	Left lower limb	Thigh and leg	6822	4330
+FMA24481	left fibula	Left fibula	Left lower limb	Thigh and leg	4544	4248
+FMA24483	left talus	Left talus	Left lower limb	Tarsal bones	5924	942
+FMA24498	left calcaneus	Left calcaneus	Left lower limb	Tarsal bones	5652	1196
+FMA24501	navicular bone of left foot	Left navicular	Left lower limb	Tarsal bones	3096	628
+FMA24529	left cuboid bone	Left cuboid	Left lower limb	Tarsal bones	3804	656
+FMA24522	left medial cuneiform bone	Left medial cuneiform	Left lower limb	Tarsal bones	4210	612
+FMA24524	left intermediate cuneiform bone	Left intermediate cuneiform	Left lower limb	Tarsal bones	2106	448
+FMA24526	left lateral cuneiform bone	Left lateral cuneiform	Left lower limb	Tarsal bones	2968	522
+FMA24508	left first metatarsal bone	Left first metatarsal bone	Left lower limb	Metatarsal bones	4860	938
+FMA24510	left second metatarsal bone	Left second metatarsal bone	Left lower limb	Metatarsal bones	3388	1024
+FMA24512	left third metatarsal bone	Left third metatarsal bone	Left lower limb	Metatarsal bones	3228	980
+FMA24514	left fourth metatarsal bone	Left fourth metatarsal bone	Left lower limb	Metatarsal bones	3118	970
+FMA24516	left fifth metatarsal bone	Left fifth metatarsal bone	Left lower limb	Metatarsal bones	3688	1024
+FMA43254	proximal phalanx of left big toe	Left big toe, proximal phalanx	Left lower limb	Phalanges of the foot	2194	544
+FMA32635	proximal phalanx of left second toe	Left second toe, proximal phalanx	Left lower limb	Phalanges of the foot	1416	428
+FMA32637	proximal phalanx of left third toe	Left third toe, proximal phalanx	Left lower limb	Phalanges of the foot	1258	422
+FMA32639	proximal phalanx of left fourth toe	Left fourth toe, proximal phalanx	Left lower limb	Phalanges of the foot	1166	402
+FMA32641	proximal phalanx of left little toe	Left little toe, proximal phalanx	Left lower limb	Phalanges of the foot	1206	400
+FMA32643	middle phalanx of left second toe	Left second toe, middle phalanx	Left lower limb	Phalanges of the foot	686	400
+FMA32645	middle phalanx of left third toe	Left third toe, middle phalanx	Left lower limb	Phalanges of the foot	638	400
+FMA32647	middle phalanx of left fourth toe	Left fourth toe, middle phalanx	Left lower limb	Phalanges of the foot	546	400
+FMA230988	middle phalanx of left little toe	Left little toe, middle phalanx	Left lower limb	Phalanges of the foot	302	302
+FMA32651	distal phalanx of left big toe	Left big toe, distal phalanx	Left lower limb	Phalanges of the foot	1594	416
+FMA32653	distal phalanx of left second toe	Left second toe, distal phalanx	Left lower limb	Phalanges of the foot	482	400
+FMA32655	distal phalanx of left third toe	Left third toe, distal phalanx	Left lower limb	Phalanges of the foot	354	354
+FMA32657	distal phalanx of left fourth toe	Left fourth toe, distal phalanx	Left lower limb	Phalanges of the foot	364	364
+FMA32659	distal phalanx of left little toe	Left little toe, distal phalanx	Left lower limb	Phalanges of the foot	284	284
+FMA45098	sesamoid bone of left foot	Left sesamoid bones of the foot	Left lower limb		556	400
+

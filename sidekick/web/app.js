@@ -1,0 +1,1098 @@
+import {setupScrollableTabs} from './tab-navigation.js';
+import {registerPendingSaveLifecycle} from './lifecycle-saves.js';
+import {createNavigationDiagnostics} from './navigation-diagnostics.js';
+import {anatomyInventoryCSV} from './anatomy-inventory.js';
+import { structureDetails, detailCoverage } from './anatomy-details.js';
+import { regionalGuides, regionSources, nerveNotes, regionalStructures, regionMarkdown } from './regional-anatomy.js';
+import { studentUnits, studentSources, studentUnitCounts, studentUnitMarkdown, studentRevisionPrompt } from './student-units.js';
+import { learningPacks, learningPackCounts, teachingFromPack, learningPackMarkdown } from './learning-packs.js';
+import { v1Criteria, v1Audience, readinessReviewed } from './readiness.js';
+import { parseWorkspaceBackup, workspaceBackup, backupLimit, backupFilename } from './backup.js';
+import { appRelease, versionReviewSteps, buildVersionReview, guideProgress, guideHidden, setGuideHidden, reportCategories, buildProblemReport } from './help.js';
+import { anatomySystems, filterAnatomy, anatomyResearchTerm, anatomyLearningDraft } from './anatomy.js';
+import { searchWorkspace, workspaceTypes } from './workspace-search.js';
+import { readingDefaults, loadReading, saveReading, applyReading } from './reading.js';
+import { filterReflections, portfolioSummary, portfolioHTML, portfolioMarkdown, followUpSummary, assignReviewDate, localDay } from './portfolio.js';
+import { newStudySet, cardFromNotes, saveStudyCard, rateStudyCard, studyMarkdown, filterStudyCards } from './study.js';
+import { newTeachingPlan, teachingSource, teachingMarkdown, suggestedAgenda, readingLabels } from './teaching.js';
+import { loadOriginalAbstract, applyOriginalAbstract, retainSourceWarning } from './paper-details.js';
+import { newAppraisal, appraisalFields, basisLabels, reflectionFromAppraisal, appraisalMarkdown } from './appraisal.js';
+import { WorkspaceSync } from './sync.js';
+import { TrialWorkspaceSync } from './trial.js';
+import { validateWorkspace, emptyWorkspace, hasRecords } from './workspace-data.js';
+import { searchPapers, externalResearchLinks, doiURL, citation, toRIS, defaultFilters } from './research.js';
+import { resources, questions, teachingTopics } from './content.js';
+
+const icons = {
+  home: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  research: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',
+  learn: '<path d="m2 8 10-5 10 5-10 5L2 8Z"/><path d="M6 10v7c4 3 8 3 12 0v-7M22 8v8"/>',
+  practice: '<rect x="3" y="6" width="18" height="15" rx="2"/><path d="M8 6V3h8v3m-4 5v6m-3-3h6"/>',
+  cpd: '<path d="M8 3H5a2 2 0 0 0-2 2v15a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V5a2 2 0 0 0-2-2h-3"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="m8 13 3 3 5-6"/>',
+  fcp: '<path d="M12 3 3 7v5c0 5 9 9 9 9s9-4 9-9V7l-9-4Z"/><path d="m8 12 3 3 5-6"/>',
+  library: '<path d="M6 3h12v19l-6-4-6 4V3Z"/>',
+  book: '<path d="M12 5c-3-2-7-2-10-1v15c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1Zm0 0v15"/>',
+  anatomy: '<circle cx="12" cy="4" r="2"/><path d="M8 9h8m-4-3v8m-4 7 4-7 4 7M8 9l-3 5m11-5 3 5"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6m10-6v6M3 11h18"/>',
+  check: '<path d="m5 12 4 4L19 6"/>',
+  download: '<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',
+  plus: '<path d="M12 4v16M4 12h16"/>',
+};
+const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || icons.book}</svg>`;
+const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const main = document.querySelector('main');
+const dialog = document.querySelector('dialog');
+let guideHiddenForVisit=null;
+let readingSettings = {...readingDefaults};
+try { readingSettings = loadReading(localStorage); } catch {}
+applyReading(readingSettings,document.documentElement);
+let workspaceQuery = '', workspaceType = 'all', workspaceMatches = [], workspaceFocus = null;
+const KEY = 'physiosidekick.workspace.v1';
+let storageFailed = false;
+let legacyWorkspace = null;
+try {
+  const stored = JSON.parse(localStorage.getItem(KEY));
+  if (stored) legacyWorkspace = validateWorkspace(stored);
+} catch { storageFailed = true; }
+let workspace = emptyWorkspace();
+let sync;
+let route = location.hash.slice(1) || 'home';
+let paperMap = new Map(workspace.saved.map(p => [p.id, p]));
+let workspaceEpoch = 0;
+const navigationDiagnostics = createNavigationDiagnostics();
+let paperReturn = { route:'research', id:'', scrollY:0 };
+let paperLookup = null;
+let filters = { ...defaultFilters };
+let searchState = { term: '', papers: [], total: 0, nextCursor: '*', error: '', searched: false, loading: false };
+let controller;
+let requestNumber = 0;
+const abstractRequests = new Map();
+const abstractErrors = new Map();
+let anatomyWorkbenchCleanup=null;
+let anatomySystem='skeleton', anatomyGuideId='', anatomySide='all';
+let anatomyViewer=null, anatomyReady=false, anatomyTerm='', anatomyRegion='', anatomySelected=null, anatomyLoadVersion=0;
+let learnTab = 'units';
+let learningTabsCleanup=null;
+let quizIndex = 0;
+let quizAnswered = false;
+let libraryFilter = '';
+let cpdFormOpen = false;
+let reflectionEditing = null;
+let portfolioFilters = { from:'', to:'', kind:'', term:'', followUp:'' };
+let reflectionDraft = null;
+let activeAppraisal = null;
+let activeTeaching = null;
+let activeStudy = null;
+let studyFilters = {setId:null,term:'',rating:'all'};
+let learningDownloadURL = null;
+let studyPractice = null;
+let studyDraft = null;
+let toastTimer;
+let portfolioDownloadURL = null;
+let portfolioExportBusy = false;
+const nav = [['home', 'Overview'], ['research', 'Research'], ['learn', 'Learn & anatomy'], ['practice', 'Practice resources'], ['cpd', 'My CPD'], ['fcp', 'FCP workspace'], ['library', 'Saved papers']];
+function persist() {
+  if (!sync?.account) { toast('Connect to your account before saving.'); return false; }
+  return sync.queue(workspace);
+}
+function toast(message) {
+  clearTimeout(toastTimer); const el = document.querySelector('#toast'); el.textContent = message; el.classList.add('toast-show');
+  toastTimer = setTimeout(() => el.classList.remove('toast-show'), 4500);
+}
+let dialogReturnFocus = null;
+function openDialog(html, opener = null) { if (!dialog.open) dialogReturnFocus = opener || document.activeElement; if(learningDownloadURL){URL.revokeObjectURL(learningDownloadURL);learningDownloadURL=null;} dialog.dataset.paperId = ''; document.querySelector('#dialog-content').innerHTML = `<div class="dialog-body">${html}</div>`; if (!dialog.open) dialog.showModal(); const heading=dialog.querySelector('#dialog-title'); if(heading){heading.tabIndex=-1;heading.focus();} }
+function navigate(next) { if (location.hash === `#${next}`) render(); else location.hash = next; }
+function updateNav() {
+  document.querySelector('#desktop-nav').innerHTML = nav.map(([id, label]) => `<a href="#${id}" class="nav-item ${route === id ? 'active' : ''}" ${route === id ? 'aria-current="page"' : ''}>${icon(id)}<span>${label}</span>${id === 'fcp' ? '<span class="premium">PREVIEW</span>' : ''}${id === 'library' ? `<span class="count">${workspace.saved.length}</span>` : ''}</a>`).join('');
+  const mobile = [['home', 'Home'], ['research', 'Research'], ['learn', 'Learn'], ['cpd', 'CPD'], ['fcp', 'FCP']];
+  document.querySelector('#mobile-nav').innerHTML = mobile.map(([id, label]) => `<a href="#${id}" class="${route === id ? 'active' : ''}" ${route === id ? 'aria-current="page"' : ''}>${icon(id)}<span>${label}</span></a>`).join('');
+  document.querySelector('#breadcrumb').textContent = nav.find(([id]) => route === id)?.[1] || (route === 'paper' ? 'Paper details' : route === 'appraisal' ? 'Paper appraisal' : route === 'teaching' ? 'Teaching session' : route === 'study' ? 'My revision' : route === 'workspace-search' ? 'Search workspace' : 'Overview');
+}
+function intro(eyebrow, title, description, action = '') {
+  return `<div class="page-intro"><span class="eyebrow">${eyebrow}</span><div class="title-row"><h1>${title}</h1>${action}</div><p>${description}</p></div>`;
+}
+function searchForm(id, value = '', hero = false) {
+  return `<form id="${id}" class="${hero ? '' : 'searchbox research-search'}">${hero ? '<div class="searchbox">' : ''}${icon('research')}<input type="search" name="topic" aria-label="Search research papers" placeholder="${hero ? 'What are you curious about?' : 'Topic, author or DOI…'}" value="${esc(value)}" maxlength="250" ${hero ? 'required' : ''}><button class="button ${hero ? 'light' : ''}" type="submit">Search</button>${hero ? '</div>' : ''}</form>`;
+}
+function workspaceSearchPage() {
+  main.innerHTML = `${intro('FIND WHAT YOU KEPT', 'Search your workspace.', 'Find your saved papers, notes, appraisals, reflections, teaching sessions and revision cards.')}<form id="workspace-search-form" class="card"><div class="form-row"><div class="field"><label for="workspace-query">Search saved content</label><input id="workspace-query" type="search" maxlength="250" value="${esc(workspaceQuery)}" placeholder="A topic, note, author, DOI or PMID"></div><div class="field"><label for="workspace-type">Record type</label><select id="workspace-type">${Object.entries(workspaceTypes).map(([key,label]) => `<option value="${key}" ${workspaceType === key ? 'selected' : ''}>${label}</option>`).join('')}</select></div></div><button class="button" type="submit">Search my records</button></form><div class="notice">This searches the workspace loaded on this device. Use Refresh from account to load another device’s latest saves. To discover new publications, open Research.</div><section id="workspace-matches" aria-label="Workspace search results" aria-live="polite"></section>`;
+  document.querySelector('#workspace-search-form').onsubmit = e => { e.preventDefault(); workspaceQuery = document.querySelector('#workspace-query').value; workspaceType = document.querySelector('#workspace-type').value; renderWorkspaceMatches(); };
+  renderWorkspaceMatches();
+}
+function renderWorkspaceMatches() {
+  const area = document.querySelector('#workspace-matches');
+  if (!sync?.account) { area.innerHTML = '<p>Connect to your account to search saved records.</p>'; return; }
+  if (!workspaceQuery.trim()) { area.innerHTML = '<div class="empty"><h2>What are you looking for?</h2><p>Search words from a title, a personal note or a learning activity.</p></div>'; return; }
+  let data;
+  try { data = searchWorkspace(workspace,workspaceQuery,{type:workspaceType}); } catch(e) { area.innerHTML = `<div class="notice error">${esc(e.message)}</div>`; return; }
+  workspaceMatches = data.results;
+  area.innerHTML = `<p class="subtle" style="margin-top:20px">${data.total} matching ${data.total === 1 ? 'record' : 'records'}${data.total > data.results.length ? ` · Showing ${data.results.length}; narrow your words or record type to find more` : ''}</p>${data.results.length ? `<div class="paper-list">${data.results.map((result,index) => `<article class="card"><span class="badge">${esc(workspaceTypes[result.type])}</span><h2>${esc(result.title)}</h2><p class="subtle">${esc(result.meta)}</p><p>${esc(result.snippet)}</p><button class="button secondary" data-open-workspace-result="${index}" aria-label="Open ${esc(result.title)}">Open matching record</button></article>`).join('')}</div>` : '<div class="empty"><h2>No saved records match</h2><p>Try fewer words or choose Everything. New publication searches are in Research.</p></div>'}`;
+  area.onclick = e => { const button = e.target.closest('[data-open-workspace-result]'); if (button) openWorkspaceResult(workspaceMatches[Number(button.dataset.openWorkspaceResult)]); };
+}
+function openWorkspaceResult(result) {
+  if (!result) return;
+  if (studyDraft?.dirty) { activeStudy = studyDraft.setId; navigate('study'); toast('Save or cancel the current revision card first.'); return; }
+  if (cpdFormOpen && reflectionDraft) { navigate('cpd'); toast('Save or cancel the current reflection first.'); return; }
+  if (result.type === 'paper') { paperDetail(result.id); return; }
+  if (result.type === 'appraisal') { activeAppraisal = result.id; navigate('appraisal'); return; }
+  if (result.type === 'reflection') { portfolioFilters = {from:'',to:'',kind:'',term:'',followUp:''}; workspaceFocus = {selector:`[data-reflection="${result.id}"]`}; navigate('cpd'); return; }
+  if (result.type === 'teaching') { activeTeaching = result.id; navigate('teaching'); return; }
+  if (result.type === 'revision') { activeStudy = result.id; studyPractice = null; studyDraft = null; workspaceFocus = {selector:`[data-study-card="${result.childId}"]`}; navigate('study'); }
+}
+function applyWorkspaceFocus() {
+  if (!workspaceFocus) return;
+  const target = document.querySelector(workspaceFocus.selector); workspaceFocus = null;
+  if (!target) return;
+  target.setAttribute('tabindex','-1'); target.classList.add('workspace-found'); target.focus({preventScroll:true}); target.scrollIntoView({block:'start',behavior:'instant'});
+  setTimeout(() => target.classList.remove('workspace-found'),4000);
+}
+function readingAndInstall() {
+  const installed = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  openDialog(`<span class="eyebrow">MAKE IT COMFORTABLE</span><h2 id="dialog-title">Reading & iPhone setup</h2><form id="reading-form"><div class="field"><label for="reading-size">Text size</label><select id="reading-size" name="size"><option value="standard">Standard</option><option value="larger">Larger · 112.5%</option><option value="largest">Largest · 125%</option></select></div><div class="field"><label for="reading-spacing">Text spacing</label><select id="reading-spacing" name="spacing"><option value="standard">Standard</option><option value="comfortable">More space between lines and words</option></select></div><div class="field"><label for="reading-motion">Motion</label><select id="reading-motion" name="motion"><option value="system">Follow device preference</option><option value="reduced">Reduce motion</option></select></div><p id="reading-save-status" role="status">Reading preferences apply to this browser or Home Screen app on this device.</p><button type="button" class="text-button" id="reset-reading">Reset reading preferences</button></form><section class="install-help" aria-labelledby="learn-tabs-help"><h3 id="learn-tabs-help">Find more Learn tabs</h3><p>On iPhone, the Learn tab row scrolls sideways. With VoiceOver off, swipe left or right across the row to reveal more tabs, including Anatomy and Research sources, then tap a tab to open it.</p></section><details class="voiceover-help" id="voiceover-help"><summary>Using VoiceOver on iPhone</summary><p>VoiceOver is your iPhone’s screen reader. Its gestures and voice are controlled by iOS. It does not need to be enabled to use text sizing here.</p><ol><li>Tap a title or control once and wait for its spoken name.</li><li>Double-tap anywhere on the screen to activate the selected item. You do not need to aim both taps at the text.</li><li>Swipe right or left with one finger to move between items.</li><li>Swipe up with three fingers together to scroll down one screen; swipe down with three fingers to scroll up.</li></ol><p>Paper titles open a full page. The paper heading is at the beginning; Back to research results is below the record. PubMed and full-text links open a separate website in another tab.</p><p>To turn VoiceOver on or off, ask Siri, or use iPhone Settings → Accessibility → VoiceOver. Keep it enabled if you rely on it.</p><p>If opening a paper still sends you back, use Report a problem. Its locally prepared report includes the release and recent page/control sequence, without adding your searches, paper titles or learning notes. Nothing is submitted automatically.</p><p><a href="https://support.apple.com/en-gb/guide/iphone/iph3e2e2281/ios" target="_blank" rel="noopener noreferrer">Apple’s VoiceOver gesture guide</a></p></details><section class="install-help"><img src="/icon-180.png" width="72" height="72" alt="PhysioSidekick Home Screen icon"><h3>Keep PhysioSidekick on your iPhone</h3>${installed ? '<p>This window is already running in Home Screen app mode.</p>' : '<ol><li>Open PhysioSidekick in Safari. Sign in to use account saving.</li><li>Open Safari’s Share menu. If needed, use More or View More to see the available actions.</li><li>Choose Add to Home Screen and turn on Open as Web App if shown.</li><li>Tap Add, then open the PhysioSidekick icon from your Home Screen.</li></ol>'}<p>This is the web app, not an App Store installation. An internet connection is needed for sign-in, account saves and live research. You may need to sign in again when first opening the Home Screen version; use the same account to load your saved workspace.</p><p><a href="https://support.apple.com/en-gb/guide/iphone/iphea86e5236/27/ios/27" target="_blank" rel="noopener noreferrer">Apple’s Home Screen instructions</a></p></section>`);
+  const form = document.querySelector('#reading-form');
+  const fill = () => { for (const [key,value] of Object.entries(readingSettings)) form.elements[key].value = value; };
+  const save = () => {
+    readingSettings = applyReading(Object.fromEntries(new FormData(form)),document.documentElement);
+    let stored = false; try { stored = saveReading(readingSettings,localStorage); } catch { /* Device storage may be disabled. */ }
+    document.querySelector('#reading-save-status').textContent = stored ? 'Reading preferences saved on this device.' : 'Preferences applied for this visit. This browser could not save them.';
+  };
+  fill(); form.onchange = save; form.onsubmit = e => e.preventDefault();
+  document.querySelector('#reset-reading').onclick = () => { readingSettings = {...readingDefaults}; fill(); save(); };
+}
+
+let versionReviewDraft = {device:'Not specified',notes:''};
+function betaReadiness() {
+  openDialog(`<span class="eyebrow">PRODUCT REVIEW</span><h2 id="dialog-title">Review this version</h2><p>App release <strong>${esc(appRelease)}</strong>. Review the connected experience in one pass, then keep one set of notes.</p><p>The research, learning, appraisal, CPD and teaching workflows are available to review. Comprehensive anatomy and independent content approval remain open; the current models and supplied content show their limits.</p><ol class="guide-steps">${versionReviewSteps.map(step=>`<li><h3>${esc(step.title)}</h3><p>${esc(step.detail)}</p><a class="button secondary" data-review-route="${step.route}" href="#${step.route}" ${step.anatomy?'id="review-anatomy"':''}>${step.anatomy?'Open anatomy':step.route==='appraisal'?'Open appraisals':step.route==='cpd'?'Open My CPD':step.route==='fcp'?'Open FCP':'Open '+step.route}</a></li>`).join('')}</ol><form id="version-review-form"><h3>Your review notes</h3><p class="subtle">Notes remain in this visit while you move between screens. Download them before closing/reloading the app. Nothing is submitted automatically; leave out patient information.</p><div class="field"><label for="version-review-device">Review device</label><select id="version-review-device">${['Not specified','iPhone or iPad','Mac','Other'].map(value=>`<option ${versionReviewDraft.device===value?'selected':''}>${value}</option>`).join('')}</select></div><div class="field"><label for="version-review-notes">What works, what needs changing, and anything missing</label><textarea id="version-review-notes" maxlength="8000" rows="8">${esc(versionReviewDraft.notes)}</textarea></div><p id="version-review-status" role="status"></p><button class="button" type="submit">Download review notes (.txt)</button></form><details class="readiness-list"><summary>Detailed V1 completion criteria</summary><p>Scope baseline ${esc(readinessReviewed)}. Intended audience: ${esc(v1Audience)}. Implementation, developer checks and independent review remain separate.</p>${v1Criteria.map(item=>`<section><span class="eyebrow">${item.id}</span><h3>${esc(item.title)}</h3><strong>${esc(item.state)}</strong><p><b>Finished when:</b> ${esc(item.doneWhen)}</p></section>`).join('')}<p>The current responsive web/Home Screen app is the implementation route. Native Apple signing, TestFlight and App Store submission remain a separate distribution gate.</p></details><div class="button-row"><button class="button secondary" id="readiness-report">Report a specific problem</button></div>`);
+  const form=document.querySelector('#version-review-form');
+  const capture=()=>{versionReviewDraft={device:document.querySelector('#version-review-device').value,notes:document.querySelector('#version-review-notes').value};};
+  form.oninput=capture;form.onchange=capture;
+  form.onsubmit=e=>{e.preventDefault();capture();try{download(`physiosidekick-review-${appRelease}.txt`,buildVersionReview(versionReviewDraft),'text/plain');document.querySelector('#version-review-status').textContent='Review notes prepared for download. They have not been sent.';}catch(error){document.querySelector('#version-review-status').textContent=error.message;}};
+  document.querySelectorAll('[data-review-route]').forEach(link=>link.onclick=e=>{e.preventDefault();if(link.id==='review-anatomy')learnTab='anatomy';dialog.close();navigate(link.dataset.reviewRoute);});
+  document.querySelector('#readiness-report').onclick=problemReport;
+}
+function gettingStarted() {
+  const steps=guideProgress(workspace);
+  openDialog(`<span class="eyebrow">START HERE</span><h2 id="dialog-title">Make PhysioSidekick useful to you.</h2><p>Start with a question, follow a real source, then keep your own learning record.</p><ol class="guide-steps">${steps.map(step=>`<li><h3>${esc(step.title)}</h3><p>${esc(step.detail)}</p><a class="button secondary" href="#${step.route}">Open ${step.route==='appraisal'?'paper appraisals':step.route==='cpd'?'My CPD':'Research'}</a></li>`).join('')}</ol><h3>Keep your work safe</h3>${sync?.mode === 'trial' ? '<p>Trial records stay in this browser tab. Export a workspace backup before closing it. They do not sync or upload to an account.</p>' : ''}<p>For account work, wait for “Account saved” before switching devices. On another device, use the same account and choose Refresh from account. If two versions conflict, review recovery options before combining.</p><p>Use Your data & privacy to export a backup. Your progress here records saved items, not evidence of reading, competence or accredited CPD. Keep identifiable patient information out of notes and reports.</p><div class="button-row"><button class="button secondary" id="guide-reading">Reading & iPhone setup</button><button class="text-button" id="guide-privacy">Backups & privacy</button><button class="text-button" id="show-guide-card">Show guide on Overview</button></div>`);
+  document.querySelector('#guide-reading').onclick=readingAndInstall;
+  document.querySelector('#guide-privacy').onclick=privacy;
+  document.querySelector('#show-guide-card').onclick=()=>{guideHiddenForVisit=false;let ok=false;try{ok=setGuideHidden(localStorage,false);}catch{}dialog.close();navigate('home');toast(ok?'Getting-started guide restored.':'Guide shown for this visit.');};
+}
+function guideCard() {
+  if(guideHiddenForVisit)return '';
+  if(guideHiddenForVisit===null)try {if(guideHidden(localStorage))return '';}catch{}
+  const steps=guideProgress(workspace),done=steps.filter(step=>step.done).length;
+  return `<section class="card start-guide" aria-labelledby="guide-heading"><div class="section-heading"><h2 id="guide-heading">Your first useful steps</h2><button class="text-button" id="hide-guide">Hide guide</button></div><p>${done} of 3 saved-record steps completed. This is a setup guide, not a reading or competency score.</p><ol class="guide-steps">${steps.map(step=>`<li><strong>${step.done?'Saved record present · ':''}${esc(step.title)}</strong><p>${esc(step.detail)}</p></li>`).join('')}</ol><button class="button secondary" data-start-guide>Open getting-started guide</button></section>`;
+}
+let problemReportDraft={category:'research',device:'Not specified',description:'',expected:''};
+function problemReport() {
+  openDialog(`<span class="eyebrow">HELP IMPROVE YOUR SIDEKICK</span><h2 id="dialog-title">Report a problem</h2><p>Create a report to copy into this chat or share with your tester. Reports are prepared on this device; nothing is sent automatically. Draft text stays when you close and reopen this window during the current workspace visit; reloading clears it.</p><p class="subtle">Do not include patient information, passwords or private account details. The report adds the app release, page name, saving status, whether changes are pending and the last 20 page/control events from this visit. Searches, paper titles, URLs, learning notes and account identity are excluded from that automatic context.</p><form id="problem-form"><div class="field"><label for="problem-area">Problem area</label><select id="problem-area" name="category">${Object.entries(reportCategories).map(([value,label])=>`<option value="${value}">${esc(label)}</option>`).join('')}</select></div><div class="field"><label for="problem-device">Device (optional)</label><select id="problem-device" name="device">${['Not specified','iPhone or iPad','Mac','Other'].map(value=>`<option>${value}</option>`).join('')}</select></div><div class="field"><label for="problem-description">What happened? Include the steps to repeat it.</label><textarea id="problem-description" name="description" required minlength="10" maxlength="2000"></textarea></div><div class="field"><label for="problem-expected">What did you expect? (optional)</label><textarea id="problem-expected" name="expected" maxlength="1000"></textarea></div><p id="problem-status" role="status"></p><button class="button" type="submit">Preview report</button></form><section id="problem-preview" hidden><h3>Review before sharing</h3><div class="field"><label for="problem-text">Report preview</label><textarea id="problem-text" rows="12" readonly></textarea></div><div class="button-row"><button class="button secondary" id="copy-problem">Copy report</button><button class="button secondary" id="download-problem">Download report (.txt)</button></div><p class="subtle">The report has not been submitted. Paste the copied text into this chat when you want me to investigate.</p></section>`);
+  let report='';const form=document.querySelector('#problem-form'),status=document.querySelector('#problem-status');
+  for(const [key,value]of Object.entries(problemReportDraft)){const field=form.querySelector(`[name="${key}"]`);if(field)field.value=value;}
+  const captureReport=()=>{problemReportDraft=Object.fromEntries(new FormData(form));report='';document.querySelector('#problem-preview').hidden=true;status.textContent='Draft kept for this visit. Preview again to update the report.';};
+  form.oninput=captureReport;form.onchange=captureReport;
+  form.onsubmit=e=>{e.preventDefault();try{problemReportDraft=Object.fromEntries(new FormData(form));report=buildProblemReport(problemReportDraft,{route,navigation:navigationDiagnostics.snapshot(),mode:sync?.mode || (sync?.account ? 'account' : 'browse'),syncStatus:sync?.status,pending:!!(sync?.pending||sync?.invalidPending)});document.querySelector('#problem-text').value=report;document.querySelector('#problem-preview').hidden=false;status.textContent='Preview ready. Nothing has been sent.';document.querySelector('#problem-text').focus();}catch(error){status.textContent=error.message;}};
+  document.querySelector('#copy-problem').onclick=async()=>{if(!report)return;try{await navigator.clipboard.writeText(report);status.textContent='Report copied. It has not been sent.';}catch{const text=document.querySelector('#problem-text');text.focus();text.select();status.textContent='Select and copy the preview text. Nothing has been sent.';}};
+  document.querySelector('#download-problem').onclick=()=>{if(report)download('physiosidekick-problem-report.txt',report,'text/plain');};
+}
+function home() {
+  const followUps=followUpSummary(workspace.reflections);
+  const minutes = workspace.reflections.reduce((sum, r) => sum + Number(r.minutes || 0), 0);
+  main.innerHTML = `${intro('YOUR KNOWLEDGE, CONNECTED', 'A little curiosity. A lot of possibility.', 'Your space to learn, explore the evidence and grow as a physio.', `<span class="date-pill">${icon('calendar')}${new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long' }).format(new Date())}</span>`)}
+<div class="workspace-quick-actions"><button class="button secondary" id="home-review-version">Review this version</button><button class="button secondary" data-workspace-search>Search my saved workspace</button><button class="text-button" data-reading-setup>Reading & iPhone setup</button></div>
+  ${guideCard()}<section class="card learning-followups"><h2>Your learning follow-ups</h2><p>${followUps.due} review dates due today or earlier · ${followUps.upcoming} future dates</p><button class="button secondary" id="home-due-followups">View due review dates</button><p class="subtle">Dates you entered for reviewing your learning. No notification is scheduled and a due date does not establish whether an action is complete.</p></section><section class="hero" aria-labelledby="hero-title"><div><span class="eyebrow">START WITH A QUESTION</span><h2 id="hero-title">Good practice starts<br>with better questions.</h2><p>Find real research. Follow the original paper. Build your own understanding.</p>${searchForm('home-search', '', true)}<div class="suggestions"><span>Explore a topic</span>${['Rotator cuff exercise', 'Knee osteoarthritis', 'Low back pain'].map(t => `<button data-search="${t}">${t}</button>`).join('')}</div></div><div class="hero-icon">${icon('book')}</div></section>
+  <div class="section-heading"><h2>Make it your sidekick</h2><span class="subtle">From study to practice</span></div>
+  <section class="cards" aria-label="Explore your workspace">
+  <a href="#learn" class="card feature-card"><span class="tile-icon">${icon('learn')}</span><h3>Build your understanding</h3><p>Critical appraisal, learning checks and anatomy resources.</p><span class="mini-label">LEARN SOMETHING NEW</span></a>
+  <a href="#library" class="card feature-card"><span class="tile-icon blue">${icon('library')}</span><h3>A library that’s yours</h3><p>Keep papers, collections and your own notes together.</p><span class="mini-label">${workspace.saved.length} SAVED ${workspace.saved.length === 1 ? 'PAPER' : 'PAPERS'}</span></a>
+  <a href="#cpd" class="card feature-card"><span class="tile-icon gold">${icon('cpd')}</span><h3>Make learning count</h3><p>Capture a reflection and decide what you’ll do next.</p><span class="mini-label">${workspace.reflections.length} REFLECTIONS · ${minutes} MIN LOGGED</span></a></section>
+  <div class="two-col"><section><div class="section-heading"><h2>Follow your curiosity</h2><a href="#research" class="text-button">Explore research</a></div><div class="card topic-list">${[['Shoulder & upper limb', 'Rotator cuff rehabilitation', 'Rotator cuff exercise'], ['Knee & lower limb', 'Exercise and osteoarthritis', 'Knee osteoarthritis exercise'], ['Spine & pain', 'Understanding low back pain', 'Low back pain physiotherapy']].map(([title, sub, query]) => `<div class="topic-item"><span class="topic-symbol">${icon('research')}</span><div><strong>${title}</strong><small>${sub}</small></div><button class="text-button" data-search="${query}">Find papers</button></div>`).join('')}</div></section>
+  <section class="card fcp-card" style="margin-top:30px"><span class="eyebrow">FOR FIRST CONTACT PHYSIOS</span><h3>A space for your<br>next teaching session.</h3><p>Turn a learning question into a structured team discussion.</p><a href="#fcp" class="button secondary">Explore the FCP workspace</a></section></div>
+  ${storageFailed ? '<div class="notice error">Browser storage could not be read. Use “Your data & privacy” to export changes before closing this page.</div>' : ''}`;
+  document.querySelector('#hide-guide')?.addEventListener('click',()=>{guideHiddenForVisit=true;let ok=false;try{ok=setGuideHidden(localStorage,true);}catch{}document.querySelector('.start-guide')?.remove();if(!ok)toast('Guide hidden for this visit.');});
+  document.querySelector('#home-review-version').onclick=betaReadiness;
+  document.querySelector('#home-due-followups').onclick=()=>{portfolioFilters={from:'',to:'',kind:'',term:'',followUp:'',review:'due'};navigate('cpd');};
+  document.querySelector('#home-search').addEventListener('submit', e => { e.preventDefault(); startSearch(new FormData(e.currentTarget).get('topic')); });
+}
+function research() {
+  main.innerHTML = `${intro('FOLLOW THE SOURCE', 'Real papers. Clear starting points.', 'Find a paper by topic, title, author, DOI or PMID. Follow the source and decide what the evidence means.')}${searchForm('research-search', searchState.term)}
+  <details class="search-options" ${filters.author || filters.match !== 'all' || filters.field !== 'titleAbstract' ? 'open' : ''}><summary>Search options · words, phrases & authors</summary><div class="search-option-fields"><div class="field"><label for="match-mode">Match</label><select id="match-mode"><option value="all">All words</option><option value="any">Any word</option><option value="phrase">Exact phrase</option></select></div><div class="field"><label for="search-field">Search within</label><select id="search-field"><option value="titleAbstract">Title & abstract</option><option value="title">Title only</option><option value="all">All indexed fields</option></select></div><div class="field"><label for="author-filter">Author (optional)</label><input id="author-filter" maxlength="100" value="${esc(filters.author)}" placeholder="e.g. Hopewell S"></div></div><p class="subtle">Paste a DOI, PMID or PubMed link for an exact paper lookup. Discovery filters are ignored for exact lookups. Use “Search” after entering an author.</p></details>
+  <div id="saved-searches"></div>
+  <div class="research-layout"><aside class="card filter-panel" aria-label="Research filters"><h2>Refine your search</h2>
+  <div class="field"><label for="study-type">Publication type</label><select id="study-type"><option value="all">All publications</option><option value="review">Systematic reviews</option><option value="trial">Randomised trials</option></select></div>
+  <div class="field"><label for="year-filter">Publication date</label><select id="year-filter"><option value="">Any date</option><option value="5">Last 5 years</option><option value="2">Last 2 years</option></select></div>
+  <div class="field"><label for="sort-filter">Sort results</label><select id="sort-filter"><option value="relevance">Relevance</option><option value="newest">Newest first</option></select></div>
+  <label class="check-field"><input type="checkbox" id="open-access"> Open access only</label><button class="text-button" id="reset-filters">Reset search options</button><p class="subtle">Filters use indexed publication/access labels and can miss relevant papers. Try All publications or an exact PMID/DOI if a known paper is missing. Labels do not establish study quality.</p></aside><section aria-label="Search results"><p id="results-announcement" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></p><div id="results"></div></section></div>`;
+  [['study-type', 'type'], ['year-filter', 'years'], ['sort-filter', 'sort'], ['match-mode', 'match'], ['search-field', 'field']].forEach(([id, key]) => {
+    document.getElementById(id).value = filters[key];
+    document.getElementById(id).addEventListener('change', e => { filters[key] = e.target.value; if (searchState.searched) runSearch(document.querySelector('#research-search input').value); });
+  });
+  document.querySelector('#author-filter').addEventListener('input', e => { filters.author = e.target.value; });
+  document.querySelector('#author-filter').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); runSearch(document.querySelector('#research-search input').value); } });
+  document.querySelector('#open-access').checked = filters.openAccess;
+  document.querySelector('#open-access').addEventListener('change', e => { filters.openAccess = e.target.checked; if (searchState.searched) runSearch(document.querySelector('#research-search input').value); });
+  document.querySelector('#research-search').addEventListener('submit', e => { e.preventDefault(); runSearch(String(new FormData(e.currentTarget).get('topic'))); });
+  document.querySelector('#reset-filters').onclick = () => { const term = document.querySelector('#research-search input').value; filters = { ...defaultFilters }; searchState.term = term; research(); if (searchState.searched) runSearch(term); };
+  renderSavedSearches(); renderResults();
+}
+function renderSavedSearches() {
+  const area = document.querySelector('#saved-searches'); if (!area) return;
+  area.innerHTML = workspace.searches.length ? `<div class="saved-search-bar"><span class="field-label">Your saved searches</span><div class="saved-search-list">${workspace.searches.map((s, i) => `<span class="saved-search-chip"><button data-run-search="${i}" title="${esc(searchDescription(s.filters))}">${esc(s.term || s.filters.author)}</button><button data-remove-search="${i}" aria-label="Remove saved search: ${esc(s.term || s.filters.author)}">×</button></span>`).join('')}</div></div>` : '';
+}
+function searchDescription(f) {
+  return `${f.match === 'phrase' ? 'Exact phrase' : f.match === 'any' ? 'Any word' : 'All words'} · ${f.field === 'title' ? 'title only' : f.field === 'all' ? 'all indexed fields' : 'title & abstract'}${f.author ? ` · author: ${f.author}` : ''}${f.type !== 'all' ? ` · ${f.type === 'review' ? 'systematic reviews' : 'randomised trials'}` : ''}${f.years ? ` · last ${f.years} years` : ''}${f.openAccess ? ' · open access' : ''}`;
+}
+function startSearch(term) { filters = { ...defaultFilters }; searchState.term = term; navigate('research'); if (route === 'research') research(); runSearch(term); }
+async function runSearch(term, more = false) {
+  term = term.trim();
+  controller?.abort(); controller = new AbortController(); const current = ++requestNumber;
+  const usedFilters = { ...(more ? searchState.usedFilters : filters) };
+  searchState = { ...searchState, term, loading: true, searched: true, error: '', failedMore: false, cancelled: false, usedFilters, ...(more ? {} : { papers: [], total: 0, nextCursor: '*', query: '', identifier: null, provider: '', note: '' }) };
+  if (route === 'research') { const input = document.querySelector('#research-search input'); if (input) input.value = term; renderResults(); }
+  try {
+    const data = await searchPapers(term, usedFilters, more ? searchState.nextCursor : '*', controller.signal);
+    if (current !== requestNumber) return;
+    const all = more ? [...searchState.papers, ...data.papers] : data.papers;
+    searchState = { ...searchState, papers: [...new Map(all.map(p => [p.id, p])).values()], total: data.total, nextCursor: data.papers.length ? data.nextCursor : null, loading: false, query: data.query, provider: data.provider, note: data.note, identifier: data.identifier, searchedAt: new Date().toISOString() };
+    data.papers.forEach(p => paperMap.set(p.id, p));
+  } catch (e) { if (current !== requestNumber || e.name === 'AbortError') return; searchState.loading = false; searchState.failedMore = more; searchState.error = e.message || 'Search failed. Please try again.'; }
+  if (route === 'research') renderResults();
+}
+function cancelSearch() {
+  if (!searchState.loading) return;
+  controller?.abort(); requestNumber++;
+  searchState = { ...searchState, loading: false, cancelled: true, error: '', failedMore: false };
+  renderResults();
+  document.querySelector('#research-search input')?.focus();
+}
+function renderResults() {
+  const el = document.querySelector('#results'); if (!el) return;
+  el.setAttribute('aria-busy',String(searchState.loading));
+  const announcement=document.querySelector('#results-announcement');if(announcement)announcement.textContent=!searchState.searched?'':searchState.loading?'Searching publication records.':searchState.cancelled?'Search stopped. Previously loaded papers are retained.':searchState.error?searchState.error:`${searchState.total.toLocaleString()} indexed ${searchState.total===1?'result':'results'}. ${searchState.papers.length} ${searchState.papers.length===1?'paper':'papers'} shown.`;
+  if (!searchState.searched) { el.innerHTML = `<div class="empty">${icon('research')}<h3>Your next discovery starts here</h3><p>Search a topic or paper title, or paste a DOI, PMID or PubMed link. Use search options to narrow the words and author.</p><button class="button secondary" data-search="Knee osteoarthritis exercise">Try knee osteoarthritis</button></div>`; return; }
+  const f = searchState.usedFilters || filters;
+  let sourceLink=''; try { sourceLink=externalResearchLinks(searchState.term,f).europePMC; } catch {}
+  if (searchState.loading && !searchState.papers.length) { el.innerHTML = `<div class="loading"><span class="spinner"></span>Searching real publication records…</div><button class="button secondary" id="cancel-search">Stop search</button><p class="subtle">The research index can be slow. ${sourceLink ? `<a href="${esc(sourceLink)}" target="_blank" rel="noopener noreferrer">Open the same search on Europe PMC</a> while this loads.` : ''}</p>`; document.querySelector('#cancel-search').onclick=cancelSearch; return; }
+  const exact = searchState.identifier;
+  el.innerHTML = `${searchState.cancelled ? '<div class="notice">Search stopped. Previously loaded papers are kept. No new result count was returned. <button class="text-button" id="resume-search">Search again</button></div>' : ''}${searchState.loading ? '<button class="button secondary" id="cancel-search">Stop search</button>' : ''}${searchState.error ? `<div class="notice error">${esc(searchState.error)} <button class="text-button" id="retry-search">Retry search</button>${sourceLink ? `<p><a class="button secondary" href="${esc(sourceLink)}" target="_blank" rel="noopener noreferrer">Open this search on Europe PMC</a></p><small>The same keywords and filters are preserved. This opens the research index directly.</small>` : ''}</div>` : ''}
+  ${exact ? `<div class="notice">Exact ${exact.kind} lookup: <strong>${esc(exact.value)}</strong>. Keyword, author, date, publication-type and access filters were ignored so they cannot hide this paper.</div>` : ''}
+  ${searchState.note ? `<div class="notice">${esc(searchState.note)}</div>` : ''}
+  ${searchState.query ? `<div class="result-toolbar"><strong>${searchState.total.toLocaleString()} indexed ${searchState.total === 1 ? 'result' : 'results'}</strong><span>${esc(searchState.provider || 'Europe PMC / PubMed')}<br>Relevance is not evidence quality</span></div>` : ''}
+  ${searchState.query ? `<div class="search-tools"><button class="button secondary" id="save-search">${icon('library')}Save this search</button><button class="text-button" id="export-search">Export search record</button></div><details class="query-details"><summary>How this search was run</summary><p>${exact ? `Exact ${exact.kind} lookup` : esc(searchDescription(f))}. Sorted by ${f.sort === 'newest' && !exact ? 'newest first' : 'relevance'}.</p><code>${esc(searchState.query)}</code><p>Run ${esc(new Date(searchState.searchedAt).toLocaleString('en-GB'))}. This is a discovery search, not a comprehensive systematic-review strategy.</p></details>` : ''}
+  ${!searchState.papers.length && !searchState.error && !searchState.cancelled ? `<div class="empty">${icon('research')}<h3>${exact ? 'No indexed record found for this identifier' : 'No matching papers found'}</h3><p>${exact ? 'Check the identifier and try PubMed directly. This does not prove that the paper does not exist.' : 'Try fewer words, “Any word”, all indexed fields or reset the filters.'}</p>${exact ? `<a class="button secondary" href="https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(exact.value)}" target="_blank" rel="noopener noreferrer">Check PubMed</a>` : '<button class="button secondary" id="broaden-search">Broaden this search</button>'}</div>` : ''}
+  <div class="paper-list">${searchState.papers.map(p => paperCard(p)).join('')}</div>
+  ${searchState.nextCursor && searchState.papers.length < searchState.total && searchState.papers.length ? `<button id="load-more" class="button secondary" style="margin-top:20px" ${searchState.loading ? 'disabled' : ''}>${searchState.loading ? 'Loading…' : 'Load more papers'}</button>` : ''}`;
+  document.querySelector('#cancel-search')?.addEventListener('click', cancelSearch);
+  document.querySelector('#resume-search')?.addEventListener('click', () => { filters = { ...searchState.usedFilters }; research(); runSearch(searchState.term); });
+  document.querySelector('#retry-search')?.addEventListener('click', () => { const more=searchState.failedMore; filters = { ...searchState.usedFilters }; research(); runSearch(searchState.term, more); });
+  document.querySelector('#load-more')?.addEventListener('click', () => runSearch(searchState.term, true));
+  document.querySelector('#broaden-search')?.addEventListener('click', () => { filters = { ...defaultFilters, match: 'any', field: 'all' }; research(); runSearch(searchState.term); });
+  document.querySelector('#save-search')?.addEventListener('click', () => {
+    const entry = { term: searchState.term, filters: { ...searchState.usedFilters }, savedAt: new Date().toISOString() };
+    if (workspace.searches.some(s => s.term === entry.term && JSON.stringify(s.filters) === JSON.stringify(entry.filters))) { toast('This search is already saved'); return; }
+    if (workspace.searches.length >= 20) { toast('You have 20 saved searches. Remove one before adding another.'); return; }
+    workspace.searches.unshift(entry); if (persist()) toast('Search added to your account workspace'); renderSavedSearches();
+  });
+  document.querySelector('#export-search')?.addEventListener('click', () => download('physiosidekick-search-record.txt', `PhysioSidekick research search\nSource: ${searchState.provider}\nRun: ${searchState.searchedAt}\nEntered search: ${searchState.term || '[author only]'}\nOptions: ${exact ? 'Exact identifier lookup; discovery filters ignored' : searchDescription(f)}\nQuery: ${searchState.query}\nSource note: ${searchState.note || 'None'}\nResults reported at search time: ${searchState.total}\n\nDiscovery search only; not a comprehensive systematic-review strategy.\n`, 'text/plain'));
+}
+function paperCard(p, savedView = false) {
+  const saved = workspace.saved.some(s => s.id === p.id);
+  const type = p.types?.find(t => /systematic review|meta-analysis|randomized controlled trial/i.test(t)) || p.types?.[0] || 'Indexed publication';
+  return `<article class="card paper-card" data-paper="${esc(p.id)}"><div class="paper-tags"><span class="badge neutral">Indexed: ${esc(type)}</span><span class="badge ${p.openAccess ? 'oa' : ''}">${p.fullText ? 'Free full-text link indexed' : p.openAccess ? 'Open access indexed · link unavailable' : 'Free access not confirmed'}</span>${p.retracted ? '<span class="badge" style="background:#ffe9e2;color:#a03f28">Retracted publication</span>' : ''}</div>
+  <h3><a class="paper-title" data-detail="${esc(p.id)}" data-paper-link href="#paper/${esc(p.pmid)}">${esc(p.title)}</a></h3><div class="paper-meta">${esc(p.authors || 'Authors not supplied')}<br>${esc(p.journal || 'Journal not supplied')} · ${esc(p.year || 'Date not supplied')}</div>
+  <p class="paper-abstract">${esc(p.abstract || (p.abstractStatus === 'notIndexed' ? 'No English abstract is indexed in the retrieved PubMed record. Open the original source for details.' : 'Abstract not loaded in these search results. Open the record to check the original indexed abstract.'))}</p>
+  <div class="paper-actions"><a class="text-button" data-detail="${esc(p.id)}" data-paper-link href="#paper/${esc(p.pmid)}">Read record</a><a href="${esc(p.recordURL)}" target="_blank" rel="noopener noreferrer">PubMed</a>${p.fullText ? `<a class="full-text-link" href="${esc(p.fullText)}" target="_blank" rel="noopener noreferrer">Read free full text</a>` : ''}${p.doi ? `<a href="${esc(doiURL(p.doi))}" target="_blank" rel="noopener noreferrer">Publisher / DOI</a>` : ''}<button class="save-button ${saved ? 'saved' : ''}" data-save="${esc(p.id)}" aria-label="${saved ? 'Remove saved paper' : 'Save paper'}: ${esc(p.title)}">${icon('library')}${saved ? 'Saved' : 'Save'}</button></div>
+  ${savedView ? `<div class="saved-extra"><div class="button-row"><button class="button secondary" data-appraise="${esc(p.id)}">${workspace.appraisals.some(a => a.paperId === p.id) ? 'Continue appraisal' : 'Appraise this paper'}</button></div><div class="saved-grid"><div class="field"><label for="collection-${p.pmid}">Collection</label><input id="collection-${p.pmid}" value="${esc(p.collection || '')}" data-collection="${esc(p.id)}" placeholder="e.g. Shoulder assignment" maxlength="80" list="collection-options"></div><div class="field"><label>Reference</label><button class="button secondary" data-copy="${esc(p.id)}">Copy citation</button></div></div><div class="field"><label for="note-${p.pmid}">Your notes</label><textarea id="note-${p.pmid}" data-note="${esc(p.id)}" maxlength="10000" placeholder="What did you learn? No identifiable patient information.">${esc(p.notes || '')}</textarea></div><button class="button secondary" data-save-notes="${esc(p.id)}">Save collection & notes</button></div>` : ''}</article>`;
+}
+function focusPaperHeading() {
+  const heading=document.querySelector('#paper-heading');if(!heading)return;
+  const pageDocument=heading.ownerDocument,viewLocation=location,expectedHash=location.hash;
+  const priorFocus=pageDocument.activeElement;
+  // Let layout and the accessibility tree settle before moving reading focus.
+  requestAnimationFrame(()=>{
+    if(route!=='paper'||viewLocation.hash!==expectedHash||!heading.isConnected||dialog.open)return;
+    const active=pageDocument.activeElement;
+    if(active!==priorFocus && active!==pageDocument.body && active!==main && active!==heading)return;
+    heading.focus({preventScroll:true});
+  });
+}
+function paperDetail(id) {
+  const match=/^MED:([1-9]\d{0,8})$/.exec(id);if(!match)return;
+  if(route!=='paper')paperReturn={route,id,scrollY:window.scrollY || 0};
+  if(dialog.open)dialog.close();navigate(`paper/${match[1]}`);
+}
+function paperPage() {
+  const pmid=/^#paper\/([1-9]\d{0,8})$/.exec(location.hash)?.[1];
+  const id=`MED:${pmid}`,p=workspace.saved.find(p=>p.id===id)||paperMap.get(id)||(paperLookup?.pmid===pmid?paperLookup.paper:null);
+  const returnRoute=['research','library','workspace-search'].includes(paperReturn.route)?paperReturn.route:'research';
+  const back=`<a class="button secondary" id="paper-back" href="#${returnRoute}">${returnRoute==='library'?'Back to saved papers':returnRoute==='workspace-search'?'Back to workspace results':'Back to research results'}</a>`;
+  if(!p){
+    const error=paperLookup?.pmid===pmid?paperLookup.error:'';
+    main.innerHTML=`<section class="card"><h1 id="paper-heading" tabindex="-1">Paper details</h1><p role="status">${error?esc(error):'Loading the original indexed record…'}</p>${error?'<button class="button secondary" id="retry-paper-record">Retry paper lookup</button>':''}<p><a href="https://pubmed.ncbi.nlm.nih.gov/${pmid}/" target="_blank" rel="noopener noreferrer">Open original PubMed record (new tab)</a></p></section><div class="button-row" style="margin-top:20px">${back}</div>`;
+    document.querySelector('#retry-paper-record')?.addEventListener('click',()=>{paperLookup=null;paperPage();});
+    if(!paperLookup || paperLookup.pmid!==pmid)loadPaperPage(pmid);
+    return;
+  }
+  paperMap.set(p.id,p);
+  const focusedAbstract=document.activeElement?.id==='paper-abstract-action';
+  main.innerHTML=`<article class="card paper-record" data-paper-record="${esc(id)}">${paperRecordContent(p)}</article><nav class="button-row" aria-label="Return from paper" style="margin-top:20px">${back}</nav>`;
+  if(focusedAbstract)document.querySelector('#paper-abstract-action')?.focus({preventScroll:true});
+}
+async function loadPaperPage(pmid){
+  paperLookup?.controller?.abort();const task={pmid,controller:new AbortController(),error:'',paper:null};paperLookup=task;
+  try{
+    const data=await searchPapers(pmid,{...defaultFilters},'*',task.controller.signal);
+    if(paperLookup!==task)return;
+    task.paper=data.papers.find(p=>p.pmid===pmid)||null;
+    if(!task.paper)throw new Error('No matching indexed record was returned. Retry or open the original PubMed record.');
+    if(route==='paper' && location.hash===`#paper/${pmid}`){paperMap.set(task.paper.id,task.paper);paperPage();focusPaperHeading();}
+  }catch(error){if(paperLookup!==task||error.name==='AbortError')return;task.error=error.message;if(route==='paper' && location.hash===`#paper/${pmid}`)paperPage();}
+}
+function paperRecordContent(p){
+  const id=p.id;
+  return `<span class="eyebrow">ORIGINAL PUBLICATION RECORD</span><h1 id="paper-heading" tabindex="-1">${esc(p.title)}</h1><p class="paper-meta">${esc(p.authors)}<br>${esc(p.journal)} · ${esc(p.year)}</p>
+  <div class="notice error" id="paper-source-warning" ${p.retracted?'':'hidden'}>This record is marked as a retracted publication. Investigate the retraction notice before using its findings.</div>
+  <div class="identifier">PMID: ${esc(p.pmid)}${p.doi ? `<br>DOI: ${esc(p.doi)}` : ''}</div><div class="button-row"><a class="button" href="${esc(p.recordURL)}" target="_blank" rel="noopener noreferrer">Open PubMed record (new tab)</a>${p.fullText ? `<a class="button secondary" href="${esc(p.fullText)}" target="_blank" rel="noopener noreferrer">Open free full text</a>` : p.doi ? `<a class="button secondary" href="${esc(doiURL(p.doi))}" target="_blank" rel="noopener noreferrer">Check publisher access</a>` : ''}</div>
+  <p class="subtle">PubMed and full-text links open a separate website in a new browser tab.</p><section class="access-panel"><h2>Get the full paper</h2>${p.fullText ? `<p>A free full-text link is listed by the index. The provider controls access and the version available.</p><div class="button-row">${(p.fullTextLinks?.length ? p.fullTextLinks : [{ url: p.fullText, style: 'full text', provider: 'Indexed source' }]).map(l => `<a class="button secondary" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.style === 'pdf' ? 'PDF' : l.style === 'html' ? 'Full text' : l.style)} · ${esc(l.provider.replaceAll('_', ' '))}</a>`).join('')}</div>` : `<p>A free full-text link is not confirmed here. That does not necessarily mean the paper is paywalled.</p><ol><li>Open the publisher/DOI or PubMed record and check its full-text links.</li><li>If asked to pay, try your university, NHS or employer library’s institutional sign-in.</li><li>Ask your library about document supply or an authorised author manuscript.</li></ol>`}</section><section id="paper-abstract-region" aria-labelledby="paper-abstract-heading">${paperAbstractContent(p)}</section>
+  <div class="button-row"><button class="button" data-appraise="${esc(p.id)}">Appraise this paper</button></div><details class="indexed-types"><summary>Indexed publication labels</summary><p>These labels are supplied by the research index. They can be incomplete and do not verify the study design or quality. Check the paper’s methods before classifying it yourself.</p><ul>${(p.types?.length ? p.types : ['No publication labels supplied']).map(type=>`<li>${esc(type)}</li>`).join('')}</ul></details><h2>Before applying the findings</h2><ul><li>Does the population and setting match your question?</li><li>How was the study designed, and what could bias its findings?</li><li>How large and uncertain are the effects, and were harms reported?</li><li>Have you read the full text, or only the abstract?</li></ul>
+  <div class="button-row"><button class="button secondary" data-save="${esc(p.id)}">${icon('library')}${workspace.saved.some(s => s.id === id) ? 'Remove from saved papers' : 'Save to my papers'}</button><button class="button secondary" data-copy="${esc(p.id)}">Copy citation</button></div><p class="subtle" style="margin-top:20px">Record retrieved ${esc(new Date(p.retrievedAt).toLocaleDateString('en-GB'))}. <a href="${esc(p.indexedURL)}" target="_blank" rel="noopener noreferrer">View Europe PMC record</a>. Bibliographic details may be updated by the source.</p>`;
+}
+function paperAbstractContent(p) {
+  const id=p.id;
+  return `<h2 id="paper-abstract-heading" tabindex="-1">Indexed abstract</h2><p id="paper-abstract-status" role="status" aria-live="polite" ${abstractErrors.has(id)?'class="notice error"':''}>${esc(abstractRequests.has(id)?'Loading the original PubMed abstract…':abstractErrors.get(id)||(p.abstractSource==='PubMed (NCBI)'?(p.abstractStatus==='notIndexed'?'PubMed returned no indexed English abstract.':'Original PubMed abstract loaded.') : ''))}</p><p class="abstract-full">${esc(p.abstract || (p.abstractStatus === 'notIndexed' ? 'No English abstract is indexed in the retrieved PubMed record. The paper may have other-language material; check its original record.' : 'An abstract was not supplied with these search results. You can check the original PubMed record below.'))}</p>${p.abstract && !p.abstractSource ? `<p class="subtle">This abstract has not been freshly checked against PubMed. <a href="${esc(p.indexedURL)}" target="_blank" rel="noopener noreferrer">Verify at Europe PMC</a> or check the original PubMed abstract below.</p>` : ''}${p.abstractSource ? `<p class="subtle">Abstract source: ${esc(p.abstractSource)} · Retrieved ${esc(new Date(p.abstractRetrievedAt).toLocaleString('en-GB'))}. <a href="${esc(p.recordURL)}" target="_blank" rel="noopener noreferrer">Verify at PubMed</a></p>${p.abstractCopyright ? `<p class="subtle">${esc(p.abstractCopyright)}</p>` : ''}` : ''}${!p.abstract || p.abstractSource !== 'PubMed (NCBI)' ? `<button class="button secondary" id="paper-abstract-action" data-load-abstract="${esc(id)}" ${abstractRequests.has(id) ? 'disabled' : ''}>${abstractRequests.has(id) ? 'Loading original abstract…' : p.abstractStatus === 'notIndexed' ? 'Recheck PubMed abstract' : p.abstract ? 'Check original PubMed abstract' : 'Load original PubMed abstract'}</button>` : ''}<div class="notice">This is publication metadata and an indexed abstract, not an AI summary or a quality assessment. Full text may contain important methods, results and limitations omitted here.</div>`;
+}
+function updatePaperAbstract(id) {
+  const region=document.querySelector('#paper-abstract-region');
+  if(route!=='paper'||location.hash!==`#paper/${id.slice(4)}`||!region)return;
+  const paper=workspace.saved.find(p=>p.id===id)||paperMap.get(id);if(!paper)return;
+  const heldFocus=region.contains(document.activeElement);
+  region.innerHTML=paperAbstractContent(paper);
+  const warning=document.querySelector('#paper-source-warning');if(warning)warning.hidden=!paper.retracted;
+  if(heldFocus){const action=document.querySelector('#paper-abstract-action');(action && !action.disabled?action:document.querySelector('#paper-abstract-heading'))?.focus({preventScroll:true});}
+}
+function updatePaperSaveControl() {
+  const button=document.querySelector('.paper-record [data-save]');if(!button)return;
+  const saved=workspace.saved.some(p=>p.id===button.dataset.save);
+  button.innerHTML=`${icon('library')}${saved?'Remove from saved papers':'Save to my papers'}`;
+}
+async function retrieveAbstract(id) {
+  const p = workspace.saved.find(p => p.id === id) || paperMap.get(id); if (!p || abstractRequests.has(id)) return;
+  abstractErrors.delete(id);
+  const epoch = workspaceEpoch;
+  const request = loadOriginalAbstract(p.pmid); abstractRequests.set(id, request);updatePaperAbstract(id);
+  try {
+    const record = await request;
+    if (workspaceEpoch !== epoch) return;
+    // Apply only abstract metadata to the latest saved paper, preserving notes edited while loading.
+    const latest = workspace.saved.find(paper => paper.id === id) || paperMap.get(id) || p;
+    const updated = applyOriginalAbstract(latest, record); paperMap.set(id, updated);
+    const saved = workspace.saved.find(paper => paper.id === id);
+    if (saved) Object.assign(saved, updated);
+    const warningChanged = retainSourceWarning(workspace, updated);
+    if (saved || warningChanged) persist();
+    searchState.papers = searchState.papers.map(paper => paper.id === id ? applyOriginalAbstract(paper, record) : paper);
+  } catch (error) { abstractErrors.set(id, error.message); }
+  finally {
+    abstractRequests.delete(id);
+    if (route === 'paper' && location.hash === `#paper/${p.pmid}`) updatePaperAbstract(id);
+  }
+}
+function toggleSave(id) {
+  const p = paperMap.get(id); if (!p) return;
+  const at = workspace.saved.findIndex(s => s.id === id);
+  if (at >= 0) {
+    retainSourceWarning(workspace, workspace.saved[at]);
+    const old = workspace.saved[at];
+    if (old.notes || old.collection) {
+      openDialog(`<h2 id="dialog-title">Remove this saved paper?</h2><p>Your collection assignment and paper notes will also be removed from your account workspace. Appraisals and linked CPD reflections are kept separately.</p><button class="button" id="confirm-unsave">Remove saved paper and notes</button>`);
+      document.querySelector('#confirm-unsave').onclick = () => { workspace.saved = workspace.saved.filter(s => s.id !== id); finishSave('Paper removed'); dialog.close(); }; return;
+    }
+    workspace.saved.splice(at, 1); finishSave('Paper removed');
+  } else { workspace.saved.unshift({ ...p, collection: '', notes: '', savedAt: new Date().toISOString() }); finishSave('Paper saved to your library'); }
+}
+function finishSave(message) {
+  const ok=persist();if(route==='paper'){document.querySelectorAll('.nav-item .count').forEach(el=>el.textContent=workspace.saved.length);updatePaperSaveControl();}else{updateNav();if(route==='library')library();else if(route==='research')renderResults();}if(ok)toast(message);
+}
+function library() {
+  const collections = [...new Set(workspace.saved.map(p => p.collection).filter(Boolean))].sort();
+  const papers = workspace.saved.filter(p => `${p.title} ${p.authors} ${p.collection || ''} ${p.notes || ''}`.toLowerCase().includes(libraryFilter.toLowerCase()));
+  main.innerHTML = `${intro('KEEP WHAT MATTERS', 'Your saved papers.', 'Build collections for a module, a clinical question or your next teaching session.')}<div class="library-header"><button class="button secondary" id="export-ris" ${!papers.length ? 'disabled' : ''}>${icon('download')}Export ${papers.length} references (.ris)</button><button class="text-button" id="export-citations" ${!papers.length ? 'disabled' : ''}>Download citations</button><span class="subtle">Imports into reference managers</span></div><div class="collection-bar"><input aria-label="Filter saved papers" id="library-search" placeholder="Search your papers, collections and notes…" value="${esc(libraryFilter)}"><span class="subtle">${papers.length} ${papers.length === 1 ? 'paper' : 'papers'}</span></div>
+  <div class="button-row" style="margin-bottom:20px"><a class="button secondary" href="#appraisal" data-all-appraisals>My appraisals (${workspace.appraisals.length})</a></div>${collections.length ? `<div class="pill-list"><button class="pill ${!libraryFilter ? 'active' : ''}" data-library-filter="">All papers</button>${collections.map(c => `<button class="pill ${libraryFilter === c ? 'active' : ''}" data-library-filter="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : ''}<datalist id="collection-options">${collections.map(c => `<option value="${esc(c)}"></option>`).join('')}</datalist>
+  <div class="paper-list">${papers.length ? papers.map(p => paperCard(p, true)).join('') : `<div class="empty">${icon('library')}<h3>${workspace.saved.length ? 'No matching saved papers' : 'Your library starts with one good paper'}</h3><p>${workspace.saved.length ? 'Try another keyword or clear your filter.' : 'Save a research result, add it to a collection and make a note in your own words.'}</p><a class="button" href="#research">Find research</a></div>`}</div><div class="notice">Your papers and notes save to your signed-in account. On another device, open this same private app and use “Refresh from account” to load the latest saved version. Keep a workspace export as an additional copy.</div>`;
+  document.querySelector('#library-search').addEventListener('input', e => { libraryFilter = e.target.value; const pos = e.target.selectionStart; library(); const input = document.querySelector('#library-search'); input.focus(); input.setSelectionRange?.(pos, pos); });
+  document.querySelector('#export-ris').onclick = () => download('physiosidekick-references.ris', toRIS(papers), 'application/x-research-info-systems');
+  document.querySelector('#export-citations').onclick = () => download('physiosidekick-citations.txt', papers.map(citation).join('\n\n'), 'text/plain');
+}
+function resourceCard(r) { return `<article class="card resource-card"><span class="badge">${r.label}</span><h3>${r.name}</h3><p>${r.description}</p><a class="text-button" href="${r.url}" target="_blank" rel="noopener noreferrer">Open original resource</a></article>`; }
+function disposeAnatomy() { anatomyWorkbenchCleanup?.();anatomyWorkbenchCleanup=null;anatomyLoadVersion++; if (anatomyViewer) { anatomyViewer.dispose(); anatomyViewer = null; } }
+function renderAnatomy(area) {
+  const current=anatomySystems[anatomySystem], catalog=current.catalog, model=current.model, muscle=anatomySystem==='muscles';
+  const prefix=muscle?'muscles':'anatomy', coverage=detailCoverage(anatomySystem);
+  if(!anatomySelected&&!anatomyGuideId&&!anatomyRegion&&!anatomyTerm)anatomySelected=model.defaultId;
+  area.innerHTML=`<section class="card"><span class="eyebrow">ANATOMY PREVIEW · COVERAGE INCOMPLETE</span><h2>Connect structure, movement and evidence.</h2><p>Explore seven MSK learning regions with separate skeleton and muscle reference models. Regional groups include whole source structures; they are not cropped joint models or exact anatomical boundaries.</p><div class="anatomy-filters"><div class="field"><label for="anatomy-system">3D reference model</label><select id="anatomy-system"><option value="skeleton" ${!muscle?'selected':''}>Skeleton · 242 source structures</option><option value="muscles" ${muscle?'selected':''}>Muscle preview · 177 grouped entries</option></select></div><div class="field"><label for="anatomy-clinical-region">MSK learning region</label><select id="anatomy-clinical-region"><option value="">All source structures</option>${regionalGuides.map(g=>`<option value="${g.id}" ${g.id===anatomyGuideId?'selected':''}>${esc(g.title)}</option>`).join('')}</select></div><div class="field"><label for="anatomy-side">Skeletal side</label><select id="anatomy-side" ${muscle?'disabled':''}>${[['all','Both sides / midline'],['right','Right / midline'],['left','Left / midline']].map(([v,t])=>`<option value="${v}" ${anatomySide===v?'selected':''}>${t}</option>`).join('')}</select></div></div><div class="notice">${muscle?`This is not a complete human muscle atlas. Its 177 selectable groups combine 428 source meshes, often combining both sides and several heads. Only ${coverage.detailed} groups have origin/insertion and nerve notes. Bones are not shown in this model.`:'The skeletal model contains bones, selected cartilage and discs; its count is not a count of bones. Coccyx, teeth and ear ossicles are absent.'} Both models use a simplified adult male reference. Nerves, ligaments, joint capsules and labra are not rendered. Independent anatomical review is pending.</div></section><div class="anatomy-layout"><section class="card anatomy-view-card"><div class="button-row"><button class="button" id="load-anatomy">Load ${esc(current.label.toLowerCase())} · ${model.sizeLabel}</button><button class="text-button" id="reset-anatomy">Reset view & filters</button></div><p id="anatomy-status" role="status">The guide and structure list work without loading 3D. Devices without WebGL use a one-structure software view.</p><p class="subtle">Tap a structure to see its reference beside the model. ${coverage.detailed} of ${coverage.total} source structures have detailed notes; independent review is pending.</p><div class="anatomy-workbench" id="anatomy-workbench"><div class="anatomy-workbench-tools"><div class="field"><label for="anatomy-quick-select">Inspect a structure</label><select id="anatomy-quick-select"></select></div><button class="button secondary" id="show-anatomy-details" disabled aria-expanded="true" aria-controls="anatomy-selection">Show details</button><button class="button secondary" id="expand-anatomy">Expand viewer</button><button class="button secondary" id="close-expanded-anatomy" hidden>Exit expanded view</button></div><div class="anatomy-stage" id="anatomy-stage"><p class="anatomy-stage-hint">Load this model when you are ready to explore. You can inspect reference notes from the list first.</p></div><aside id="anatomy-selection" class="anatomy-inspector" aria-label="Selected structure details"><p>Select a structure to inspect its reference here.</p></aside><p class="sr-only" id="anatomy-selection-announcement" role="status" aria-live="polite"></p></div><div class="button-row anatomy-controls"><button class="button secondary" data-anatomy-view="anterior" disabled>Anterior view</button><button class="button secondary" data-anatomy-view="posterior" disabled>Posterior view</button><button class="button secondary" data-anatomy-view="right" disabled>Right lateral view</button><button class="button secondary" id="anatomy-zoom-in" disabled aria-label="Zoom in on anatomy">Zoom in</button><button class="button secondary" id="anatomy-zoom-out" disabled aria-label="Zoom out on anatomy">Zoom out</button></div><p class="subtle">Drag to rotate; pinch or scroll to zoom. With the model focused, arrow keys rotate and + / − zoom. Models are separate assets, not an aligned overlay. No joint motion or muscle contraction is simulated.</p></section><section class="card anatomy-browser"><h2>Find a structure</h2><div class="field"><label for="anatomy-query">Structure name or source ID</label><input type="search" id="anatomy-query" maxlength="150" value="${esc(anatomyTerm)}" placeholder="e.g. scaphoid, deltoid or FMA ID"></div><div class="field"><label for="anatomy-region">Source catalogue group</label><select id="anatomy-region"><option value="">All source groups</option>${[...new Set(catalog.map(s=>s.region))].map(region=>`<option value="${esc(region)}" ${anatomyRegion===region?'selected':''}>${esc(region)}</option>`).join('')}</select></div><p id="anatomy-count" class="subtle" role="status"></p><div class="field"><label for="anatomy-structure">Structure list</label><select id="anatomy-structure" size="8"></select></div></section></div><section id="regional-guide" class="card regional-guide"></section><details class="card anatomy-credits"><summary>Current model source, licence & limitations</summary><div class="button-row"><button type="button" class="button secondary" id="export-anatomy-inventory">Download named coverage (.csv)</button></div><p>${esc(model.credit)}</p><p>The model geometry is unchanged from the pinned OrganUI asset, adapted from BodyParts3D 3.0. Source meshes were selected, simplified, transformed and assigned illustrative colours. ${muscle?'Grouped muscle structures may include both sides and several source meshes. Most tendons and some muscles are absent.':'Selected cartilage and discs are included, but joint soft tissues are incomplete.'}</p><p>Model and derived views: <a href="${model.license}" target="_blank" rel="noopener noreferrer">CC BY-SA 2.1 Japan</a>. <a href="${model.source}" target="_blank" rel="noopener noreferrer">Pinned source repository</a> · <a href="/${prefix}-upstream-attribution.md" target="_blank" rel="noopener noreferrer">Model attribution</a> · <a href="/${prefix}-upstream-provenance.md" target="_blank" rel="noopener noreferrer">Preparation and limitations</a> · <a href="/${prefix}-source-license.txt" target="_blank" rel="noopener noreferrer">Source licence notice</a> · <a href="/anatomy-third-party.txt" target="_blank" rel="noopener noreferrer">Viewer software licence</a>${muscle?' · <a href="/muscles-manifest.json" target="_blank" rel="noopener noreferrer">Muscle checksum/source manifest</a> · <a href="/muscles-upstream-code-license.txt" target="_blank" rel="noopener noreferrer">Upstream catalogue code notice</a>':''}</p><p>Source representations can be missing or incorrect. These previews do not verify diagnosis, measurements or clinical decisions. DBCLS and the source authors do not endorse PhysioSidekick.</p></details>`;
+  document.querySelector('#export-anatomy-inventory').onclick=()=>download('physiosidekick-anatomy-selection-coverage.csv', anatomyInventoryCSV(), 'text/csv');
+  const status=(message,error=false)=>{const node=document.querySelector('#anatomy-status');if(!node)return;node.textContent=message;node.className=error?'notice error':'';};
+  const regional=()=>regionalStructures(anatomyGuideId,anatomySystem,anatomySide);
+  const found=()=>{const ids=new Set(regional().map(s=>s.id));return filterAnatomy(anatomyTerm,anatomyRegion,anatomySystem).filter(s=>ids.has(s.id));};
+  const applyFilters=()=>{const allowed=regional().filter(s=>!anatomyRegion || s.region===anatomyRegion).map(s=>s.id);if(anatomySelected&&!allowed.includes(anatomySelected))anatomySelected=null;anatomyViewer?.setRegion(anatomyRegion);anatomyViewer?.setStructures(allowed);anatomyViewer?.select(anatomySelected);drawList();};
+  function drawList(){const list=document.querySelector('#anatomy-structure'),items=found();list.innerHTML=items.map(s=>`<option value="${esc(s.id)}">${esc(s.name)} · ${structureDetails(anatomySystem,s.id).hasProfile?'reference notes':'reference missing'}</option>`).join('');list.value=anatomySelected||'';const quick=document.querySelector('#anatomy-quick-select');quick.innerHTML='<option value="">Choose a structure</option>'+items.map(s=>`<option value="${esc(s.id)}">${esc(s.name)} · ${structureDetails(anatomySystem,s.id).hasProfile?'reference notes':'reference missing'}</option>`).join('');quick.value=anatomySelected||'';document.querySelector('#anatomy-count').textContent=`${items.length} matching source structures of ${catalog.length}${items.length?'':'. Clear the search or change the region/group.'}`;drawSelection();}
+  function select(id,fromViewer=false){anatomySelected=catalog.some(s=>s.id===id)?id:null;if(fromViewer&&!found().some(s=>s.id===id)){anatomyTerm='';document.querySelector('#anatomy-query').value='';}anatomyViewer?.select(anatomySelected);drawList();if(anatomySelected){document.querySelector('#anatomy-selection').hidden=false;document.querySelector('#anatomy-workbench').classList.remove('details-hidden');document.querySelector('#show-anatomy-details').setAttribute('aria-expanded','true');if(window.matchMedia?.('(max-width:700px)').matches)setExpanded(true);}}
+  function drawSelection(){
+    const item=structureDetails(anatomySystem,anatomySelected),panel=document.querySelector('#anatomy-selection'),show=document.querySelector('#show-anatomy-details');
+    if(!item){panel.hidden=false;document.querySelector('#anatomy-workbench').classList.remove('details-hidden');panel.dataset.selectionKey='';panel.innerHTML='<p>Choose a structure from the model or list. Its reference will appear here without moving the page.</p>';show.disabled=true;return;}
+    show.disabled=false;const key=`${anatomySystem}:${item.id}`,changed=panel.dataset.selectionKey!==key;
+    if(!changed){panel.querySelectorAll('#focus-anatomy,#isolate-anatomy').forEach(b=>b.disabled=!anatomyReady);return;}
+    panel.dataset.selectionKey=key;panel.hidden=false;document.querySelector('#anatomy-workbench').classList.remove('details-hidden');show.setAttribute('aria-expanded','true');
+    panel.innerHTML=`<header class="anatomy-inspector-header"><div><span class="eyebrow">${item.hasProfile?'REFERENCE NOTES · DRAFT':'REFERENCE CONTENT MISSING'}</span><h3 id="anatomy-inspector-title">${esc(item.name)}</h3></div><button class="text-button" id="hide-anatomy-details" aria-label="Hide structure details">Hide</button></header><div class="anatomy-inspector-body" tabindex="0" aria-label="Reference details for ${esc(item.name)}">${item.hasProfile?`<dl class="anatomy-facts">${item.fields.map(f=>`<div><dt>${esc(f.label)}</dt><dd>${esc(f.value)}</dd></div>`).join('')}</dl><p class="subtle">Selected main anatomy only; variants and additional attachments can occur. Independent anatomical review pending.</p>`:'<div class="notice">Detailed attachment/landmark reference has not yet been added for this structure. No anatomy facts are inferred from the model label.</div>'}${item.groupedSides?'<p class="subtle">Both sides, and sometimes several heads, are selected together in this model.</p>':''}<details class="anatomy-detail-sources"><summary>Sources & model identity</summary>${item.sources.map(source=>`<p><a href="${esc(source.url)}" target="_blank" rel="noopener noreferrer">${esc(source.title)}</a><br>${esc(source.location)}<br>Source located ${esc(source.locatedAt)}</p>`).join('')}<p>Source ID: ${esc(item.sourceId)}<br>Original label: ${esc(catalog.find(s=>s.id===item.id).sourceName)}</p><a href="${esc(item.modelSource)}" target="_blank" rel="noopener noreferrer">Pinned model catalogue</a><p>Note version ${esc(item.review.version)} · review pending. Source-location dates are not review dates.</p></details><div class="button-row"><button class="button secondary" id="focus-anatomy" ${anatomyReady?'':'disabled'}>Focus selected</button><button class="button secondary" id="isolate-anatomy" ${anatomyReady?'':'disabled'}>Isolate</button></div><div class="button-row"><button class="text-button" id="research-anatomy">Find research</button><button class="text-button" id="saved-anatomy">My related saved work</button><button class="text-button" id="reflect-anatomy">Write a reflection</button></div></div>`;
+    document.querySelector('#anatomy-selection-announcement').textContent=`${item.name} selected. ${item.hasProfile?'Reference details are available beside the model.':'Detailed reference is not yet available; catalogue identity is shown.'}`;
+    document.querySelector('#hide-anatomy-details').onclick=()=>{panel.hidden=true;document.querySelector('#anatomy-workbench').classList.add('details-hidden');show.setAttribute('aria-expanded','false');show.focus();};
+    document.querySelector('#focus-anatomy').onclick=()=>anatomyViewer?.focusSelected();document.querySelector('#isolate-anatomy').onclick=()=>anatomyViewer?.isolate(true);
+    const source=catalog.find(s=>s.id===item.id);
+    document.querySelector('#research-anatomy').onclick=()=>startSearch(anatomyResearchTerm(source));
+    document.querySelector('#saved-anatomy').onclick=()=>{workspaceQuery=source.sourceName.replace(/^(right|left)\s+/i,'');workspaceType='all';navigate('workspace-search');};
+    document.querySelector('#reflect-anatomy').onclick=()=>{if(expanded)setExpanded(false);if(!sync?.account||sync.combining||sync.status==='loading'){toast('Connect to your account before writing a reflection.');return;}if(cpdFormOpen){toast('Save or cancel the existing reflection first.');navigate('cpd');return;}if(studyDraft?.dirty){activeStudy=studyDraft.setId;navigate('study');toast('Save or cancel your revision card first.');return;}reflectionDraft=anatomyLearningDraft(source,anatomySystem);reflectionEditing=null;cpdFormOpen=true;navigate('cpd');};
+  }
+  function drawGuide(){const panel=document.querySelector('#regional-guide'),g=regionalGuides.find(g=>g.id===anatomyGuideId);
+    if(!g){panel.innerHTML=`<h2>Choose a regional learning guide</h2><p>Each guide links the skeletal landmarks, selected muscles, joint notes and key nerves. Notes are drafts pending anatomical review. Nerve notes are reference text, not rendered nerve paths.</p><div class="button-row">${regionalGuides.map(g=>`<button class="button secondary" data-guide-region="${g.id}">${esc(g.title)}</button>`).join('')}</div>`;panel.querySelectorAll('[data-guide-region]').forEach(b=>b.onclick=()=>chooseGuide(b.dataset.guideRegion));return;}
+    const renderNote=n=>`<article><h3>${esc(n.title)}</h3><p>${esc(n.text)}</p><a href="${esc(regionSources[n.source].url)}" target="_blank" rel="noopener noreferrer">${esc(regionSources[n.source].title)}</a><p class="subtle">Source location: ${esc(n.location)}</p></article>`;
+    panel.innerHTML=`<span class="eyebrow">${esc(g.title)} · GUIDE ${esc(g.version)} · REVIEW PENDING</span><h2>${esc(g.title)} learning guide</h2><div class="two-col">${renderNote(g.joint)}${renderNote(g.action)}</div><details><summary>Key nerves · source-linked notes, not 3D</summary><div class="resource-grid">${g.nerves.map(id=>renderNote(nerveNotes.find(n=>n.id===id))).join('')}</div><p class="subtle">Selected relationships only, not an exhaustive innervation, sensory territory or diagnostic map. Anatomical variants occur; no symptom pattern is used here to assign a diagnosis.</p></details><h3>Apply it</h3><p>${esc(g.task)}</p><div class="button-row"><button class="button secondary" id="guide-export">Download regional guide</button><button class="button secondary" id="guide-research">Find regional anatomy research</button><button class="button secondary" id="guide-revision">Start my paper revision draft</button><button class="text-button" id="guide-student">Anatomy-to-evidence starter unit</button></div>`;
+    document.querySelector('#guide-export').onclick=()=>download(`physiosidekick-anatomy-${g.id}.md`,regionMarkdown(g.id),'text/markdown');
+    document.querySelector('#guide-research').onclick=()=>startSearch(`${g.title.replace('&','')} anatomy`);
+    document.querySelector('#guide-student').onclick=()=>openStudentUnit('anatomy-evidence');
+    document.querySelector('#guide-revision').onclick=()=>{if(!sync?.account||sync.combining||sync.status==='loading'){toast('Wait for the account connection before creating a draft.');return;}if(studyDraft?.dirty){activeStudy=studyDraft.setId;navigate('study');toast('Save or cancel your current revision card first.');return;}const set=newStudySet();set.title=`${g.title}: anatomy and evidence`;workspace.studySets.unshift(set);activeStudy=set.id;studyPractice=null;learnTab='revision';studyDraft={setId:set.id,question:`Which ${g.title.toLowerCase()} structures are relevant to this paper, and what does its evidence establish beyond an anatomical explanation?\n\nPrompt from PhysioSidekick ${g.title} guide ${g.version}; anatomical review pending.`,answer:'',sourceId:'',dirty:true};persist();navigate('study');};
+  }
+  function chooseGuide(id){anatomyGuideId=regionalGuides.some(g=>g.id===id)?id:'';anatomyRegion='';anatomyTerm='';anatomySelected=null;document.querySelector('#anatomy-clinical-region').value=anatomyGuideId;document.querySelector('#anatomy-region').value='';document.querySelector('#anatomy-query').value='';applyFilters();drawGuide();}
+  const bench=document.querySelector('#anatomy-workbench'),expand=document.querySelector('#expand-anatomy'),exit=document.querySelector('#close-expanded-anatomy');let expanded=false,previousOverflow='',inertNodes=[];
+  const restoreBackground=()=>{inertNodes.forEach(([node,value])=>node.inert=value);inertNodes=[];};
+  const setExpanded=value=>{if(expanded===value)return;expanded=value;if(value){previousOverflow=document.body.style.overflow;document.body.style.overflow='hidden';for(let node=bench;node.parentElement;node=node.parentElement){for(const sibling of node.parentElement.children)if(sibling!==node){inertNodes.push([sibling,sibling.inert]);sibling.inert=true;}if(node.parentElement===document.body)break;}bench.classList.add('is-expanded');bench.setAttribute('role','dialog');bench.setAttribute('aria-modal','true');bench.setAttribute('aria-label','Expanded anatomy viewer');expand.hidden=true;exit.hidden=false;exit.focus({preventScroll:true});}else{restoreBackground();document.body.style.overflow=previousOverflow;bench.classList.remove('is-expanded');bench.removeAttribute('role');bench.removeAttribute('aria-modal');bench.removeAttribute('aria-label');expand.hidden=false;exit.hidden=true;if(expand.isConnected)expand.focus({preventScroll:true});}};
+  const escape=e=>{if(!expanded)return;if(e.key==='Escape'){e.preventDefault();setExpanded(false);}else if(e.key==='Tab'){const nodes=[...bench.querySelectorAll('button,select,input,a[href],[tabindex]:not([tabindex="-1"])')].filter(n=>!n.disabled&&n.getClientRects().length);if(!nodes.length)return;const first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&(document.activeElement===first||!bench.contains(document.activeElement))){e.preventDefault();last.focus();}else if(!e.shiftKey&&(document.activeElement===last||!bench.contains(document.activeElement))){e.preventDefault();first.focus();}}};
+  expand.onclick=()=>setExpanded(true);exit.onclick=()=>setExpanded(false);document.addEventListener('keydown',escape);
+  anatomyWorkbenchCleanup=()=>{document.removeEventListener('keydown',escape);restoreBackground();if(expanded){document.body.style.overflow=previousOverflow;expanded=false;}};
+  document.querySelector('#show-anatomy-details').onclick=()=>{document.querySelector('#anatomy-selection').hidden=false;bench.classList.remove('details-hidden');document.querySelector('#show-anatomy-details').setAttribute('aria-expanded','true');if(window.matchMedia?.('(max-width:700px)').matches)setExpanded(true);const heading=document.querySelector('#anatomy-inspector-title');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true});}};
+  document.querySelector('#anatomy-quick-select').onchange=e=>select(e.target.value);
+  document.querySelector('#anatomy-system').onchange=e=>{disposeAnatomy();anatomyReady=false;anatomySystem=e.target.value;anatomyRegion='';anatomyTerm='';anatomySelected=null;anatomySide='all';renderAnatomy(area);document.querySelector('#anatomy-system').focus();};
+  document.querySelector('#anatomy-clinical-region').onchange=e=>chooseGuide(e.target.value);
+  document.querySelector('#anatomy-side').onchange=e=>{anatomySide=e.target.value;applyFilters();};
+  document.querySelector('#anatomy-query').oninput=e=>{anatomyTerm=e.target.value;drawList();};
+  document.querySelector('#anatomy-region').onchange=e=>{anatomyRegion=e.target.value;applyFilters();};
+  document.querySelector('#anatomy-structure').onchange=e=>select(e.target.value);
+  const enable=value=>{document.querySelectorAll('[data-anatomy-view],#anatomy-zoom-in,#anatomy-zoom-out').forEach(b=>b.disabled=!value);};
+  document.querySelector('#load-anatomy').onclick=async()=>{anatomyViewer?.dispose();anatomyViewer=null;anatomyReady=false;enable(false);const version=++anatomyLoadVersion,button=document.querySelector('#load-anatomy');button.disabled=true;document.querySelector('#anatomy-stage').innerHTML='';status('Loading the 3D viewer…');try{const module=await import('./anatomy-viewer.js');if(version!==anatomyLoadVersion)return;anatomyViewer=module.createSkeletonViewer(document.querySelector('#anatomy-stage'),{catalog,model,onSelect:id=>select(id,true),onStatus:(message,type)=>{if(version!==anatomyLoadVersion)return;status(message,type==='error');if(type==='error'){anatomyReady=false;enable(false);drawSelection();button.disabled=false;button.textContent='Reload 3D viewer';}}});await anatomyViewer.ready;if(version!==anatomyLoadVersion)return;anatomyReady=true;applyFilters();enable(true);drawSelection();button.disabled=false;button.textContent='Reload 3D viewer';}catch(e){if(version!==anatomyLoadVersion)return;status(e.message,true);anatomyViewer?.dispose();anatomyViewer=null;button.disabled=false;button.textContent='Retry 3D viewer';}};
+  document.querySelectorAll('[data-anatomy-view]').forEach(b=>b.onclick=()=>anatomyViewer?.view(b.dataset.anatomyView));document.querySelector('#anatomy-zoom-in').onclick=()=>anatomyViewer?.zoom(0.8);document.querySelector('#anatomy-zoom-out').onclick=()=>anatomyViewer?.zoom(1.25);
+  document.querySelector('#reset-anatomy').onclick=()=>{anatomyTerm='';anatomyRegion='';anatomyGuideId='';anatomySide='all';anatomySelected=null;document.querySelector('#anatomy-query').value='';document.querySelector('#anatomy-region').value='';document.querySelector('#anatomy-clinical-region').value='';document.querySelector('#anatomy-side').value='all';anatomyViewer?.reset();drawList();drawGuide();};drawList();drawGuide();
+}
+
+function learn() {
+  learningTabsCleanup?.();learningTabsCleanup=null;
+  disposeAnatomy(); anatomyReady=false;
+  main.innerHTML = `${intro('LEARN WITH INTENTION', 'Understand more. Keep questioning.', 'Build the habits that connect anatomy, evidence and thoughtful practice.')}<div class="learning-tab-help"><p id="learn-tabs-hint" hidden>More learning areas are available sideways. Swipe the tab row or use the tab-scroll buttons.</p><div class="button-row" id="learn-tab-controls" hidden><button class="button secondary" id="learn-tabs-earlier" type="button" aria-label="Show earlier learning tabs">Earlier tabs</button><button class="button secondary" id="learn-tabs-more" type="button" aria-label="Show more learning tabs">More tabs</button></div></div><div class="tabs" role="tablist" aria-label="Learning areas">${[['units', 'Starter units'], ['revision', 'My revision'], ['appraisal', 'Critical appraisal'], ['anatomy', 'Anatomy'], ['sources', 'Research sources']].map(([id, label]) => `<button class="tab ${learnTab === id ? 'active' : ''}" role="tab" tabindex="${learnTab===id?0:-1}" aria-selected="${learnTab === id}" data-learn-tab="${id}" id="tab-${id}" aria-controls="learning-content">${label}</button>`).join('')}</div><section id="learning-content" role="tabpanel" aria-labelledby="tab-${learnTab}"></section>`;
+  const tabs=document.querySelector('[role=tablist]');
+  learningTabsCleanup=setupScrollableTabs({tablist:tabs,selected:document.querySelector(`#tab-${learnTab}`),previous:document.querySelector('#learn-tabs-earlier'),next:document.querySelector('#learn-tabs-more'),controls:document.querySelector('#learn-tab-controls'),hint:document.querySelector('#learn-tabs-hint')});
+  tabs.onkeydown=e=>{const ids=['units','revision','appraisal','anatomy','sources'],index=ids.indexOf(learnTab);let next;if(e.key==='ArrowRight')next=(index+1)%ids.length;else if(e.key==='ArrowLeft')next=(index+ids.length-1)%ids.length;else if(e.key==='Home')next=0;else if(e.key==='End')next=ids.length-1;else return;e.preventDefault();learnTab=ids[next];learn();document.querySelector(`#tab-${learnTab}`).focus({preventScroll:true});};
+  const area = document.querySelector('#learning-content');
+  if (learnTab === 'units') renderStudentUnits(area);
+  else if (learnTab === 'revision') { renderStudySets(area); }
+  else if (learnTab === 'anatomy') renderAnatomy(area);
+  else if (learnTab === 'sources') area.innerHTML = `<div class="resource-grid">${resources.filter(r => r.area === 'research').map(resourceCard).join('')}</div>`;
+  else { area.innerHTML = `<div class="two-col"><section class="card" id="quiz-area"></section><article class="card resource-card"><span class="badge">Start a useful habit</span><h3>Read. Question. Reflect.</h3><p>A summary is a starting point. Check the original source, write down what remains uncertain and decide what you need to learn next.</p><a href="#cpd" class="text-button">Capture a reflection</a><div class="notice">These short learning checks are introductory exercises, not accredited training or a clinical competency assessment.</div><a class="text-button" href="${resources[3].url}" target="_blank" rel="noopener noreferrer">Explore CASP appraisal checklists</a></article></div>`; renderQuiz(); }
+}
+function renderStudentUnits(area) {
+  const counts=studentUnitCounts();
+  area.innerHTML=`<section class="card"><span class="eyebrow">FROM FINDING TO UNDERSTANDING</span><h2>Student starter units</h2><p>${counts.units} units · ${counts.questions} source-linked questions · ${counts.reviewed} units with a completed independent review</p><p>Try each question before revealing its explanation. The numbered path builds from finding a paper to using anatomy thoughtfully. Examples labelled fictional are learning exercises, not published results.</p><div class="notice">Independent content review pending. These introductory exercises do not award a qualification, competency score or CPD time. Your personal revision answers remain separate.</div></section><div class="resource-grid student-units">${studentUnits.map((u,i)=>`<article class="card"><span class="eyebrow">UNIT ${i+1} · ${u.questions.length} QUESTIONS</span><h2>${esc(u.title)}</h2><p>${esc(u.objective)}</p><button class="button" data-open-unit="${u.id}" aria-label="Open unit: ${esc(u.title)}">Open unit</button></article>`).join('')}</div>`;
+  area.querySelectorAll('[data-open-unit]').forEach(b=>b.onclick=()=>openStudentUnit(b.dataset.openUnit));
+}
+function openStudentUnit(id) {
+  const u=studentUnits.find(u=>u.id===id); if(!u)return;
+  openDialog(`<span class="eyebrow">STUDENT STARTER UNIT · ${esc(u.version)}</span><h2 id="dialog-title">${esc(u.title)}</h2><p>${esc(u.objective)}</p><div class="notice">Independent content review pending. No score, accreditation or automatic CPD credit. Sources were located on 27 November 2026; check current versions. Explanations are original introductory teaching notes, not source quotations or clinical guidance.</div><h3>Try, then check</h3><p>Answer aloud or in your own notes before opening each explanation. Nothing in this unit is marked as completed or saved automatically.</p><ol class="student-questions">${u.questions.map(q=>{const s=studentSources[q.sourceId];return `<li id="student-q-${q.id}"><h3>${esc(q.question)}</h3><details><summary>Show explanation and source</summary><p>${esc(q.explanation)}</p><p class="subtle">Source location: ${esc(q.location)}</p><a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a></details></li>`;}).join('')}</ol><section class="card"><h3>Apply it with a paper</h3><p>${esc(u.task)}</p><p>Start a personal revision draft using the prompt below. Choose a real saved paper and write your own checked answer. The supplied explanation is not copied into your answer.</p><p class="reflection-content">${esc(u.revisionPrompt)}</p><div class="button-row"><button class="button" id="unit-revision">Start my revision draft</button><button class="button secondary" id="unit-export">Download this unit</button><button class="text-button" id="unit-research">Find a paper</button>${u.id==='anatomy-evidence'?'<button class="text-button" id="unit-anatomy">Explore anatomy</button>':''}</div></section>`);
+  document.querySelector('#unit-export').onclick=()=>download(`physiosidekick-${u.id}.md`,studentUnitMarkdown(u.id),'text/markdown');
+  document.querySelector('#unit-research').onclick=()=>{dialog.close();navigate('research');};
+  if(u.id==='anatomy-evidence')document.querySelector('#unit-anatomy').onclick=()=>{dialog.close();learnTab='anatomy';navigate('learn');};
+  document.querySelector('#unit-revision').onclick=()=>{
+    if(!sync?.account || sync.combining || sync.status==='loading'){toast('Wait for the account connection before creating a draft.');return;}
+    if(studyDraft?.dirty){dialog.close();activeStudy=studyDraft.setId;navigate('study');toast('Save or cancel your current revision card first.');return;}
+    const prompt=studentRevisionPrompt(u.id),set=newStudySet();set.title=prompt.title;workspace.studySets.unshift(set);activeStudy=set.id;studyPractice=null;learnTab='revision';
+    studyDraft={setId:set.id,question:prompt.question,answer:'',sourceId:'',dirty:true};persist();dialog.close();navigate('study');
+  };
+}
+function renderStudySets(area) {
+  area.innerHTML = `<div class="card"><div class="split-heading"><h2>Your revision sets</h2><button class="button" data-new-study>New study set</button></div><p>Turn your reading into questions you can practise. Answers are your own notes; check the original paper before relying on them.</p>${workspace.studySets.length ? workspace.studySets.map(set => `<article class="teaching-summary"><h3>${esc(set.title || 'Untitled study set')}</h3><p class="subtle">${set.cards.length} ${set.cards.length === 1 ? 'card' : 'cards'} · ${set.cards.filter(c => c.rating === 'again').length} marked for another look</p><button class="button secondary" data-open-study="${esc(set.id)}">Open study set</button></article>`).join('') : '<p class="subtle">Create a set, choose a saved paper and write a question and answer. You can also bring in your own appraisal notes.</p>'}</div>`;
+}
+function studyEditor() {
+  const set = workspace.studySets.find(set => set.id === activeStudy);
+  if (!set) { learnTab = 'revision'; learn(); return; }
+  if (studyPractice?.setId === set.id) { renderStudyPractice(set); return; }
+  if(studyFilters.setId!==set.id)studyFilters={setId:set.id,term:'',rating:'all'};
+  const visibleCards=filterStudyCards(set.cards,studyFilters);
+  main.innerHTML = `${intro('FROM READING TO RECALL', 'Make the learning stick.', 'Create your own source-linked questions. Set titles and practice ratings save automatically; use Save card to keep a new or edited card.')}<div class="button-row" style="margin-bottom:20px"><a class="text-button" href="#learn">All study sets</a><button class="button secondary" id="export-study">Markdown (.md)</button></div><section class="card"><div class="field"><label for="study-title">Study set title</label><input id="study-title" maxlength="180" value="${esc(set.title)}"></div><div class="button-row"><button class="button" id="new-study-card">Add revision card</button><button class="button secondary" id="practise-study" ${set.cards.length ? '' : 'disabled'}>Practise all cards</button><button class="text-button" id="practise-again" ${set.cards.some(c => c.rating === 'again') ? '' : 'disabled'}>Practise cards marked again</button></div><p class="subtle">${set.cards.length} ${set.cards.length === 1 ? 'card' : 'cards'} · ${set.cards.filter(c => c.rating === 'unrated').length} unrated · ${set.cards.filter(c => c.rating === 'again').length} marked again · ${set.cards.filter(c => c.rating === 'recalled').length} recalled on last attempt</p></section><form id="study-filters" class="card"><h2>Find cards in this set</h2><div class="form-row"><div class="field"><label for="study-filter-term">Question, answer, source or PMID</label><input id="study-filter-term" type="search" maxlength="250" value="${esc(studyFilters.term)}"></div><div class="field"><label for="study-filter-rating">Recall rating</label><select id="study-filter-rating">${[['all','All cards'],['unrated','Not rated'],['again','Needs another look'],['recalled','Recalled (self-rated)']].map(([value,label])=>`<option value="${value}" ${studyFilters.rating===value?'selected':''}>${label}</option>`).join('')}</select></div></div><div class="button-row"><button class="button secondary" type="submit">Find cards</button><button class="text-button" type="button" id="reset-study-filters">Show all cards</button><button class="button secondary" type="button" id="practise-filtered" ${visibleCards.length?'':'disabled'}>Practise filtered cards</button></div><p role="status">${visibleCards.length} of ${set.cards.length} cards shown. Exports contain the full set.</p></form><div id="study-card-form"></div>${visibleCards.length?'':set.cards.length?'<p class="notice">No cards match these filters. Choose Show all cards or change your search.</p>':'<p class="notice">No revision cards yet. Choose Add revision card to begin.</p>'}<div class="paper-list">${visibleCards.map(card => `<article class="card" data-study-card="${esc(card.id)}"><span class="badge">${card.rating === 'again' ? 'Another look' : card.rating === 'recalled' ? 'Recalled · self-rated' : 'Not rated'}</span><h2>${esc(card.question)}</h2><details><summary>Show my saved answer</summary><p class="reflection-content">${esc(card.answer)}</p></details><p class="subtle">Source: ${esc(card.source.title)} · ${esc(readingLabels[card.source.readingBasis])}</p>${card.source.retracted ? '<div class="notice error">Source marked as retracted. Check the retraction notice.</div>' : ''}<div class="button-row"><a href="https://pubmed.ncbi.nlm.nih.gov/${esc(card.source.pmid)}/" target="_blank" rel="noopener noreferrer">Open original paper record</a><button class="text-button" data-edit-card="${esc(card.id)}">Edit card</button><button class="danger-button" data-remove-card="${esc(card.id)}">Remove card</button></div></article>`).join('')}</div><div class="notice">Recall ratings are self-reported and apply to these personal notes. They do not verify the answer or assess clinical competence. No study time is automatically added to CPD.</div><button class="danger-button" id="remove-study">Remove study set</button>`;
+  mountLearningExports('revision',()=>set,'#study-filters',()=>{if(studyDraft?.dirty){toast('Save or cancel your card draft before exporting.');return false;}return true;});
+  document.querySelector('#study-filters').onsubmit=e=>{e.preventDefault();studyFilters={setId:set.id,term:document.querySelector('#study-filter-term').value,rating:document.querySelector('#study-filter-rating').value};studyEditor();};
+  document.querySelector('#reset-study-filters').onclick=()=>{studyFilters={setId:set.id,term:'',rating:'all'};studyEditor();};
+  document.querySelector('#practise-filtered').onclick=()=>{if(studyDraft?.dirty){toast('Save or cancel your card draft before practising.');return;}if(!visibleCards.length)return;studyPractice={setId:set.id,ids:visibleCards.map(c=>c.id),at:0,revealed:false};studyEditor();};
+  const editable = () => sync?.account && !sync.combining && sync.status !== 'loading';
+  document.querySelector('#study-title').oninput = e => { if (!editable()) return; set.title = e.target.value; set.updatedAt = new Date().toISOString(); persist(); };
+  document.querySelector('#new-study-card').onclick = () => { if (!editable()) return; if (set.cards.length >= 100) { toast('A study set can hold up to 100 cards.'); return; } if (studyDraft?.dirty) { toast('Save or cancel the current card first.'); return; } studyDraft = { setId: set.id, question: '', answer: '', sourceId: '', dirty: false }; renderStudyCardForm(set); };
+  document.querySelector('#export-study').onclick = () => download('physiosidekick-study-set.md', studyMarkdown(set), 'text/markdown');
+  const practise = onlyAgain => { if (studyDraft?.dirty) { toast('Save or cancel the current card before practising.'); return; } studyPractice = { setId: set.id, ids: set.cards.filter(c => !onlyAgain || c.rating === 'again').map(c => c.id), at: 0, revealed: false }; studyEditor(); };
+  document.querySelector('#practise-study').onclick = () => practise(false); document.querySelector('#practise-again').onclick = () => practise(true);
+  document.querySelectorAll('[data-edit-card]').forEach(button => button.onclick = () => {
+    if (!editable()) return; if (studyDraft?.dirty) { toast('Save or cancel the current card first.'); return; }
+    const c = set.cards.find(c => c.id === button.dataset.editCard); studyDraft = { setId: set.id, cardId: c.id, question: c.question, answer: c.answer, sourceId: `MED:${c.source.pmid}`, dirty: false }; renderStudyCardForm(set);
+  });
+  document.querySelectorAll('[data-remove-card]').forEach(button => button.onclick = () => {
+    if (!editable()) return;
+    openDialog('<h2 id="dialog-title">Remove this revision card?</h2><p>The card and its recall rating will be removed. Its saved paper and appraisal remain.</p><button class="button" id="confirm-card-remove">Remove card</button>');
+    document.querySelector('#confirm-card-remove').onclick = () => { if (!editable()) return; set.cards = set.cards.filter(c => c.id !== button.dataset.removeCard); set.updatedAt = new Date().toISOString(); persist(); dialog.close(); studyDraft = null; studyEditor(); };
+  });
+  document.querySelector('#remove-study').onclick = () => {
+    if (!editable()) return;
+    openDialog('<h2 id="dialog-title">Remove this study set?</h2><p>This removes its cards and recall ratings from your account workspace. Export it first to keep a copy. Papers, appraisals and CPD records remain.</p><button class="button" id="confirm-study-remove">Remove study set</button>');
+    document.querySelector('#confirm-study-remove').onclick = () => { if (!editable()) return; workspace.studySets = workspace.studySets.filter(s => s.id !== set.id); activeStudy = null; studyDraft = null; persist(); dialog.close(); learnTab = 'revision'; navigate('learn'); };
+  };
+  if (studyDraft?.setId === set.id) renderStudyCardForm(set);
+}
+function renderStudyCardForm(set) {
+  const d = studyDraft, existing = set.cards.find(c => c.id === d.cardId);
+  const oldSourceMissing = existing && !workspace.saved.some(p => p.pmid === existing.source.pmid);
+  document.querySelector('#study-card-form').innerHTML = `<form id="revision-card-form" class="card form-card" style="margin-top:20px"><h2>${existing ? 'Edit revision card' : 'Write a revision card'}</h2><p>Write an answer you have checked. Bringing in appraisal notes creates an editable draft, not an AI answer.</p><div class="field"><label for="revision-source">Source paper</label><select id="revision-source" required><option value="">Choose a saved paper</option>${oldSourceMissing ? `<option value="MED:${esc(existing.source.pmid)}">${esc(existing.source.title)} · retained source snapshot</option>` : ''}${workspace.saved.map(p => `<option value="${esc(p.id)}">${esc(p.title)}</option>`).join('')}</select></div><div class="button-row"><button class="button secondary" type="button" id="notes-to-card">Use my appraisal notes</button><a class="text-button" href="#research">Find papers</a></div><div class="field"><label for="revision-question">Question</label><textarea id="revision-question" maxlength="1000" required>${esc(d.question)}</textarea></div><div class="field"><label for="revision-answer">Answer in your own words</label><textarea id="revision-answer" maxlength="6000" required>${esc(d.answer)}</textarea></div><p class="subtle">Editing a question, answer or source resets its last recall rating. Your previous review count is retained.</p><div class="button-row"><button class="button" type="submit">Save card</button><button class="button secondary" type="button" id="cancel-study-card">Cancel card edit</button></div></form>`;
+  document.querySelector('#revision-source').value = d.sourceId;
+  const capture = () => { d.question = document.querySelector('#revision-question').value; d.answer = document.querySelector('#revision-answer').value; d.sourceId = document.querySelector('#revision-source').value; d.dirty = true; };
+  document.querySelector('#revision-card-form').oninput = capture;
+  document.querySelector('#revision-source').onchange = capture;
+  document.querySelector('#notes-to-card').onclick = () => {
+    const sourceId = document.querySelector('#revision-source').value;
+    const a = workspace.appraisals.filter(a => a.paperId === sourceId).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+    if (document.querySelector('#revision-answer').value.trim() || document.querySelector('#revision-question').value.trim()) { toast('This card already has text. Start a new card to bring in appraisal notes.'); return; }
+    try { const notes = cardFromNotes(a); document.querySelector('#revision-question').value = notes.question; document.querySelector('#revision-answer').value = notes.answer; capture(); } catch(e) { toast(e.message); }
+  };
+  document.querySelector('#cancel-study-card').onclick = () => { studyDraft = null; document.querySelector('#study-card-form').innerHTML = ''; };
+  document.querySelector('#revision-card-form').onsubmit = e => {
+    e.preventDefault(); if (!sync?.account || sync.combining || sync.status === 'loading') return; capture();
+    const paper = workspace.saved.find(p => p.id === d.sourceId);
+    const a = workspace.appraisals.filter(a => a.paperId === d.sourceId).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+    try {
+      const source = existing && d.sourceId === `MED:${existing.source.pmid}` ? existing.source : undefined;
+      const card = saveStudyCard({ question: d.question, answer: d.answer, paper, appraisal: a, source, existing });
+      if (existing) set.cards = set.cards.map(c => c.id === existing.id ? card : c); else set.cards.push(card);
+      set.updatedAt = new Date().toISOString(); persist(); studyDraft = null; studyEditor(); toast('Revision card queued for saving');
+    } catch(e) { toast(e.message); }
+  };
+  document.querySelector('#revision-source').focus();
+}
+function renderStudyPractice(set) {
+  const session = studyPractice, card = set.cards.find(c => c.id === session.ids[session.at]);
+  main.innerHTML = `${intro('TRY BEFORE YOU REVEAL', 'Recall in your own words.', 'Think of your answer first, then reveal your saved notes and rate your recall.')}<button class="text-button" id="end-study-practice">Back to study set</button><section class="card recall-card" style="margin-top:20px">${card ? `${card.source.retracted ? '<div class="notice error">Source marked as retracted. Check the original record before studying these notes.</div>' : ''}<span class="eyebrow">CARD ${session.at+1} OF ${session.ids.length}</span><h2>${esc(card.question)}</h2>${session.revealed ? `<h3>Your saved answer</h3><p class="reflection-content">${esc(card.answer)}</p><p class="subtle">${esc(card.source.title)} · ${esc(readingLabels[card.source.readingBasis])}</p><a href="https://pubmed.ncbi.nlm.nih.gov/${esc(card.source.pmid)}/" target="_blank" rel="noopener noreferrer">Check original source</a>${card.source.retracted ? '<div class="notice error">Source marked as retracted. Investigate the retraction notice.</div>' : ''}<div class="button-row" style="margin-top:20px"><button class="button secondary" id="rate-again">Needs another look</button><button class="button" id="rate-recalled">I recalled it</button></div>` : '<button class="button" id="reveal-study-answer">Reveal my answer</button>'}` : '<h2>This round is complete.</h2><p>Your recall ratings have been queued for account saving. You can return to cards marked for another look.</p>'}</section><div class="notice">This compares your recall with your own notes. It does not verify the answer, establish competence or log CPD time.</div>`;
+  document.querySelector('#end-study-practice').onclick = () => { studyPractice = null; studyEditor(); };
+  document.querySelector('#reveal-study-answer')?.addEventListener('click', () => { session.revealed = true; renderStudyPractice(set); });
+  const rate = rating => {
+    if (!session.revealed || !card || !sync?.account || sync.combining || sync.status === 'loading') return;
+    set.cards = set.cards.map(c => c.id === card.id ? rateStudyCard(c, rating) : c); set.updatedAt = new Date().toISOString(); persist(); session.at++; session.revealed = false; renderStudyPractice(set);
+  };
+  document.querySelector('#rate-again')?.addEventListener('click', () => rate('again'));
+  document.querySelector('#rate-recalled')?.addEventListener('click', () => rate('recalled'));
+}
+
+function renderQuiz() {
+  quizAnswered = false; const q = questions[quizIndex];
+  document.querySelector('#quiz-area').innerHTML = `<span class="eyebrow">A MOMENT TO THINK · ${quizIndex + 1} OF ${questions.length}</span><h2 style="margin:18px 0;font-size:1.2rem;line-height:1.5">${q.question}</h2><div>${q.options.map((o, i) => `<button class="quiz-option" data-answer="${i}">${o}</button>`).join('')}</div><div id="quiz-feedback" aria-live="polite"></div><button class="text-button" id="next-question" hidden>Next learning check</button>`;
+  document.querySelector('#next-question').onclick = () => { quizIndex = (quizIndex + 1) % questions.length; renderQuiz(); };
+}
+function practice() {
+  main.innerHTML = `${intro('PRACTICE RESOURCES', 'Go straight to the source.', 'A starting shelf of original professional resources. Always check scope, currency and local pathways.')}<div class="resource-grid">${resources.filter(r => r.area === 'practice').map(resourceCard).join('')}<article class="card resource-card"><span class="badge">Research in context</span><h3>Find the evidence behind a question</h3><p>Look up original publications, examine their limitations and save the ones relevant to your learning.</p><a class="text-button" href="#research">Search research</a></article></div><div class="notice">Validated outcome measures and assessment resources will be added after their exact versions, scoring methods and permissions are verified. No generic assessment scores are used here.</div>`;
+}
+function beginAppraisal(paperId) {
+  const p = workspace.saved.find(p => p.id === paperId) || paperMap.get(paperId); if (!p) return;
+  if (!sync?.account || sync.combining) { toast('Connect to your account before starting an appraisal.'); return; }
+  let a = workspace.appraisals.filter(a => a.paperId === paperId).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+  if (!a) {
+    a = newAppraisal(p); workspace.appraisals.unshift(a);
+    if (!workspace.saved.some(saved => saved.id === paperId)) workspace.saved.unshift({ ...p, notes: '', collection: '', savedAt: new Date().toISOString() });
+    persist();
+  }
+  if (p.retracted && !a.sourceRetracted) { a.sourceRetracted = true; persist(); }
+  activeAppraisal = a.id; if (dialog.open) dialog.close(); navigate('appraisal');
+}
+function appraisal() {
+  const a = workspace.appraisals.find(a => a.id === activeAppraisal);
+  if (!a) {
+    main.innerHTML = `${intro('READ. QUESTION. REFLECT.', 'Your paper appraisals.', 'Keep your reasoning beside the source, then decide what you want to learn next.')}<div class="button-row"><a class="button secondary" href="#library">Saved papers</a><a class="button" href="#research">Find a paper</a></div><div class="paper-list">${workspace.appraisals.length ? workspace.appraisals.map(entry => `<article class="card"><span class="badge">${esc(basisLabels[entry.basis])}</span><h2>${esc(entry.title)}</h2><p class="subtle">PMID ${esc(entry.pmid)} · Last edited ${esc(new Date(entry.updatedAt).toLocaleString('en-GB'))}</p><button class="button secondary" data-open-appraisal="${esc(entry.id)}">Open appraisal</button></article>`).join('') : '<div class="empty"><h2>Start with a real paper</h2><p>Open a paper record or a saved paper and choose “Appraise this paper”.</p></div>'}</div>`;
+    return;
+  }
+  main.innerHTML = `${intro('YOUR REASONING, BESIDE THE SOURCE', 'Appraise this paper.', 'Notes save as you type to your current workspace. Check the save status above for confirmation.')}<div class="button-row" style="margin-bottom:20px"><button class="text-button" id="all-appraisals">All appraisals</button><a class="text-button" href="#library">Saved papers</a></div><article class="card appraisal-source"><h2>${esc(a.title)}</h2><p>${esc(a.citation)}</p><a href="https://pubmed.ncbi.nlm.nih.gov/${esc(a.pmid)}/" target="_blank" rel="noopener noreferrer">Open original PubMed record</a>${(a.sourceRetracted || paperMap.get(a.paperId)?.retracted) ? '<div class="notice error">This indexed paper is marked as retracted. Investigate the retraction notice before using its findings.</div>' : ''}</article><form id="appraisal-form" class="card form-card" style="margin-top:20px"><h2>What have you reviewed?</h2><div class="form-row"><div class="field"><label for="appraisal-basis">Reading basis</label><select id="appraisal-basis" data-appraisal-field="basis">${Object.entries(basisLabels).map(([key,label]) => `<option value="${key}" ${key === a.basis ? 'selected' : ''}>${label}</option>`).join('')}</select></div><div class="field"><label for="appraisal-design">Study design (your assessment)</label><input id="appraisal-design" data-appraisal-field="design" maxlength="200" value="${esc(a.design)}" placeholder="e.g. Trial, review, cohort; unsure is fine"></div></div><div class="notice" id="appraisal-basis-note"></div>${appraisalFields.map(([key,label,hint]) => `<div class="field"><label for="appraisal-${key}">${label}</label><p class="subtle" id="hint-${key}">${hint}</p><textarea id="appraisal-${key}" data-appraisal-field="${key}" maxlength="5000" aria-describedby="hint-${key}">${esc(a[key])}</textarea></div>`).join('')}<div class="notice">These are general learning prompts, not a validated appraisal instrument or an automatic quality score. Use a study-specific checklist when appropriate. Keep patient information out of your notes.</div><div class="button-row"><button class="button" type="button" id="appraisal-reflect">${workspace.reflections.some(r => r.appraisalId === a.id) ? 'Open linked CPD reflection' : 'Create CPD reflection'}</button><button class="button secondary" type="button" id="export-appraisal">Markdown (.md)</button></div></form>`;
+  const basisNote = () => { document.querySelector('#appraisal-basis-note').textContent = a.basis === 'abstract' ? 'Abstract only: important methods, harms and limitations may be missing. Record those gaps and read the full text before drawing conclusions that need it.' : a.basis === 'fullText' ? 'Full text recorded as read. Consider the methods, results, harms, uncertainty and relevance; reading the full text does not itself establish quality.' : 'Not yet read. Keep questions here as a draft; record what you have actually read before creating a CPD reflection.'; };
+  basisNote();
+  document.querySelector('#appraisal-form').onsubmit = e => e.preventDefault();
+  document.querySelector('#appraisal-form').addEventListener('input', e => {
+    const key = e.target.dataset.appraisalField; if (!key) return;
+    if (!sync?.account || sync.combining || sync.status === 'loading') return;
+    a[key] = e.target.value; a.updatedAt = new Date().toISOString(); persist(); if (key === 'basis') basisNote();
+  });
+  mountLearningExports('appraisal',()=>({...a,sourceRetracted:a.sourceRetracted===true || paperMap.get(a.paperId)?.retracted===true}),'#appraisal-form');
+  document.querySelector('#all-appraisals').onclick = () => { activeAppraisal = null; appraisal(); };
+  document.querySelector('#export-appraisal').onclick = () => download(`physiosidekick-appraisal-${a.pmid}.md`, appraisalMarkdown(a), 'text/markdown');
+  document.querySelector('#appraisal-reflect').onclick = () => {
+    if(cpdFormOpen){navigate('cpd');toast('Save or cancel your existing reflection draft first.');return;}
+    try {
+      const existing = workspace.reflections.find(r => r.appraisalId === a.id);
+      reflectionDraft = existing ? null : reflectionFromAppraisal(a); reflectionEditing = existing?.id || null;
+      cpdFormOpen = true; navigate('cpd');
+    } catch (e) { toast(e.message); }
+  };
+}
+
+function cpd() {
+  if (portfolioDownloadURL) { URL.revokeObjectURL(portfolioDownloadURL); portfolioDownloadURL = null; }
+  let records = [], filterError = '';
+  try { records = filterReflections(workspace.reflections, portfolioFilters); } catch (e) { filterError = e.message; }
+  const stats = portfolioSummary(records);
+  const followUps = followUpSummary(workspace.reflections);
+  const kinds = [...new Set(workspace.reflections.map(r => r.kind))].sort();
+  main.innerHTML = `${intro('YOUR DEVELOPMENT', 'See where your learning leads.', 'Review your reflections, record follow-up outcomes and build a personal portfolio with traceable sources.', '<button class="button" id="new-reflection">'+icon('plus')+'Add reflection</button>')}<section class="card"><h2>Your CPD portfolio</h2><section class="learning-followups"><h3>Your review dates</h3><p>${followUps.due} due today or earlier · ${followUps.upcoming} future dates · ${followUps.undated} without a date</p><div class="button-row"><button class="button" id="set-review-date" ${workspace.reflections.length?'':'disabled'}>Set review date</button><button class="button secondary" id="show-due-reviews">Show all due review dates</button></div><p class="subtle">Set a date on a saved reflection. Future dates appear under Future review dates.</p><p class="subtle">Date-based view only. An outcome note does not automatically close a review, and no reminder is scheduled.</p></section><p>${records.length} of ${workspace.reflections.length} reflections selected. Only recorded learning time is included.</p><form id="portfolio-filters"><h3>Filter your portfolio</h3><p class="subtle">These controls filter existing records; they do not set a reflection’s review date.</p><div class="form-row"><div class="field"><label for="portfolio-from">Learning date from</label><input id="portfolio-from" name="from" type="date" value="${esc(portfolioFilters.from)}"></div><div class="field"><label for="portfolio-to">Learning date to</label><input id="portfolio-to" name="to" type="date" value="${esc(portfolioFilters.to)}"></div></div><div class="form-row"><div class="field"><label for="portfolio-kind">Activity type</label><select id="portfolio-kind" name="kind"><option value="">All activities</option>${kinds.map(kind => `<option value="${esc(kind)}" ${portfolioFilters.kind === kind ? 'selected' : ''}>${esc(kind)}</option>`).join('')}</select></div><div class="field"><label for="portfolio-followup">Follow-up record</label><select id="portfolio-followup" name="followUp"><option value="">All reflections</option><option value="recorded" ${portfolioFilters.followUp === 'recorded' ? 'selected' : ''}>Outcome recorded</option><option value="missing" ${portfolioFilters.followUp === 'missing' ? 'selected' : ''}>No outcome recorded</option></select></div></div><div class="field"><label for="portfolio-review">Filter by review date</label><select id="portfolio-review" name="review">${[['','All review dates'],['due','Due today or earlier'],['upcoming','Future review dates'],['undated','No review date']].map(([value,label])=>`<option value="${value}" ${portfolioFilters.review===value?'selected':''}>${label}</option>`).join('')}</select></div><div class="field"><label for="portfolio-term">Search reflections</label><input id="portfolio-term" name="term" type="search" maxlength="250" value="${esc(portfolioFilters.term)}" placeholder="Title, learning, next step, outcome or source"></div><div class="button-row"><button class="button secondary" type="submit">Apply portfolio filters</button><button class="text-button" type="button" id="reset-portfolio">Show all records</button></div></form>${filterError ? `<div class="notice error">${esc(filterError)}</div>` : ''}<div class="stat-line portfolio-stats"><div><strong>${stats.count}</strong><span>Selected reflections</span></div><div><strong>${stats.minutes}</strong><span>Recorded minutes</span></div><div><strong>${stats.activities}</strong><span>Activity types</span></div><div><strong>${stats.followedUp}</strong><span>Outcomes recorded</span></div></div><div class="button-row portfolio-main-exports"><button class="button" id="export-portfolio-pdf" ${!records.length || filterError ? 'disabled' : ''}>Export PDF (.pdf)</button><button class="button secondary" id="export-portfolio-word" ${!records.length || filterError ? 'disabled' : ''}>Export Word (.docx)</button></div><p class="subtle">PDF is ready to print or share. Word is editable. Choose a format, then tap Save file when it is ready. Files are generated on this device from the selected reflections and their linked evidence.</p><p id="portfolio-export-status" role="status">${!records.length ? 'Select or add a reflection to enable exports.' : ''}</p><div id="portfolio-download"></div><details class="portfolio-additional"><summary>Additional export formats</summary><div class="button-row"><button class="button secondary" id="export-cpd" ${!records.length || filterError ? 'disabled' : ''}>Markdown (.md)</button><button class="button secondary" id="export-portfolio-print" ${!records.length || filterError ? 'disabled' : ''}>Printable webpage (.html)</button></div><p class="subtle">The webpage can also be printed from a browser. <a href="/export-third-party.txt" target="_blank" rel="noopener noreferrer">Export software and font licences</a></p></details></section><div class="notice">This is your personal learning log. Time logged does not establish accreditation or regulatory approval. Outcomes are your own account of what happened. Keep entries free of identifiable patient information.</div><div class="button-row" style="margin-bottom:20px"><a class="button secondary" href="#appraisal" data-all-appraisals>My paper appraisals</a></div><div id="reflection-form-area"></div><div class="paper-list">${records.length ? records.map(r => `<article class="card" data-reflection="${esc(r.id)}"><div class="reflection-meta"><span>${esc(r.date)}</span><span>· ${Number(r.minutes)} minutes</span><span class="badge">${esc(r.kind)}</span></div><h3>${esc(r.title)}</h3><p class="reflection-content">${esc(r.learning)}</p><h3>My intended next step</h3><p class="reflection-content">${esc(r.action)}</p><h3>Outcome / follow-up</h3><p class="reflection-content">${esc(r.outcome || 'No outcome recorded yet.')}</p>${r.followUpDate ? `<p class="subtle">Review date: ${esc(r.followUpDate)}</p>` : ''}${r.source ? `<p class="identifier">Source: ${esc(r.source)}</p>` : ''}${r.appraisalId ? `<p class="subtle">Reading basis at reflection: ${esc(basisLabels[r.basis] || 'Not recorded')}</p><button class="text-button" data-open-appraisal="${esc(r.appraisalId)}">Open linked appraisal</button>` : ''}<div class="reflection-actions"><button class="text-button" data-set-review-date="${esc(r.id)}">${r.followUpDate?'Change review date':'Set review date'}</button><button class="text-button" data-edit-reflection="${esc(r.id)}">Edit reflection & follow-up</button><button class="danger-button" data-delete-reflection="${esc(r.id)}">Remove</button></div></article>`).join('') : `<div class="empty">${icon('cpd')}<h3>${workspace.reflections.length ? 'No reflections match these filters' : 'A useful thought is worth keeping'}</h3><p>${workspace.reflections.length ? (portfolioFilters.review==='due' ? 'Reflections without a review date, or with a future date, do not appear in this view. Use Set review date to link a date to a saved reflection, or choose Show all records.' : 'Your saved records are hidden by these filters. Choose Show all records, or use Set review date to update a saved reflection.') : 'Start with a paper, a teaching session or a question that changed your understanding.'}</p>${!workspace.reflections.length ? '<button class="button secondary" id="first-reflection">Write your first reflection</button>' : ''}</div>`}</div>`;
+  document.querySelector('#new-reflection').onclick = () => { if (cpdFormOpen) { toast('Save or cancel the current reflection first.'); return; } reflectionEditing = null; reflectionDraft = null; cpdFormOpen = true; renderReflectionForm(); };
+  document.querySelector('#first-reflection')?.addEventListener('click', () => { if (cpdFormOpen) return; reflectionEditing = null; reflectionDraft = null; cpdFormOpen = true; renderReflectionForm(); });
+  document.querySelector('#set-review-date').onclick=()=>reviewDateDialog();
+  document.querySelectorAll('[data-set-review-date]').forEach(button=>button.onclick=()=>reviewDateDialog(button.dataset.setReviewDate));
+  document.querySelector('#show-due-reviews').onclick=()=>{portfolioFilters={from:'',to:'',kind:'',term:'',followUp:'',review:'due'};cpd();};
+  document.querySelector('#portfolio-filters').onsubmit = e => { e.preventDefault(); portfolioFilters = Object.fromEntries(new FormData(e.currentTarget)); cpd(); };
+  document.querySelector('#reset-portfolio').onclick = () => { portfolioFilters = { from:'', to:'', kind:'', term:'', followUp:'' }; cpd(); };
+  const exportPortfolio = printable => {
+    if (cpdFormOpen) { toast('Save or cancel the reflection draft before exporting.'); return; }
+    if (printable) download('physiosidekick-cpd-portfolio.html', portfolioHTML(workspace, portfolioFilters), 'text/html');
+    else download('physiosidekick-cpd-portfolio.md', portfolioMarkdown(workspace, portfolioFilters), 'text/markdown');
+  };
+  document.querySelector('#export-cpd').onclick = () => exportPortfolio(false);
+  document.querySelector('#export-portfolio-print').onclick = () => exportPortfolio(true);
+  const exportDocument = async format => {
+    if (portfolioExportBusy) return;
+    if (cpdFormOpen) { toast('Save or cancel the reflection draft before exporting.'); return; }
+    const selected = filterReflections(workspace.reflections,portfolioFilters);
+    if (!selected.length) { toast('Select or add a reflection before exporting.'); return; }
+    const snapshot = structuredClone(workspace), scope = {...portfolioFilters}, now = new Date();
+    const status = document.querySelector('#portfolio-export-status'), area = document.querySelector('#portfolio-download');
+    const buttons = [...document.querySelectorAll('.portfolio-main-exports button')];
+    portfolioExportBusy = true; buttons.forEach(button=>button.disabled=true);
+    if (portfolioDownloadURL) { URL.revokeObjectURL(portfolioDownloadURL); portfolioDownloadURL = null; }
+    area.replaceChildren(); status.textContent = `Preparing ${format === 'pdf' ? 'PDF' : 'Word'} file…`;
+    try {
+      const exporter = await import('./portfolio-exports.js');
+      const bytes = await (format === 'pdf' ? exporter.portfolioPDF : exporter.portfolioWord)(snapshot,scope,now);
+      if (!area.isConnected || workspaceEpoch !== epoch) return;
+      const type = format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      portfolioDownloadURL = URL.createObjectURL(new Blob([bytes],{type}));
+      const link = document.createElement('a'); link.className='button'; link.href=portfolioDownloadURL;
+      link.download=`physiosidekick-cpd-portfolio-${now.toISOString().replace(/[:.]/g,'-')}.${format}`;
+      link.textContent=`Save file (${format === 'pdf' ? 'PDF' : 'Word .docx'})`; area.append(link);
+      status.textContent='File ready. Tap Save file to download it, then open or share it from your browser’s downloads.';
+      link.focus();
+    } catch { if (status.isConnected) status.textContent='The file could not be prepared. Retry, or choose a format under Additional export formats. Your records have not been changed.'; }
+    finally { portfolioExportBusy=false; buttons.forEach(button=>{if(button.isConnected)button.disabled=false;}); }
+  };
+  const epoch = workspaceEpoch;
+  document.querySelector('#export-portfolio-pdf').onclick = () => exportDocument('pdf');
+  document.querySelector('#export-portfolio-word').onclick = () => exportDocument('docx');
+  if (cpdFormOpen) renderReflectionForm();
+}
+function reviewDateDialog(id='') {
+  if(hasOpenDraft()){toast('Save or cancel your open draft before setting a review date.');return;}
+  if(!sync?.account||sync.status==='loading'||sync.combining||sync.replacing){toast('Wait for your account connection before setting a review date.');return;}
+  const accountId=sync.account.id;
+  const selected=id || (workspace.reflections.length===1?workspace.reflections[0].id:'');
+  openDialog(`<h2 id="dialog-title">Set a reflection’s review date</h2><p>Choose the saved reflection and when you want to review that learning. This updates its review date; it does not schedule a notification.</p><form id="review-date-form"><div class="field"><label for="review-reflection">Saved reflection</label><select id="review-reflection" required><option value="">Choose a reflection</option>${workspace.reflections.map(r=>`<option value="${esc(r.id)}" ${r.id===selected?'selected':''}>${esc(r.title)} · ${esc(r.date)}</option>`).join('')}</select></div><div class="field"><label for="review-date-value">Review date</label><input id="review-date-value" type="date" required><p id="review-date-hint" class="subtle"></p></div><p class="subtle">A future date is shown under Future review dates. After saving, the portfolio will show the relevant dated records.</p><p id="review-date-status" role="status"></p><div class="button-row"><button class="button" type="submit">Save review date</button><button class="button secondary" type="button" id="cancel-review-date">Cancel</button></div></form>`);
+  const picker=document.querySelector('#review-reflection'),date=document.querySelector('#review-date-value'),status=document.querySelector('#review-date-status');
+  picker.value=selected;
+  const fill=()=>{const record=workspace.reflections.find(r=>r.id===picker.value);date.value=record?.followUpDate||'';date.min=record?.date||'';document.querySelector('#review-date-hint').textContent=record?`Learning date: ${record.date}. Choose that date or later.`:'Choose a saved reflection first.';status.textContent='';};
+  fill();picker.onchange=fill;document.querySelector('#cancel-review-date').onclick=()=>dialog.close();
+  document.querySelector('#review-date-form').onsubmit=e=>{
+    e.preventDefault();
+    if(sync?.account?.id!==accountId||sync.status==='loading'||sync.combining||sync.replacing){status.textContent='Your account changed or is loading. Close this window and try again after connecting.';return;}
+    try{
+      const next=assignReviewDate(workspace.reflections,picker.value,date.value);
+      validateWorkspace({...workspace,reflections:next});
+      const previous=workspace.reflections;workspace.reflections=next;
+      if(!persist()){workspace.reflections=previous;status.textContent='The date could not be queued. Your existing reflection is unchanged.';return;}
+      portfolioFilters={from:'',to:'',kind:'',term:'',followUp:'',review:date.value<=followUpSummary(next).today?'due':'upcoming'};
+      const title=workspace.reflections.find(r=>r.id===picker.value).title;
+      dialog.close();cpd();const target=[...document.querySelectorAll('[data-reflection]')].find(node=>node.dataset.reflection===picker.value);if(target){target.tabIndex=-1;target.classList.add('workspace-found');target.scrollIntoView?.({block:'center'});target.focus({preventScroll:true});}toast(sync.mode === 'trial' ? `Review date linked to “${title}”. Export a backup to keep your trial.` : `Review date linked to “${title}”. Wait for Account saved before switching devices.`);
+    }catch(error){status.textContent=error.message;}
+  };
+}
+
+function renderReflectionForm() {
+  const r = reflectionDraft || workspace.reflections.find(r => r.id === reflectionEditing) || {};
+  const area = document.querySelector('#reflection-form-area');
+  area.innerHTML = `<form id="reflection-form" class="card form-card" style="margin-bottom:20px"><h2>${r.id ? 'Edit your reflection' : 'Capture a reflection'}</h2>${r.appraisalId ? `<div class="notice">Draft from your own appraisal notes · ${esc(basisLabels[r.basis] || 'Reading basis not recorded')}. Check the wording and enter the time actually spent before saving. Later appraisal edits do not rewrite this reflection.</div>` : ''}<div class="field"><label for="reflection-title">Learning title</label><input id="reflection-title" name="title" value="${esc(r.title || '')}" maxlength="180" required></div><div class="form-row"><div class="field"><label for="reflection-date">Date</label><input id="reflection-date" name="date" type="date" value="${esc(r.date || localDay())}" required></div><div class="field"><label for="reflection-minutes">Learning time in minutes</label><input id="reflection-minutes" name="minutes" type="number" min="1" max="1440" value="${esc(r.minutes || '')}" required></div></div><div class="field"><label for="reflection-kind">Activity</label><select id="reflection-kind" name="kind"><option>Research reading</option><option>Teaching</option><option>Course or learning</option><option>Professional reflection</option></select></div><div class="field"><label for="reflection-learning">What did you learn, and why does it matter?</label><textarea id="reflection-learning" name="learning" maxlength="10000" required>${esc(r.learning || '')}</textarea></div><div class="field"><label for="reflection-action">What will you do next?</label><textarea id="reflection-action" name="action" maxlength="10000" required>${esc(r.action || '')}</textarea></div><div class="field"><label for="reflection-outcome">Outcome / follow-up (optional)</label><textarea id="reflection-outcome" name="outcome" maxlength="6000" placeholder="What happened after the learning action? Record what you observed and what remains uncertain.">${esc(r.outcome || '')}</textarea></div><div class="field"><label for="reflection-followup">Review date (optional)</label><input id="reflection-followup" name="followUpDate" type="date" value="${esc(r.followUpDate || '')}"><p class="subtle">Your chosen review date. This field does not create a reminder.</p></div><div class="field"><label for="reflection-source">Source or reference (optional)</label><input id="reflection-source" name="source" value="${esc(r.source || '')}" maxlength="1000" placeholder="Paper DOI, guideline or session title"></div><div class="button-row"><button class="button" type="submit">Save reflection</button><button class="button secondary" type="button" id="cancel-reflection">Cancel</button></div></form>`;
+  if (r.kind) document.querySelector('#reflection-kind').value = r.kind;
+  document.querySelector('#reflection-form').addEventListener('input', e => {
+    const data = Object.fromEntries(new FormData(e.currentTarget));
+    reflectionDraft = { ...r, ...data, ...(r.id ? { id: r.id } : {}) };
+  });
+  document.querySelector('#cancel-reflection').onclick = () => { cpdFormOpen = false; reflectionEditing = null; reflectionDraft = null; area.innerHTML = ''; };
+  document.querySelector('#reflection-form').onsubmit = e => {
+    e.preventDefault(); const data = Object.fromEntries(new FormData(e.currentTarget));
+    if (!data.title.trim() || !data.learning.trim() || !data.action.trim()) { toast('Please complete the title, learning and next step.'); return; }
+    const entry = { ...data, ...(r.appraisalId ? { appraisalId: r.appraisalId, paperId: r.paperId, basis: r.basis } : {}), ...(r.sourceRetracted ? { sourceRetracted: true } : {}), id: r.id || crypto.randomUUID(), minutes: Number(data.minutes) };
+    try { validateWorkspace({ ...workspace, reflections: [entry] }); } catch (e) { toast(e.message); return; }
+    workspace.reflections = r.id ? workspace.reflections.map(old => old.id === r.id ? entry : old) : [entry, ...workspace.reflections];
+    const ok = persist(); cpdFormOpen = false; reflectionEditing = null; reflectionDraft = null; cpd(); if (ok) toast('Reflection added to your workspace');
+  };
+  document.querySelector('#reflection-title').focus();
+}
+function fcp() {
+  main.innerHTML = `${intro('FIRST CONTACT PRACTICE', 'Teach with a purpose.', 'A dedicated space for FCP learning, reflection and team teaching.')}<section class="fcp-banner"><span class="eyebrow">SPECIALIST AREA · PROTOTYPE PREVIEW</span><h2 style="margin-top:12px">Your next teaching session starts here.</h2><p>Build a discussion plan, add a verified source and make the learning practical. The future premium curriculum and pricing have not been set.</p></section><section class="card" style="margin-bottom:20px"><span class="eyebrow">V1-F · SUPPLIED LEARNING CONTENT</span><h2>FCP learning packs</h2><p>${learningPackCounts().drafts} source-linked drafts prepared toward the six-pack V1 content floor. ${learningPackCounts().reviewed} packs have a recorded completed review. Review status is shown on each pack.</p>${learningPacks.map(pack=>`<article class="teaching-summary"><h3>${esc(pack.title)}</h3><p>${esc(pack.summary)}</p><p class="subtle">${esc(pack.status)} · Version ${pack.version} · ${pack.minutes} planned minutes</p><button class="button secondary" data-open-pack="${pack.id}" aria-label="Open learning pack: ${esc(pack.title)}">Open learning pack</button></article>`).join('')}</section><section class="card" style="margin-bottom:20px"><div class="split-heading"><h2>Your teaching sessions</h2><button class="button" data-new-teaching>New session</button></div><p>Plans and paper references save to your current workspace. Return here to continue or adapt a session.</p>${workspace.teachingPlans.length ? workspace.teachingPlans.map(t => `<article class="teaching-summary"><h3>${esc(t.title || 'Untitled teaching session')}</h3><p class="subtle">${esc(t.audience || 'Audience not recorded')} · ${t.minutes} minutes · ${t.sources.length} attached papers · Draft</p><div class="button-row"><button class="text-button" data-open-teaching="${esc(t.id)}">Open session</button><button class="text-button" data-copy-teaching="${esc(t.id)}">Duplicate session</button></div></article>`).join('') : '<p class="subtle">Start a blank session or use one of the frameworks below.</p>'}</section><div class="resource-grid">${teachingTopics.map((t, i) => `<article class="card resource-card"><span class="badge">Teaching framework · 15 minutes</span><h3>${t.title}</h3><p>${t.summary}</p><button class="text-button" data-teaching="${i}">Create teaching outline</button></article>`).join('')}<article class="card resource-card"><span class="badge">Source shelf</span><h3>Start from the current guidance</h3><p>Use the original recommendation, check its scope and add your local pathway before delivering a session.</p><a class="text-button" href="#practice">Open practice resources</a></article></div><div class="notice">These are editable planning frameworks, not reviewed clinical teaching packs, prescribing advice, accredited training or competency sign-off. Clinical teaching content needs professional review before use.</div>`;
+}
+function openLearningPack(id) {
+  const pack=learningPacks.find(item=>item.id===id);if(!pack)return;
+  openDialog(`<span class="eyebrow">SUPPLIED FCP LEARNING DRAFT</span><h2 id="dialog-title">${esc(pack.title)}</h2><p><strong>${esc(pack.status)}</strong><br>Version ${pack.version} · ${pack.minutes} planned teaching minutes</p><p>${esc(pack.summary)}</p>${[['Learning objectives',pack.objectives],['Timed agenda',pack.agenda],['Fictional case and discussion',pack.discussion],['Facilitator preparation and source checkpoints',pack.preparation],['Take-home activity',pack.takeaways]].map(([title,text])=>`<section class="pack-section"><h3>${title}</h3><p class="pack-text">${esc(text)}</p></section>`).join('')}${pack.checks?.length ? `<section class="pack-section"><h3>Learner self-checks</h3><p>Compare your reasoning with these draft facilitator points and the original source. These are discussion prompts, not a scored competency test.</p>${pack.checks.map(check=>`<details class="pack-check"><summary>${esc(check.question)}</summary><p>${esc(check.points)}</p><p class="subtle"><a href="${esc(pack.sources[check.sourceIndex].url)}" target="_blank" rel="noopener noreferrer">${esc(pack.sources[check.sourceIndex].title)}</a> · ${esc(check.section)}</p></details>`).join('')}</section>` : ''}<section><h3>Original source map</h3><ul>${pack.sources.map(source=>`<li><a href="${esc(source.url)}" target="_blank" rel="noopener noreferrer">${esc(source.title)}</a> · ${esc(source.sections)}</li>`).join('')}</ul></section><p>Check the original sources and local context, then obtain clinical review before delivery. This pack has no accreditation or competency sign-off. The teaching duration does not populate your CPD time.</p><div class="button-row"><button class="button" id="use-learning-pack">Create my editable session</button><button class="button secondary" id="export-learning-pack">Download pack (.md)</button></div>`);
+  document.querySelector('#export-learning-pack').onclick=()=>download(`physiosidekick-${pack.id}-${pack.version}.md`,learningPackMarkdown(pack),'text/markdown');
+  document.querySelector('#use-learning-pack').onclick=()=>{
+    if(!sync?.account||sync.combining||sync.status==='loading'){toast('Connect to your account before saving a session.');return;}
+    const plan=teachingFromPack(pack);try{validateWorkspace({...workspace,teachingPlans:[...workspace.teachingPlans,plan]});}catch(error){toast(error.message);return;}
+    workspace.teachingPlans.unshift(plan);activeTeaching=plan.id;persist();dialog.close();navigate('teaching');
+  };
+}
+function teaching(index) {
+  const topic = teachingTopics[index]; if (!topic) return;
+  createTeaching(topic);
+}
+function createTeaching(topic) {
+  if (!sync?.account || sync.combining || sync.status === 'loading') { toast('Connect to your account before creating a session.'); return; }
+  const plan = newTeachingPlan(topic); workspace.teachingPlans.unshift(plan); activeTeaching = plan.id; persist(); navigate('teaching');
+}
+function teachingEditor() {
+  const t = workspace.teachingPlans.find(t => t.id === activeTeaching);
+  if (!t) { fcp(); return; }
+  const fields = [['objectives','Learning objectives','What should learners be able to explain, question or do after the session?'],['agenda','Agenda','Check that the timings in your edited agenda fit the planned session length.'],['discussion','Fictional case or discussion question','Use a fictional scenario or general question. Do not enter identifiable patient information.'],['preparation','Facilitator preparation','What do you need to read, check or prepare before teaching?'],['takeaways','Takeaways and next action','What should the group take away, and what uncertainty or follow-up remains?'],['guidance','Guidance or other references to check','Record guideline titles, versions, URLs and any local pathway you need to verify.']];
+  main.innerHTML = `${intro('FROM EVIDENCE TO TEACHING', 'Build a useful session.', 'Your plan saves as you type. Check the save status above for confirmation.')}<div class="button-row" style="margin-bottom:20px"><a class="text-button" href="#fcp">All teaching sessions</a><button class="button secondary" id="export-teaching">Markdown (.md)</button></div><div class="notice">Draft planning workspace. Source attachment does not verify clinical content or establish study quality. Review the original papers and complete the plan before delivery.</div><form id="saved-teaching-form" class="card form-card"><div class="field"><label for="session-title">Session title</label><input id="session-title" data-session-field="title" maxlength="180" value="${esc(t.title)}"></div><div class="form-row"><div class="field"><label for="session-audience">Audience</label><input id="session-audience" data-session-field="audience" maxlength="120" value="${esc(t.audience)}" placeholder="e.g. FCP team or student journal club"></div><div class="field"><label for="session-minutes">Planned duration in minutes</label><input id="session-minutes" data-session-field="minutes" type="number" min="5" max="480" value="${t.minutes}" aria-describedby="session-time-hint"><p class="subtle" id="session-time-hint">5–480 minutes. Learning time is not automatically added to CPD.</p></div></div>${fields.map(([key,label,hint]) => `<div class="field"><label for="session-${key}">${label}</label><p class="subtle" id="session-hint-${key}">${hint}</p><textarea id="session-${key}" data-session-field="${key}" maxlength="6000" aria-describedby="session-hint-${key}">${esc(t[key])}</textarea></div>`).join('')}</form><section class="card" style="margin-top:20px"><h2>Attach real paper references</h2><p>Choose a paper saved in your library. Citations and original links are retained with this plan, even if you later remove the paper from your library.</p><div class="field"><label for="session-paper">Saved paper</label><select id="session-paper"><option value="">Choose a saved paper</option>${workspace.saved.map(p => `<option value="${esc(p.id)}">${esc(p.title)} · PMID ${esc(p.pmid)}</option>`).join('')}</select></div><div class="button-row"><button class="button secondary" id="attach-session-paper" ${workspace.saved.length ? '' : 'disabled'}>Attach selected paper</button><a class="text-button" href="#research">Find more papers</a></div><div id="session-sources"></div></section><div class="button-row" style="margin-top:20px"><button class="danger-button" id="remove-teaching">Remove this session</button></div>`;
+  document.querySelector('#saved-teaching-form').onsubmit = e => e.preventDefault();
+  document.querySelector('#saved-teaching-form').addEventListener('input', e => {
+    const key = e.target.dataset.sessionField; if (!key || !sync?.account || sync.combining || sync.status === 'loading') return;
+    if (key === 'minutes') {
+      const minutes = Number(e.target.value); if (!Number.isInteger(minutes) || minutes < 5 || minutes > 480) { e.target.setCustomValidity('Use 5 to 480 minutes.'); return; }
+      e.target.setCustomValidity('');
+      if (t.agenda === suggestedAgenda(t.minutes)) { t.agenda = suggestedAgenda(minutes); document.querySelector('#session-agenda').value = t.agenda; }
+      t.minutes = minutes;
+    } else t[key] = e.target.value;
+    t.updatedAt = new Date().toISOString(); persist();
+  });
+  mountLearningExports('teaching',()=>t,'#saved-teaching-form',()=>document.querySelector('#session-minutes').reportValidity());
+  document.querySelector('#export-teaching').onclick = () => {
+    if (!document.querySelector('#session-minutes').reportValidity()) return;
+    download('physiosidekick-teaching-plan.md', teachingMarkdown(t), 'text/markdown');
+  };
+  document.querySelector('#attach-session-paper').onclick = () => {
+    if (!sync?.account || sync.combining || sync.status === 'loading') return;
+    const paper = workspace.saved.find(p => p.id === document.querySelector('#session-paper').value);
+    if (!paper) { toast('Choose a saved paper first.'); return; }
+    if (t.sources.some(s => s.pmid === paper.pmid)) { toast('That paper is already attached.'); return; }
+    if (t.sources.length >= 20) { toast('A session can have up to 20 attached papers.'); return; }
+    const appraisal = workspace.appraisals.filter(a => a.paperId === paper.id).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+    t.sources.push(teachingSource(paper, appraisal)); t.updatedAt = new Date().toISOString(); persist(); renderTeachingSources(t);
+  };
+  document.querySelector('#remove-teaching').onclick = () => {
+    openDialog('<h2 id="dialog-title">Remove this teaching session?</h2><p>The session plan and its attached reference snapshots will be removed from your account workspace. Saved papers, appraisals and CPD reflections remain. Export a copy first if you want to keep it.</p><button class="button" id="confirm-remove-teaching">Remove session</button>');
+    document.querySelector('#confirm-remove-teaching').onclick = () => {
+      if (!sync?.account || sync.combining || sync.status === 'loading') return;
+      workspace.teachingPlans = workspace.teachingPlans.filter(p => p.id !== t.id); activeTeaching = null; persist(); dialog.close(); navigate('fcp');
+    };
+  };
+  renderTeachingSources(t);
+}
+function renderTeachingSources(t) {
+  const area = document.querySelector('#session-sources');
+  area.innerHTML = t.sources.length ? t.sources.map(s => `<article class="teaching-summary"><h3>${esc(s.title)}</h3><p>${esc(s.citation)}</p><a href="https://pubmed.ncbi.nlm.nih.gov/${esc(s.pmid)}/" target="_blank" rel="noopener noreferrer">Open original PubMed record</a>${s.retracted ? '<div class="notice error">Marked as retracted in the attached index record. Investigate the retraction notice before teaching from it.</div>' : ''}<div class="field" style="margin-top:15px"><label for="session-basis-${s.pmid}">Reading basis for this session</label><select id="session-basis-${s.pmid}" data-session-basis="${esc(s.pmid)}">${Object.entries(readingLabels).map(([key,label]) => `<option value="${key}" ${key === s.readingBasis ? 'selected' : ''}>${label}</option>`).join('')}</select><p class="subtle">Initially copied from the latest saved appraisal when present. Confirm what you actually reviewed. This is your declaration, not an app quality check.</p></div><button class="text-button" data-remove-source="${esc(s.pmid)}">Detach reference</button></article>`).join('') : '<p class="subtle" style="margin-top:20px">No papers attached yet.</p>';
+  area.onchange = e => {
+    if (!sync?.account || sync.combining || sync.status === 'loading') return;
+    const source = t.sources.find(s => s.pmid === e.target.dataset.sessionBasis); if (!source) return;
+    source.readingBasis = e.target.value; t.updatedAt = new Date().toISOString(); persist();
+  };
+  area.onclick = e => {
+    if (!sync?.account || sync.combining || sync.status === 'loading') return;
+    const button = e.target.closest('[data-remove-source]'); if (!button) return;
+    t.sources = t.sources.filter(s => s.pmid !== button.dataset.removeSource); t.updatedAt = new Date().toISOString(); persist(); renderTeachingSources(t);
+  };
+}
+
+function mountLearningExports(kind,getRecord,anchor,allowed=()=>true) {
+  const section=document.createElement('section'); section.className='card learning-exports';
+  section.innerHTML=`<h2>Export ${kind==='revision'?'full revision set':kind==='teaching'?'teaching plan':'appraisal'}</h2><div class="button-row"><button type="button" class="button" data-document-format="pdf">Export PDF (.pdf)</button><button type="button" class="button secondary" data-document-format="docx">Export Word (.docx)</button></div><p class="subtle">Includes your saved text and source references. Choose a format, then tap Save file when ready. Files are generated on this device. ${kind==='revision'?'The full set, including answers, is exported regardless of list filters.':''}</p>`;
+  document.querySelector(anchor).before(section);
+  section.querySelectorAll('[data-document-format]').forEach(button=>button.onclick=async()=>{
+    if(!allowed())return;
+    const record=structuredClone(getRecord()),format=button.dataset.documentFormat,epoch=workspaceEpoch,now=new Date();
+    openDialog(`<h2 id="dialog-title">Preparing ${format==='pdf'?'PDF':'Word'} export</h2><p id="learning-export-status" role="status">Preparing your file on this device…</p><div id="learning-export-download"></div>`);
+    const status=document.querySelector('#learning-export-status'),area=document.querySelector('#learning-export-download');
+    try{
+      const exporter=await import('./portfolio-exports.js');
+      const bytes=await(format==='pdf'?exporter.learningPDF:exporter.learningWord)(kind,record,now);
+      if(!status.isConnected||!dialog.open||epoch!==workspaceEpoch)return;
+      const type=format==='pdf'?'application/pdf':'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      learningDownloadURL=URL.createObjectURL(new Blob([bytes],{type}));
+      const link=document.createElement('a');link.className='button';link.href=learningDownloadURL;link.download=`physiosidekick-${kind}-${now.toISOString().replace(/[:.]/g,'-')}.${format}`;link.textContent=`Save file (${format==='pdf'?'PDF':'Word .docx'})`;area.append(link);document.querySelector('#dialog-title').textContent=`${format==='pdf'?'PDF':'Word'} export ready`;status.textContent='File ready. Tap Save file, then open or share it from your browser’s downloads.';link.focus();
+    }catch{if(status.isConnected)status.textContent='The export could not be prepared. Close this window and retry, or use the Markdown export. Your records have not been changed.';}
+  });
+}
+
+function download(filename, text, type) {
+  const url = URL.createObjectURL(new Blob([text], { type: `${type};charset=utf-8` })); const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+async function copyCitation(id) {
+  const p = paperMap.get(id); if (!p) return;
+  try { await navigator.clipboard.writeText(citation(p)); toast('Citation copied · check your required referencing style'); }
+  catch { openDialog(`<h2 id="dialog-title">Copy this citation</h2><p>${esc(citation(p))}</p><p class="subtle">Check against your university or publisher’s required referencing style.</p>`); }
+}
+function downloadWorkspaceBackup(recovery = false) {
+  const now = new Date();
+  download(backupFilename(now, recovery || !!sync.invalidPending), workspaceBackup(sync.invalidPending || sync.pending || workspace, now), 'application/json');
+}
+function trialPrivacy() {
+  openDialog(`<span class="eyebrow">BROWSER TRIAL</span><h2 id="dialog-title">Backups & trial privacy</h2><p>Trial papers, appraisals, teaching plans, revision sets and reflections are kept only in this tab’s session storage. They are not uploaded to an account. Reloading this tab can retain them; closing it or clearing browser data can lose them. Export a backup before leaving. Do not enter patient-identifiable information.</p><p>Live research queries and paper lookups still contact the app server and external research providers. Exports and reports are generated on this device. This is a product trial with draft learning content, not a clinical service.</p><div class="button-row"><button class="button" id="trial-export">Export workspace backup</button><button class="button secondary" id="trial-import">Import a backup</button><input id="trial-file" type="file" accept="application/json,.json" class="file-input"></div><p id="trial-import-status" role="status"></p><h3>Clear this trial</h3><p>Export first if you want to keep it. Clearing removes the trial’s active records in this tab; downloaded copies remain.</p><button class="danger-button" id="trial-clear" ${sync.status !== 'saved' || sync.pending || sync.invalidPending ? 'disabled' : ''}>Review clearing trial records</button>`);
+  document.querySelector('#trial-export').onclick=()=>downloadWorkspaceBackup();
+  document.querySelector('#trial-import').onclick=()=>document.querySelector('#trial-file').click();
+  document.querySelector('#trial-file').onchange=async e=>{
+    const file=e.target.files[0];if(!file)return;
+    try { if(file.size>backupLimit)throw new Error('Use a backup no larger than 4 MB.'); reviewImport(parseWorkspaceBackup(await file.text())); }
+    catch(error){document.querySelector('#trial-import-status').textContent=`Import not started: ${error.message}`;}
+  };
+  document.querySelector('#trial-clear').onclick=()=>{
+    if(hasOpenDraft()){toast('Save or cancel your open draft before clearing.');return;}
+    const confirmation={revision:sync.revision,sequence:sync.sequence};
+    openDialog('<h2 id="dialog-title">Clear this browser trial?</h2><p>All saved learning records in this tab’s trial will be removed. Export a backup first if you want to keep them. Your account records are unaffected.</p><button class="button secondary" id="keep-trial">Keep my trial</button><button class="danger-button" id="confirm-trial-clear">Clear trial records</button><p id="trial-clear-status" role="status"></p>');
+    document.querySelector('#keep-trial').onclick=trialPrivacy;
+    document.querySelector('#confirm-trial-clear').onclick=async()=>{
+      const ok=await sync.replaceRecords('clear',confirmation);
+      if(ok){resetOpenRecords();dialog.close();render();toast('Trial records cleared in this tab.');}
+      else if(document.querySelector('#trial-clear-status'))document.querySelector('#trial-clear-status').textContent='Clearing was not confirmed. Keep your backup and retry after the save status settles.';
+    };
+  };
+}
+function startTrial() {
+  if(sync?.account || !sync?.signInRequired)return;
+  try {
+    const storage=window.sessionStorage;
+    const probe='physiosidekick.trial.storage-check';storage.setItem(probe,'ok');storage.removeItem(probe);
+    resetOpenRecords();
+    sync=new TrialWorkspaceSync({storage,onData:receiveWorkspace,onStatus:syncStatus});
+    syncStatus(sync);sync.init();
+  } catch { toast('This browser cannot store a trial in this tab. Enable browser storage or sign in; no account data has been changed.'); }
+}
+function privacy() {
+  if (sync?.mode === 'trial') { trialPrivacy(); return; }
+  openDialog(`<span class="eyebrow">YOUR ACCOUNT WORKSPACE</span><h2 id="dialog-title">Your data & privacy</h2><p>Your papers, notes, saved searches, appraisals, teaching plans, revision sets and reflections are stored in the app’s account database, tied to your signed-in identity. The app keeps an account-specific device copy of pending changes so interrupted saves can be recovered.</p><p>For account saving, open PhysioSidekick on your iPhone or Mac and sign in with the same account. Data loads when you open the app; “Refresh from account” fetches newer changes. This is not live simultaneous editing.</p><p>Research keywords pass through the app server to Europe PMC, with PubMed (NCBI) as a backup. If the hosted connection fails, your browser can request Europe PMC directly without account cookies or identity. Problem-report text is prepared on this device for you to review and copy or download; it is not automatically submitted or stored in the account database. Publication metadata may be cached for five minutes. Opening a missing abstract can request that paper’s PMID from PubMed; a retrieved abstract and its source are kept when you save the paper. Your account identity is not forwarded to either research service. External resources use their own privacy policies. The app uses device fonts without requesting an external font service. Keep identifiable patient information out of this educational prototype.</p><div class="button-row"><button class="button" id="export-workspace">${icon('download')}Export workspace backup</button><button class="button secondary" id="choose-backup" type="button">Import a backup</button><input id="import-workspace" type="file" accept="application/json,.json" class="file-input"></div><p class="subtle" style="margin-top:15px">Import accepts a backup file up to 4 MB and a validated workspace up to the 2 MB account limit. It shows a summary before combining records, including pending device edits. It does not replace the account workspace. Conflicting notes are kept together and conflicting reflections become separate entries.</p>${sync?.pending ? '<div class="notice">This device has changes not yet confirmed by the account server. The export includes your current version.</div>' : ''}<p><a href="/signout-with-chatgpt?return_to=%2F" target="_top">Sign out of this app</a></p>`);
+  document.querySelector('#export-workspace').onclick = () => downloadWorkspaceBackup();
+  const section = document.createElement('section');
+  section.innerHTML = `<h3>Clear saved learning records</h3><p>Remove all papers, notes, searches, appraisals, CPD reflections, teaching plans and revision sets from the active account workspace. Export a backup first if you want to keep a copy.</p><p>This does not close your ChatGPT account or erase platform logs, provider backups, downloaded files or copies on other devices. A revision marker remains to prevent older tabs silently restoring cleared records. Full account-erasure and retention arrangements remain unfinished.</p><button class="danger-button" id="clear-records" ${!sync?.account || sync.status !== 'saved' || sync.pending || sync.invalidPending ? 'disabled' : ''}>Review clearing all records</button><p class="subtle">Wait for Account saved and save or cancel open drafts before clearing. Close older tabs and refresh other devices afterwards. An explicit backup import or conflict merge can restore removed records.</p>`;
+  document.querySelector('.dialog-body').append(section);
+  document.querySelector('#clear-records').onclick = reviewClearRecords;
+  document.querySelector('#choose-backup').onclick=()=>document.querySelector('#import-workspace').click();
+  document.querySelector('#import-workspace').onchange = async e => {
+    const file = e.target.files[0]; if (!file) return;
+    try { if (file.size > backupLimit) throw new Error('Use a workspace export file no larger than 4 MB.'); reviewImport(parseWorkspaceBackup(await file.text()), false); }
+    catch (error) { toast(`Import not started: ${error.message}`); }
+  };
+}
+function resetOpenRecords() {
+  problemReportDraft={category:'research',device:'Not specified',description:'',expected:''};
+  activeAppraisal = null; activeTeaching = null; activeStudy = null; studyDraft = null; studyPractice = null;
+  reflectionDraft = null; reflectionEditing = null; cpdFormOpen = false; workspaceFocus = null; workspaceMatches = [];
+}
+function hasOpenDraft() { return cpdFormOpen || studyDraft?.dirty; }
+function reviewClearRecords() {
+  if (studyDraft?.dirty || cpdFormOpen) { toast('Save or cancel your open draft before clearing records.'); return; }
+  if (!sync?.account || sync.status !== 'saved' || sync.pending || sync.invalidPending) { toast('Wait for Account saved before clearing records.'); return; }
+  const confirmation = { revision: sync.revision, sequence: sync.sequence };
+  openDialog(`<h2 id="dialog-title">Clear all saved learning records?</h2><p>This clears <strong>${workspace.saved.length} papers, ${workspace.searches.length} searches, ${workspace.appraisals.length} appraisals, ${workspace.reflections.length} reflections, ${workspace.teachingPlans.length} teaching plans and ${workspace.studySets.length} revision sets</strong>, including their notes and cards.</p><p>There is no undo button. Download a workspace backup before proceeding if you may need these records again. Other devices and downloaded backups need separate attention.</p><div class="field"><label for="clear-confirmation">Type CLEAR to confirm</label><input id="clear-confirmation" autocomplete="off" spellcheck="false"></div><p id="clear-status" role="status"></p><div class="button-row"><button class="danger-button" id="confirm-clear" disabled>Clear all records</button><button class="button secondary" id="cancel-clear">Keep my records</button></div>`);
+  const input = document.querySelector('#clear-confirmation'), button = document.querySelector('#confirm-clear');
+  input.oninput = () => { button.disabled = input.value !== 'CLEAR'; };
+  document.querySelector('#cancel-clear').onclick = privacy;
+  button.onclick = async () => {
+    if (input.value !== 'CLEAR') return;
+    button.disabled = true; input.disabled = true; document.querySelector('#cancel-clear').disabled = true;
+    document.querySelector('#clear-status').textContent = 'Clearing account records…';
+    const ok = await sync.replaceRecords('clear', confirmation);
+    if (!ok) { if (document.querySelector('#clear-status')) document.querySelector('#clear-status').textContent = 'Clearing was not confirmed. Close this window and refresh your account before reviewing again. Your device version has been kept.'; return; }
+    resetOpenRecords(); legacyWorkspace = null;
+    controller?.abort(); requestNumber++; searchState = {term:'',papers:[],total:0,nextCursor:'*',error:'',searched:false,loading:false};
+    paperMap.clear(); abstractErrors.clear(); dialog.close(); navigate('home');
+    toast(sync.cacheFailed ? 'Account records cleared. This browser could not confirm local cleanup; clear its site data separately.' : 'Saved learning records cleared. Refresh your other devices.');
+  };
+}
+function reviewImport(data, legacy = false) {
+  if (hasOpenDraft()) { toast('Save or cancel your reflection or revision-card draft before importing records.'); return; }
+  openDialog(`<span class="eyebrow">REVIEW IMPORT</span><h2 id="dialog-title">${sync.mode === 'trial' ? 'Import records into this trial' : 'Bring your records into your account'}</h2><p>This ${legacy ? 'browser' : 'backup'} contains <strong>${data.saved.length} papers, ${data.reflections.length} reflections and ${data.searches.length} searches and ${data.appraisals.length} appraisals and ${data.teachingPlans.length} teaching plans and ${data.studySets.length} study sets</strong>.</p><p>These will be combined with ${sync.mode === 'trial' ? 'this tab’s trial records' : 'your account records'}. Duplicate papers stay as one paper; different notes are kept together. Conflicting reflections, appraisals, teaching plans and study sets become separate entries. Different collection names are recorded in the paper’s notes.</p><p>The original ${legacy ? 'browser records' : 'backup file'} will remain intact. Imports may restore a record you previously removed from the account.</p><button class="button" id="confirm-import" ${!sync?.account || sync?.inflight ? 'disabled' : ''}>${sync.mode === 'trial' ? 'Combine with trial records' : 'Combine with my account records'}</button>`);
+  document.querySelector('#confirm-import').onclick = async () => { dialog.close(); await sync.combine(data, true, legacy);  };
+}
+function syncStatus(state) {
+  main.inert = state.recoveryRequired === true;
+  document.querySelectorAll('[data-note],[data-collection]').forEach(el => { el.readOnly = state.status === 'loading' || state.combining; });
+  const labels = { loading: 'Connecting…', saved: 'Account saved', pending: 'Changes pending', saving: 'Saving…', offline: 'Save interrupted', conflict: 'Changes need review', unavailable: 'Account unavailable', error: 'Save needs attention' };
+  document.querySelector('#sync-status').textContent = state.mode === 'trial' ? ({saved:'Trial saved in this tab',pending:'Trial changes pending',saving:'Saving trial…',loading:'Loading trial…',offline:'Trial save interrupted',unavailable:'Trial storage unavailable'}[state.status] || labels[state.status]) : state.signInRequired ? 'Choose how to save' : labels[state.status] || state.status;
+  const banner = document.querySelector('#sync-banner');
+  let html = '';
+  if (state.status === 'unavailable') html = `<div class="notice ${state.signInRequired ? '' : 'error'}">${state.signInRequired ? 'Browse freely. Sign in to save across devices, or start a trial in this tab.' : esc(state.error) + ' No account records are shown until your identity is confirmed.'} ${state.signInRequired ? '<button class="button secondary" id="start-trial">Try without an account</button><p>Trial work stays in this browser tab. Export a backup before closing it; it does not sync or upload to an account.</p>' : ''} <a href="/signin-with-chatgpt?return_to=%2F" target="_top">Sign in</a> <button class="text-button" id="retry-account">Retry connection</button></div>`;
+  else if (state.status === 'conflict') html = `<div class="notice error">${esc(state.error)} <button class="text-button" id="review-conflict">Review recovery options</button></div>`;
+  else if (['offline', 'error'].includes(state.status)) html = `<div class="notice error">${esc(state.error)} ${state.invalidPending ? '<button class="text-button" id="review-invalid-copy">Review recovery options</button>' : '<button class="text-button" id="retry-account">Retry saving</button>'}</div>`;
+  else if (state.needsImport) html = '<div class="notice">You have records saved by an earlier version in this browser. <button class="text-button" id="review-local-import">Review and import them</button></div>';
+  if (state.cacheFailed) html += '<div class="notice error">This browser cannot retain a recovery copy. Export your workspace if account saving is interrupted.</div>';
+  if (state.mode === 'trial') html = '<div class="notice"><strong>Browser trial</strong> · Work is saved only in this tab, including across reloads. Closing the tab, clearing browser data or using another device can lose it. Export a workspace backup to keep it. No trial records are uploaded to an account. <a href="/signin-with-chatgpt?return_to=%2F" target="_top">Sign in for account saving</a>; use backup import if you later want to transfer your trial.</div>' + html;
+  banner.innerHTML = html;
+  document.querySelector('#start-trial')?.addEventListener('click', startTrial);
+  document.querySelector('#review-local-import')?.addEventListener('click', () => reviewImport(legacyWorkspace, true));
+  document.querySelector('#review-conflict')?.addEventListener('click', conflictDialog);
+  document.querySelector('#review-invalid-copy')?.addEventListener('click', conflictDialog);
+  document.querySelector('#retry-account')?.addEventListener('click', () => state.account ? state.pending ? state.flush() : state.refresh() : state.init());
+  if (state.account) document.querySelector('.profile strong').textContent = state.account.name;
+}
+function conflictDialog() {
+  openDialog(`<h2 id="dialog-title">Keep both versions safe</h2><p>${sync.invalidPending ? 'A device copy could not be validated. Editing is paused to keep it safe. Export the original, then import a corrected workspace backup or explicitly load the account version.' : 'Your device has pending changes and the account has a newer version. No automatic overwrite has taken place.'}</p><p>You can combine both sets of records. Different notes are kept together and different versions of reflections, appraisals, teaching plans and study sets become separate entries. Removed records may return during a merge.</p><div class="button-row"><button class="button" id="merge-conflict" ${sync.invalidPending ? 'disabled' : ''}>Combine both versions</button><button class="button secondary" id="export-pending">Export this device’s version</button>${sync.invalidPending ? '<button class="button secondary" id="import-corrected">Import corrected backup</button>' : ''}</div>`);
+  document.querySelector('#merge-conflict').onclick = async () => { if (hasOpenDraft()) { toast('Save or cancel your open draft before combining records.'); return; } dialog.close(); await sync.combine(); };
+  document.querySelector('#import-corrected')?.addEventListener('click', privacy);
+  document.querySelector('#export-pending').onclick = () => downloadWorkspaceBackup(true);
+  const button = document.createElement('button'); button.className = 'danger-button'; button.textContent = 'Review discarding this device’s changes';
+  document.querySelector('.dialog-body').append(button);
+  button.onclick = () => {
+    const confirmation = {revision:sync.revision,sequence:sync.sequence};
+    if (hasOpenDraft()) { toast('Save or cancel your open draft before discarding device changes.'); return; }
+    openDialog('<h2 id="dialog-title">Use the account version instead?</h2><p>This discards this device’s pending or invalid changes after the account version loads successfully. Export this device’s version first if you want to keep it. The account records will not be overwritten.</p><button class="button secondary" id="cancel-discard">Keep reviewing</button><button class="danger-button" id="confirm-discard">Discard device changes and load account</button><p id="discard-status" role="status"></p>');
+    document.querySelector('#cancel-discard').onclick = conflictDialog;
+    document.querySelector('#confirm-discard').onclick = async e => {
+      e.currentTarget.disabled = true;
+      const ok = await sync.replaceRecords('account',confirmation);
+      if(ok){resetOpenRecords();dialog.close();render();toast('Account version loaded. Device changes discarded.');}
+      else if(document.querySelector('#discard-status')) document.querySelector('#discard-status').textContent = 'The account version was not loaded. Your device changes remain; close this window and review recovery again.';
+    };
+  };
+}
+function accountDialog() {
+  if (sync.mode === 'trial') { openDialog('<h2 id="dialog-title">Your browser trial</h2><p>Your work is saved in this tab’s session storage, not an account. It can survive a reload here, but closing the tab or clearing browser data can lose it. It does not sync to another device.</p><p>Export a backup before leaving. Signing in does not automatically upload or merge trial records; review and import your backup when signed in.</p><button class="button" id="trial-backups">Backups & trial privacy</button>'); document.querySelector('#trial-backups').onclick=privacy; return; }
+  openDialog(`<h2 id="dialog-title">Account saving</h2><p><strong>${esc(document.querySelector('#sync-status').textContent)}</strong>${sync.updatedAt ? ` · last confirmed ${esc(new Date(sync.updatedAt).toLocaleString('en-GB'))}` : ''}</p><p>Changes save automatically after a short pause. Open PhysioSidekick with the same account on another device, then refresh its account copy.</p><div class="button-row"><button class="button" id="refresh-account" ${!sync.account || sync.inflight ? 'disabled' : ''}>${sync.pending ? 'Retry pending save' : 'Refresh from account'}</button><button class="button secondary" id="account-privacy">Backups & privacy</button></div>`);
+  document.querySelector('#refresh-account').onclick = async () => { dialog.close(); if (sync.status === 'conflict') conflictDialog(); else if (sync.pending) await sync.flush(); else if (!hasOpenDraft()) await sync.refresh(); else toast('Save or cancel your reflection or revision-card draft before refreshing account records.'); };
+  document.querySelector('#account-privacy').onclick = privacy;
+}
+function about() { openDialog('<span class="eyebrow">FROM STUDY TO PRACTICE</span><h2 id="dialog-title">A first chapter for PhysioSidekick.</h2><p>This is a working review prototype of a career companion for physiotherapists and students.</p><h3>Working now</h3><ul><li>Live publication search from Europe PMC’s indexed PubMed records.</li><li>Original paper links, indexed abstracts and source access information.</li><li>Saved papers, notes, collections and reference exports.</li><li>Separate BodyParts3D-derived skeleton and muscle viewers, seven regional guide drafts, source-linked joint/nerve notes and learning/research links.</li><li>Five source-linked student starter units with 25 questions and explanations (independent review pending), plus personal revision cards with self-test practice and saved recall ratings.</li><li>Saved teaching sessions with attached paper references and editable exports.</li><li>Structured paper appraisals linked to editable CPD reflections.</li><li>Filtered CPD portfolios with follow-up outcomes, printable exports and linked evidence appendices.</li><li>Personal learning reflections and editable FCP teaching outlines.</li><li>Account saving across devices, backup import and conflict recovery.</li></ul><h3>Still to build and validate</h3><p>Independent anatomical review and real-device checks, reviewed clinical tools, independent learning-content review, a premium FCP curriculum and the signed iPhone app.</p><p>PhysioSidekick is a working name pending trademark clearance. This prototype is for product testing, not patient-specific decision support.</p>'); }
+function render() {
+  if(learningDownloadURL){URL.revokeObjectURL(learningDownloadURL);learningDownloadURL=null;}
+  if (portfolioDownloadURL) { URL.revokeObjectURL(portfolioDownloadURL); portfolioDownloadURL = null; }
+  learningTabsCleanup?.();learningTabsCleanup=null;
+  disposeAnatomy(); anatomyReady=false;
+  route = /^paper\/[1-9]\d{0,8}$/.test(location.hash.slice(1)) ? 'paper' : (['appraisal','teaching','study','workspace-search'].includes(location.hash.slice(1)) || nav.some(([id]) => id === location.hash.slice(1))) ? location.hash.slice(1) : 'home';
+  updateNav(); ({ home, research, library, learn, practice, cpd, fcp, appraisal, paper:paperPage, teaching: teachingEditor, study: studyEditor, 'workspace-search': workspaceSearchPage }[route])();
+  document.title = `${(nav.find(([id]) => id === route)?.[1] || (route === 'paper' ? (document.querySelector('#paper-heading')?.textContent || 'Paper details') : route === 'teaching' ? 'Teaching session' : route === 'study' ? 'My revision' : route === 'workspace-search' ? 'Search workspace' : 'Paper appraisal'))} · PhysioSidekick`;
+  if (workspaceFocus) requestAnimationFrame(applyWorkspaceFocus);
+}
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-new-study],[data-open-study],[data-new-teaching],[data-copy-teaching],[data-open-teaching],[data-teaching],[data-appraise],[data-open-appraisal],[data-save],[data-save-notes],[data-delete-reflection],[data-edit-reflection],[data-remove-search],#save-search,#new-reflection,#first-reflection');
+  if (el && (!sync?.account || sync.combining || sync.status === 'loading')) { e.preventDefault(); e.stopImmediatePropagation(); toast('Wait for the account connection before editing records.'); }
+}, true);
+document.addEventListener('submit', e => {
+  if (e.target.id === 'reflection-form' && (!sync?.account || sync.combining)) { e.preventDefault(); e.stopImmediatePropagation(); toast('Connect to your account before saving a reflection.'); }
+}, true);
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-all-appraisals]')) activeAppraisal = null;
+  const target = e.target.closest('button'); if (!target) return;
+  if ((('newStudy' in target.dataset) || target.dataset.openStudy) && studyDraft?.dirty) { activeStudy = studyDraft.setId; navigate('study'); toast('Save or cancel the current card first.'); return; }
+  if ('workspaceSearch' in target.dataset) navigate('workspace-search');
+  if ('startGuide' in target.dataset) gettingStarted();
+  if ('readingSetup' in target.dataset) readingAndInstall();
+  if ('newStudy' in target.dataset) { const set = newStudySet(); workspace.studySets.unshift(set); activeStudy = set.id; studyPractice = null; studyDraft = null; persist(); navigate('study'); }
+  if (target.dataset.openStudy) { activeStudy = target.dataset.openStudy; studyPractice = null; studyDraft = null; navigate('study'); }
+  if ('newTeaching' in target.dataset) createTeaching();
+  if (target.dataset.openTeaching) { activeTeaching = target.dataset.openTeaching; navigate('teaching'); }
+  if (target.dataset.copyTeaching) {
+    const source = workspace.teachingPlans.find(t => t.id === target.dataset.copyTeaching);
+    if (source) { const copy = structuredClone(source); copy.id = crypto.randomUUID(); copy.title = (source.title + ' (copy)').slice(0,180); copy.updatedAt = new Date().toISOString(); workspace.teachingPlans.unshift(copy); activeTeaching = copy.id; persist(); navigate('teaching'); }
+  }
+  if (target.dataset.loadAbstract) retrieveAbstract(target.dataset.loadAbstract);
+  if (target.dataset.appraise) beginAppraisal(target.dataset.appraise);
+  if (target.dataset.openAppraisal) { activeAppraisal = target.dataset.openAppraisal; navigate('appraisal'); }
+  if (target.dataset.search) startSearch(target.dataset.search);
+  if ('runSearch' in target.dataset) {
+    const entry = workspace.searches[Number(target.dataset.runSearch)];
+    if (entry) { filters = { ...defaultFilters, ...entry.filters }; searchState.term = entry.term; research(); runSearch(entry.term); }
+  }
+  if ('removeSearch' in target.dataset) {
+    workspace.searches.splice(Number(target.dataset.removeSearch), 1); persist(); renderSavedSearches();
+  }
+  if (target.dataset.openPack) openLearningPack(target.dataset.openPack);
+  if (target.dataset.detail) paperDetail(target.dataset.detail, target);
+  if (target.dataset.save) toggleSave(target.dataset.save);
+  if (target.dataset.copy) copyCitation(target.dataset.copy);
+  if (target.dataset.saveNotes) {
+    const card = target.closest('[data-paper]');
+    const p = workspace.saved.find(p => p.id === target.dataset.saveNotes);
+    if (p) {
+      p.collection = card.querySelector('[data-collection]').value.trim();
+      p.notes = card.querySelector('[data-note]').value;
+      paperMap.set(p.id, p);
+      if (persist()) toast('Collection and notes queued for saving');
+    }
+  }
+  if ('libraryFilter' in target.dataset) { libraryFilter = target.dataset.libraryFilter; library(); }
+  if (target.dataset.learnTab) { learnTab = target.dataset.learnTab; learn(); document.querySelector(`#tab-${learnTab}`).focus({preventScroll:true}); }
+  if ('answer' in target.dataset && !quizAnswered) {
+    quizAnswered = true; const q = questions[quizIndex]; const answer = Number(target.dataset.answer);
+    document.querySelectorAll('[data-answer]').forEach((b, i) => { b.disabled = true; if (i === q.correct) b.classList.add('correct'); else if (i === answer) b.classList.add('incorrect'); });
+    document.querySelector('#quiz-feedback').innerHTML = `<div class="notice">${answer === q.correct ? 'That’s right. ' : 'A useful distinction: '}${q.explanation}</div>`;
+    document.querySelector('#next-question').hidden = false;
+  }
+  if ('teaching' in target.dataset) teaching(Number(target.dataset.teaching));
+  if (target.dataset.editReflection && cpdFormOpen) { toast('Save or cancel the current reflection first.'); return; }
+  if (target.dataset.editReflection) { reflectionDraft = null; reflectionEditing = target.dataset.editReflection; cpdFormOpen = true; renderReflectionForm(); }
+  if (target.dataset.deleteReflection) {
+    const id = target.dataset.deleteReflection; openDialog('<h2 id="dialog-title">Remove this reflection?</h2><p>This removes the reflection from your account workspace. Export a copy first if you want to keep it.</p><button class="button" id="confirm-delete">Remove reflection</button>');
+    document.querySelector('#confirm-delete').onclick = () => { workspace.reflections = workspace.reflections.filter(r => r.id !== id); const ok = persist(); dialog.close(); cpd(); if (ok) toast('Reflection removed'); };
+  }
+});
+document.addEventListener('input', e => {
+  const id = e.target.dataset.note || e.target.dataset.collection; if (!id) return;
+  const p = workspace.saved.find(p => p.id === id); if (!p) return;
+  if ('note' in e.target.dataset) p.notes = e.target.value;
+  if ('collection' in e.target.dataset) p.collection = e.target.value.trim();
+  paperMap.set(id, p); persist();
+});
+document.querySelector('.dialog-close').onclick = () => dialog.close();
+dialog.addEventListener('close',()=>{const opener=dialogReturnFocus;dialogReturnFocus=null;if(!dialog.open){if(opener?.isConnected && !opener.closest('dialog'))opener.focus({preventScroll:true});else main.focus({preventScroll:true});}if(learningDownloadURL){URL.revokeObjectURL(learningDownloadURL);learningDownloadURL=null;}});
+// Close through explicit controls or native Escape. Assistive activation may have no pointer coordinates; never treat that as a backdrop tap.
+document.querySelector('#readiness-button').onclick=betaReadiness;
+document.querySelector('#guide-button').onclick=gettingStarted;
+document.querySelector('#report-button').onclick=problemReport;
+document.querySelector('#about-button').onclick = about;
+const releaseLabel=document.createElement('span');releaseLabel.id='app-release';releaseLabel.className='app-release';releaseLabel.textContent=`App release: ${appRelease}`;document.querySelector('.app-footer').append(releaseLabel);
+document.querySelector('#data-button').onclick = privacy;
+document.querySelector('#reading-button').onclick = readingAndInstall;
+document.querySelector('#open-workspace-search').innerHTML = icon('research');
+document.querySelector('#open-workspace-search').onclick = () => navigate('workspace-search');
+document.querySelector('#open-library').innerHTML = icon('library');
+document.querySelector('#open-library').onclick = () => navigate('library');
+function diagnosticControl(target) {
+  const el=target?.closest?.('a,button,h1,main');if(!el)return '';
+  if(el.id==='paper-back')return 'paper-return';
+  if(el.matches('a[data-paper-link]'))return el.classList.contains('paper-title')?'paper-title':'paper-record';
+  if(el.id==='paper-heading')return 'paper-heading';
+  if(el.id==='main')return 'main';
+  if(el.closest('#desktop-nav,#mobile-nav'))return 'workspace-navigation';
+  if(el.matches('a[target="_blank"]') && el.closest('.paper-record'))return 'external-source';
+  return '';
+}
+document.addEventListener('click',e=>{
+  const control=diagnosticControl(e.target);if(control)navigationDiagnostics.record({kind:'activate',route:location.hash,control,activation:e.detail===0?'no-pointer-count':e.detail>0?'pointer-click':'unknown'});
+  const link=e.target.closest('a[data-paper-link]');if(link && route!=='paper')paperReturn={route,id:link.dataset.detail,scrollY:window.scrollY || 0};
+},true);
+document.addEventListener('focusin',e=>{const control=diagnosticControl(e.target);if(control)navigationDiagnostics.record({kind:'focus',route:location.hash,control});});
+window.addEventListener('hashchange', () => {
+  navigationDiagnostics.record({kind:'route',from:route,to:location.hash});
+  const wasPaper=route==='paper';if(dialog.open)dialog.close();render();
+  if(wasPaper && route===paperReturn.route){window.scrollTo(0,paperReturn.scrollY);const opener=[...document.querySelectorAll('.paper-title')].find(el=>el.dataset.detail===paperReturn.id);(opener || main).focus({preventScroll:true});}
+  else{window.scrollTo(0,0);if(route==='paper')focusPaperHeading();else main.focus({preventScroll:true});}
+});
+document.querySelector('#sync-status').onclick = accountDialog;
+render();
+function receiveWorkspace(data) { workspaceEpoch++; if (sync && !sync.account) { resetOpenRecords(); dialog.close(); } workspace = data; paperMap = new Map([...searchState.papers, ...workspace.saved].map(p => [p.id,p])); render(); }
+sync = new WorkspaceSync({
+  legacy: legacyWorkspace,
+  onData: receiveWorkspace,
+  onStatus: syncStatus
+});
+syncStatus(sync);
+sync.init();
+registerPendingSaveLifecycle({document,window,getSync:()=>sync});
+window.addEventListener('online', () => { if (sync.account && sync.pending && sync.status !== 'conflict') sync.flush(); });
+
+window.addEventListener('beforeunload', e => { if (sync?.pending || sync?.invalidPending || sync?.replacing || studyDraft?.dirty || (cpdFormOpen && reflectionDraft)) { e.preventDefault(); e.returnValue = ''; } });
