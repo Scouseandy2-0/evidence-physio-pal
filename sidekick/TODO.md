@@ -5,7 +5,7 @@ Updated 28 November 2026. Finish the defined product before adding more major fe
 ## Saved checkpoint
 
 - GitHub repository: Scouseandy2-0/evidence-physio-pal; development branch: codex/physiosidekick-prototype; app source: sidekick/; draft PR #3. The original Lovable app remains separate.
-- Latest confirmed published application source: e3bd8b9c1ac535123c49afd1079d9846014e2c6f (version 38, navigation-help.1); deployment confirmed succeeded on 28 November. Public link browsing was enabled by Andrew for a friend without ChatGPT; account records still require identity. The next reading-reliability candidate is not live until publication is confirmed.
+- Latest confirmed published application source: 3a501bca5b1a90be3affcef55a441d03fb73b027 (version 39, reading-reliability); deployment confirmed succeeded on 28 November. Public link browsing was enabled by Andrew for a friend without ChatGPT; account records still require identity. The next reading-reliability candidate is not live until publication is confirmed.
 - Last confirmed published changes: protected invalid/malformed cache recovery, retained source warnings, local date defaults, pagination retries/Stop search, focus/reflow and dated backups. The review-date-link iPhone retest remains open.
 - Latest developer baseline: 193 automated tests passed; production build and targeted rendered workflow/layout checks passed. Actual iPhone/Mac/VoiceOver gates remain separate.
 - Binary skeleton/muscle assets are included with source attribution/licences; checksum-verified pinned download scripts remain available for restoration. Generated bundles, dependency directories, credentials, local databases and user files are not source-control backups.
@@ -165,3 +165,8 @@ Andrew explicitly authorised the next five recommendations. Anatomy remains park
 5. [x] Keep unfinished report fields in memory across close/reopen during the current workspace visit. No automatic upload; reload or workspace reset clears the draft.
 
 193 tests and syntax/build checks pass. Rendered large-text 320px tabs, live original-abstract retrieval, stable Save control and report retention passed developer checks. See docs/next-five-reliability-2026-11-28.md. Actual iPhone paper-opening reliability remains open; independent content and physical-device checks are not closed. Candidate release: 2026-11-28-reading-reliability. Publication must be confirmed separately.
+
+## Current VoiceOver status — owner retest, 28 November 2026
+
+- [x] Record Andrew’s latest report that iPhone VoiceOver “seems to be working as intended”. Treat the previously reported paper-entry issue as apparently resolved in current use; monitor and reopen if it recurs. This supersedes earlier historical open-status notes, without inventing a test count or device release confirmation.
+- [ ] Complete the broader accessibility/device scenarios separately. This observation does not close every screen, export, recovery or cross-device requirement. Evidence and boundaries: docs/device-evidence.md.

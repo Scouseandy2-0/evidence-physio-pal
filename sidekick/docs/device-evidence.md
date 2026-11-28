@@ -46,3 +46,9 @@ The successor candidate replaces paper popups with native full-page links and ex
 Andrew confirmed three-finger scrolling works on PubMed and one-finger right-swipe moves between paragraphs. Those specific external-site navigation checks are now confirmed by his report. He said selecting a title once and then double-tapping anywhere works better, but the occasional backward behaviour remains. When asked to identify the current flow, he said it takes him to “Back to research results”. That establishes the described return control, but does not prove whether the browser actually changed routes or VoiceOver landed on its link.
 
 Successor candidate 2026-11-28-paper-entry moves the return control below the record in loaded/loading/error states and schedules heading focus after layout, skipping stale callbacks or a newly focused control. Regression/browser checks pass; actual iPhone behaviour remains open.
+
+## Owner reports VoiceOver working — 28 November 2026
+
+Andrew’s latest actual-iPhone observation: “iPhone voiceover seems to be working as intended”. Record the reported paper-entry/VoiceOver issue as apparently resolved in his latest use and monitor for recurrence. This is owner-reported evidence, with the qualifier “seems”; no attempt count, complete test protocol or footer release was supplied. The latest published app at this point is version 39, release 2026-11-28-reading-reliability, source 3a501bca5b1a90be3affcef55a441d03fb73b027; the device’s loaded release was not independently captured.
+
+Earlier successful paragraph, tab/control-label and app/PubMed scrolling observations remain valid for the interactions tested. This update supersedes the earlier open-status summaries for the reported issue, but does not certify every screen, VoiceOver interaction, export, account recovery or iPhone/Mac sync scenario. Reopen the issue if backward navigation or activation failures recur.

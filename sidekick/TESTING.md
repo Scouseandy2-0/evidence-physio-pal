@@ -267,3 +267,7 @@ Full suite remains 175 passing. Expanded app-event regression first failed for c
 ## Next-five reading/reliability pass
 
 193 tests, syntax and production build pass. Source/reading stability, lifecycle recovery, tab overflow and report retention tests plus rendered checks/limits are in docs/next-five-reliability-2026-11-28.md. No physical-iPhone or independent-content sign-off is inferred.
+
+## Owner iPhone retest — 28 November 2026
+
+Andrew now reports that iPhone VoiceOver seems to work as intended. The reported issue is apparently resolved in this latest use, subject to recurrence. This is an owner observation, not a comprehensive accessibility pass; exact wording, release context and boundaries are in docs/device-evidence.md. Documentation-only update; no new runtime behaviour or repeated software test run.
