@@ -23,7 +23,7 @@ createServer(async (req, res) => {
     const url = new URL(req.url, `http://127.0.0.1:${port}`);
     if (url.pathname.startsWith('/api/')) {
       const chunks = []; for await (const part of req) chunks.push(part);
-      const headers = new Headers(req.headers); headers.set('oai-authenticated-user-id', 'local-preview-user'); headers.set('oai-authenticated-user-email', 'preview@example.invalid'); headers.set('oai-authenticated-user-full-name', 'Local preview');
+      const headers = new Headers(req.headers); const anonymous = new URL(req.headers.referer || url, url).searchParams.get('trial') === '1'; if (!anonymous) headers.set('oai-authenticated-user-id', 'local-preview-user'); headers.set('oai-authenticated-user-email', 'preview@example.invalid'); headers.set('oai-authenticated-user-full-name', 'Local preview');
       const response = await (url.pathname === '/api/paper' ? paperAPI : url.pathname === '/api/research' ? researchAPI : workspaceAPI)(new Request(url, { method: req.method, headers, ...(['PUT', 'POST'].includes(req.method) ? { body: Buffer.concat(chunks) } : {}) }), { DB: adapter });
       res.writeHead(response.status, {...securityHeaders,...Object.fromEntries(response.headers)}); res.end(await response.text()); return;
     }

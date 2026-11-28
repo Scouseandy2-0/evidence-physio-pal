@@ -16,14 +16,14 @@ export function portfolioSections(workspace,filters={},now=new Date()) {
  const sections=[{kind:'title',text:'My personal CPD portfolio'},{kind:'text',text:`PhysioSidekick · Exported ${now.toISOString()}`},{kind:'text',text:portfolioScope(filters,now)},{kind:'text',text:notice},{kind:'heading',text:'Selected learning'},{kind:'text',text:`${stats.count} ${stats.count===1?'reflection':'reflections'} · ${stats.minutes} recorded minutes · ${stats.activities} ${stats.activities===1?'activity type':'activity types'} · ${stats.followedUp} with follow-up recorded`}];
  const text=t=>sections.push({kind:'text',text:value(t)}),heading=t=>sections.push({kind:'heading',text:t}),field=(label,t)=>{sections.push({kind:'label',text:label});text(t);};
  for(const r of records){
-  heading(r.title);text(`${r.date} · ${r.minutes} minutes · ${r.kind}`);
+  heading(r.title);text(`${r.date} · ${r.minutes} minutes · ${r.kind}`);if(r.sourceRetracted)text('WARNING: source marked as retracted. Check the original record and retraction notice.');
   field('What I learned',r.learning);field('Intended next step',r.action);field('Outcome / follow-up',r.outcome);text(`Review date: ${r.followUpDate || 'Not recorded'}`);field('Source',r.source);
   if(r.appraisalId){text(`Linked appraisal: ${r.appraisalId}`);text(`Reading basis at reflection: ${basisLabels[r.basis] || 'Not recorded'}`);}
  }
  heading('Evidence appendix');text('Appraisals below are current saved notes at export and may have changed since the reflection. They are reader-authored notes, not an app quality assessment.');
  for(const paper of evidence.papers){text(paper.title);sections.push({kind:'link',text:paper.url,url:paper.url});if(paper.citation)text(paper.citation);if(paper.retracted)text('WARNING: source marked as retracted in the saved index record.');}
  for(const a of evidence.appraisals){
-  heading(`Paper appraisal: ${a.title}`);text(a.citation);sections.push({kind:'link',text:`https://pubmed.ncbi.nlm.nih.gov/${a.pmid}/`,url:`https://pubmed.ncbi.nlm.nih.gov/${a.pmid}/`});text(`Appraisal ID: ${a.id} · Last edited: ${a.updatedAt}`);text(`Reading basis: ${basisLabels[a.basis] || 'Not recorded'}`);field('Study design (recorded by me)',a.design);
+  heading(`Paper appraisal: ${a.title}`);if(a.sourceRetracted)text('WARNING: source marked as retracted. Check the original record and retraction notice.');text(a.citation);sections.push({kind:'link',text:`https://pubmed.ncbi.nlm.nih.gov/${a.pmid}/`,url:`https://pubmed.ncbi.nlm.nih.gov/${a.pmid}/`});text(`Appraisal ID: ${a.id} · Last edited: ${a.updatedAt}`);text(`Reading basis: ${basisLabels[a.basis] || 'Not recorded'}`);field('Study design (recorded by me)',a.design);
   for(const [key,label]of appraisalFields)field(label,a[key]);
   text('Personal appraisal notes, not an automatic evidence grade or an accredited checklist.');
  }

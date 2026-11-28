@@ -1,4 +1,5 @@
 import { buildQuery, identifyPaper, europePMCSearchURL, validPublicationData } from '../web/research.js';
+import { publicationAccess } from './publication-access.js';
 const PAGE_SIZE = 8;
 const cache = new Map();
 const pending = new Map();
@@ -73,7 +74,7 @@ export async function lookupPublications({ term, filters = {}, cursor = '*' }, {
   return { hitCount: count, resultList: { result: records }, nextCursorMark: offset + ids.length < Math.min(count, 9993) ? `ncbi:${offset + ids.length}` : null, executedQuery, provider: 'PubMed (NCBI backup)', note: 'Europe PMC is unavailable. These records come directly from PubMed. Search results omit abstracts and open-access labels. Open a record to load its original PubMed abstract, or follow its source link.' };
 }
 export async function researchAPI(request) {
-  if (!request.headers.get('oai-authenticated-user-id') || !request.headers.get('oai-authenticated-user-email')) return json({ error: 'Sign in to search research.' }, 401);
+  const denied = publicationAccess(request); if (denied) return denied;
   if (request.method !== 'POST') return json({ error: 'Use POST.' }, 405);
   if (request.headers.get('origin') !== new URL(request.url).origin || request.headers.get('sec-fetch-site') === 'cross-site') return json({ error: 'Request origin does not match.' }, 403);
   if (!request.headers.get('content-type')?.startsWith('application/json')) return json({ error: 'Expected JSON.' }, 415);

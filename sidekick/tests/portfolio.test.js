@@ -50,3 +50,9 @@ test('reflection source warning survives removal of both its library paper and a
  assert.equal(workspace.reflections[0].sourceRetracted,true);assert.equal(portfolioEvidence(workspace,workspace.reflections).papers[0].retracted,true);
  assert.match(portfolioMarkdown(workspace),/WARNING.*retracted/);assert.match(portfolioHTML(workspace),/WARNING.*retracted/);assert.match(portfolioMarkdown(workspace),/appraisal notes unavailable/);
 });
+
+test('HTML evidence retains recorded study design, original paper link and appraisal warning',()=>{
+ const appraisal={...a(),design:'Fictional reader-assessed cohort',sourceRetracted:true};
+ const workspace={...emptyWorkspace(),appraisals:[appraisal],reflections:[{...r('one','2026-11-27'),appraisalId:appraisal.id,paperId:appraisal.paperId,basis:'abstract'}]};
+ const html=portfolioHTML(workspace);assert.match(html,/Fictional reader-assessed cohort/);assert.match(html,/Open original PubMed record/);assert.match(html,/WARNING.*retracted/);
+});

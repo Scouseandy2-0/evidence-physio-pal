@@ -243,3 +243,7 @@ Release 2026-11-28-recovery-search-mobile protects recovered invalid/malformed c
 ## Integrated owner-review pass — 28 November 2026
 
 165 tests pass, including the named anatomy inventory, reflection warning retention after linked records are removed, older-tab account protection, explicit new-reflection minutes and one-pass review notes/navigation. Syntax/build passed; targeted DOM checks passed again after correcting same-route review links. Rendered local paper→appraisal→CPD→save/reload→Word and FCP-copy→Word journeys passed; anatomy used the explicitly labelled one-structure software fallback. Largest-text 320px review-dialog layout had no horizontal overflow. These are not actual iPhone/Mac or VoiceOver checks. See docs/OWNER-REVIEW-READINESS.md for exact evidence and unresolved gates.
+
+## Non-anatomy reliability pass — 28 November 2026
+
+175 automated tests, syntax checks and production Worker build pass. Ten live research scenarios pass. Actual rendered trial, draft protection, teaching exports and 320px enlarged-text evidence are recorded in docs/workspace-polish-2026-11-28.md. Account/device/independent-review gates remain open.

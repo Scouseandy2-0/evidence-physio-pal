@@ -291,3 +291,7 @@ Release 2026-11-28-readiness-recovery: clean source restoration/install/build ve
 ## Recovery, search and mobile pass — 28 November 2026
 
 Release 2026-11-28-recovery-search-mobile protects recovered invalid/malformed caches, retains warnings in merges and linked evidence, uses local reflection dates, retries failed result pages, allows search cancellation, restores dialog focus, widens enlarged research controls and timestamps normal/recovery backups. 160 automated tests and the ten-scenario live public research audit passed. Detailed evidence, publication boundary and remaining device/review gates: docs/readiness-ten-2026-11-28.md and TODO.md.
+
+## Public review and browser trial — 28 November 2026
+
+Andrew enabled public link browsing for a friend without ChatGPT. Account records remain private to each signed-in identity. The explicit Browser trial stores learning records only in the current tab and requires backup export to retain/transfer them. Research lookup is available without an account; private account storage is not. Candidate workspace-polish release and verification: docs/workspace-polish-2026-11-28.md. Anatomy is parked; independent content and actual-device gates remain open.

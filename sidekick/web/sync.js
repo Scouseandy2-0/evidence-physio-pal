@@ -21,6 +21,7 @@ export class WorkspaceSync {
     finally { clearTimeout(timer); }
   }
   async init() {
+    this.signInRequired = false;
     try {
       const data = await this.request();
       if (!data.account?.id || !Number.isSafeInteger(data.revision) || data.revision < 0) throw new Error('Unexpected account response.');
@@ -55,7 +56,7 @@ export class WorkspaceSync {
         this.emit('pending'); await this.flush();
       } else { this.onData(remote); this.emit('saved'); }
       this.checkLegacy();
-    } catch (e) { this.emit(this.account ? 'offline' : 'unavailable', e.message); }
+    } catch (e) { this.signInRequired = !this.account && e.status === 401; this.emit(this.account ? 'offline' : 'unavailable', e.message); }
   }
   checkLegacy() {
     if (!this.legacy || !hasRecords(this.legacy)) return;

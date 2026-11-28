@@ -134,3 +134,8 @@ input[type="date"] { min-width:0; width:100%; max-width:100%; box-sizing:border-
 @media(min-width:901px) {
   .research-layout { grid-template-columns:minmax(14rem,.3fr) minmax(0,1fr); }
 }
+/* Saved reflections must reflow with enlarged text on narrow screens. */
+.paper-list{grid-template-columns:minmax(0,1fr)}
+.paper-list>.card{min-width:0;overflow-wrap:anywhere}
+.reflection-meta,.reflection-actions{flex-wrap:wrap}
+.reflection-meta .badge{max-width:100%;white-space:normal}

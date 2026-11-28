@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-11-28T01:36:40.034Z",
+  "checkedAt": "2026-11-28T12:02:00.019Z",
   "environment": "Source implementation in Node with live Europe PMC and NCBI requests; not a hosted iPhone search test",
   "records": [
     {
@@ -10,12 +10,13 @@
         "Wang TG"
       ],
       "year": "2019",
-      "doi": "10.4103/JMU.JMU_109_18",
-      "provider": "PubMed (NCBI backup)",
+      "doi": "10.4103/jmu.jmu_109_18",
+      "provider": "Europe PMC / PubMed",
       "sourceURL": "https://pubmed.ncbi.nlm.nih.gov/31316228/",
       "indexedTypes": [
+        "Journal Article",
         "Case Reports",
-        "Journal Article"
+        "case-report"
       ],
       "checks": {
         "pmid": true,
@@ -46,14 +47,15 @@
         "Bennell KL"
       ],
       "year": "2015",
-      "doi": "10.1002/14651858.CD004376.pub3",
-      "provider": "PubMed (NCBI backup)",
+      "doi": "10.1002/14651858.cd004376.pub3",
+      "provider": "Europe PMC / PubMed",
       "sourceURL": "https://pubmed.ncbi.nlm.nih.gov/25569281/",
       "indexedTypes": [
-        "Journal Article",
         "Meta-Analysis",
         "Research Support, Non-U.S. Gov't",
-        "Systematic Review"
+        "Systematic Review",
+        "systematic-review",
+        "Journal Article"
       ],
       "checks": {
         "pmid": true,
@@ -65,9 +67,9 @@
       },
       "abstract": {
         "state": "available",
-        "indexLength": 0,
+        "indexLength": 5917,
         "pubmedLength": 5999,
-        "indexHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "indexHash": "5bf7a4fa919036d4408ff0cf84aa73be82aaeeb4a937c64c12e90760f4e6a08a",
         "pubmedHash": "7ab0d67bf1f087e7af6a6c3ad00432b1902bb919dcd2d809de01a6142e0c4aa9",
         "note": "Text hashes can differ due to heading, whitespace, symbols or index updates. No semantic-equivalence claim is made."
       }
@@ -162,12 +164,12 @@
     {
       "name": "Exact record 31316228",
       "passed": true,
-      "provider": "PubMed (NCBI backup)"
+      "provider": "Europe PMC / PubMed"
     },
     {
       "name": "Exact record 25569281",
       "passed": true,
-      "provider": "PubMed (NCBI backup)"
+      "provider": "Europe PMC / PubMed"
     },
     {
       "name": "Exact record 34265255",
@@ -228,7 +230,7 @@
       "name": "Open-access and publication-date filters",
       "passed": true,
       "provider": "Europe PMC / PubMed",
-      "total": 4923,
+      "total": 4924,
       "ids": [
         "43085994",
         "43084142",
@@ -254,5 +256,5 @@
     }
   ],
   "passed": true,
-  "finishedAt": "2026-11-28T01:37:24.238Z"
+  "finishedAt": "2026-11-28T12:02:52.719Z"
 }

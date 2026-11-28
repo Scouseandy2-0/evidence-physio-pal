@@ -1,3 +1,4 @@
+import { publicationAccess } from './publication-access.js';
 const cache = new Map(), pending = new Map();
 const json = (data, status = 200) => Response.json(data, { status, headers: { 'cache-control': 'no-store, private', 'x-content-type-options': 'nosniff' } });
 // NLM's tagged PubMed format: AB is the English abstract; CI is publisher copyright.
@@ -38,7 +39,7 @@ export async function retrievePubmedRecord(pmid, { fetcher = globalThis.fetch, t
   } finally { clearTimeout(timer); }
 }
 export async function paperAPI(request) {
-  if (!request.headers.get('oai-authenticated-user-id') || !request.headers.get('oai-authenticated-user-email')) return json({ error: 'Sign in to load publication details.' }, 401);
+  const denied = publicationAccess(request); if (denied) return denied;
   if (request.method !== 'GET') return json({ error: 'Use GET.' }, 405);
   if (request.headers.get('sec-fetch-site') === 'cross-site') return json({ error: 'Use the app to load publication details.' }, 403);
   const pmid = new URL(request.url).searchParams.get('pmid') || '';

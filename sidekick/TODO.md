@@ -5,7 +5,7 @@ Updated 28 November 2026. Finish the defined product before adding more major fe
 ## Saved checkpoint
 
 - GitHub repository: Scouseandy2-0/evidence-physio-pal; development branch: codex/physiosidekick-prototype; app source: sidekick/; draft PR #3. The original Lovable app remains separate.
-- Latest confirmed published application source: 147758b54ac688e1e525ace272c37b7e2f2dd258. Recovery/search/mobile deployment confirmed succeeded on 28 November; app remains owner-private.
+- Latest confirmed published application source: a4ebf2701addb6afae9eb956505e29be04612980 (version 31, owner-review release); deployment confirmed succeeded on 28 November. Andrew then enabled public link browsing for a friend without ChatGPT. Account records still require identity. The next workspace-polish candidate is not live until publication is confirmed.
 - Last confirmed published changes: protected invalid/malformed cache recovery, retained source warnings, local date defaults, pagination retries/Stop search, focus/reflow and dated backups. The review-date-link iPhone retest remains open.
 - Latest developer baseline: 165 automated tests passed; production build and targeted desktop workflow checks passed.
 - Binary skeleton/muscle assets are included with source attribution/licences; checksum-verified pinned download scripts remain available for restoration. Generated bundles, dependency directories, credentials, local databases and user files are not source-control backups.
@@ -105,3 +105,17 @@ Detailed evidence and limits: docs/readiness-ten-2026-11-28.md. Full suite: 160 
 - [x] Prepare one-pass review guide and evidence/state matrix: docs/PRIVATE-REVIEW-GUIDE.md, docs/OWNER-REVIEW-READINESS.md and docs/DATA-AND-SUPPORT.md.
 
 Candidate release: 2026-11-28-owner-review; publication outcome must be read separately. 165 tests pass. Actual iPhone/Mac/VoiceOver, independent content approval, full licensed anatomy and final public-launch data/support arrangements remain open. Review the integrated build when wanted; no per-change check is requested.
+
+## Non-anatomy reliability pass — 28 November 2026
+
+Andrew asked to park anatomy and get the rest right. The comprehensive V1-A atlas commitment remains open, not removed or counted as complete.
+
+- [x] Add an explicit browser-tab trial for friends without ChatGPT: local save/reload, backup import/export and confirmed clearing; no automatic account upload/merge.
+- [x] Make public publication lookup usable without account sign-in while preserving private-workspace identity checks, origin/input validation and an isolate-local anonymous request budget.
+- [x] Protect an unfinished reflection against replacement by an appraisal’s reflection action.
+- [x] Retain recorded study design, original PubMed link and source warnings consistently in portfolio HTML; show retained reflection warnings directly in all portfolio formats.
+- [x] Remove hardcoded Andrew/private profile wording from anonymous screens and distinguish trial versus account saving/privacy/report text.
+- [x] Fix populated CPD card overflow at 320px with 20px text. Developer Chromium recheck: document client/scroll width 305/305; review-date dialog 260/260. No real Safari/VoiceOver claim.
+- [x] Run 175 automated tests and 10 live publication-audit scenarios, plus rendered trial save/reload/Word, real PMID/original-abstract lookup, draft-protection, teaching-copy/Word and review-date checks.
+
+Evidence: docs/workspace-polish-2026-11-28.md. Remaining non-anatomy gates: actual iPhone/Mac persistence and exports, VoiceOver, independent clinical/content review, reference-manager RIS import, final operator/support and supplier retention/erasure arrangements. These require evidence or decisions that developer tests cannot supply.

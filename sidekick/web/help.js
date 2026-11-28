@@ -1,4 +1,4 @@
-export const appRelease = '2026-11-28-owner-review';
+export const appRelease = '2026-11-28-workspace-polish';
 export const guideKey = 'physiosidekick.guide.hidden.v1';
 export function guideProgress(workspace = {}) {
   return [
@@ -18,7 +18,7 @@ export function buildProblemReport(input, context = {}, now = new Date()) {
   const route=['home','research','learn','library','cpd','fcp','practice','appraisal','study','teaching','workspace-search'].includes(context.route)?context.route:'unknown';
   const status=['loading','saved','pending','saving','offline','conflict','unavailable','error'].includes(context.syncStatus)?context.syncStatus:'unknown';
   const device=['iPhone or iPad','Mac','Other','Not specified'].includes(input.device)?input.device:'Not specified';
-  return `PhysioSidekick problem report\nCreated: ${now.toISOString()}\nApp release: ${appRelease}\nArea: ${reportCategories[input.category]}\nPage: ${route}\nDevice (chosen by me): ${device}\nAccount save status: ${status}\nUnconfirmed device changes: ${context.pending===true?'yes':'no'}\n\nWhat happened / steps to reproduce:\n${description}\n\nWhat I expected:\n${expected||'Not provided'}\n\nReport prepared on this device. It has not been sent. Review for private information before sharing.\n`;
+  return `PhysioSidekick problem report\nCreated: ${now.toISOString()}\nApp release: ${appRelease}\nArea: ${reportCategories[input.category]}\nPage: ${route}\nDevice (chosen by me): ${device}\nStorage: ${context.mode === 'trial' ? 'Browser trial (this tab only)' : 'Account workspace'}\n${context.mode === 'trial' ? 'Trial' : 'Account'} save status: ${status}\nUnconfirmed device changes: ${context.pending===true?'yes':'no'}\n\nWhat happened / steps to reproduce:\n${description}\n\nWhat I expected:\n${expected||'Not provided'}\n\nReport prepared on this device. It has not been sent. Review for private information before sharing.\n`;
 }
 
 export const versionReviewSteps = [
